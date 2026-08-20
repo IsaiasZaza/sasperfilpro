@@ -1,0 +1,69 @@
+import type { Metadata } from "next";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
+import { Footer } from "@/components/layout/footer";
+import { Navbar } from "@/components/layout/navbar";
+import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
+import "./globals.css";
+
+const sans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+});
+
+const serif = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  axes: ["opsz", "SOFT"],
+});
+
+const title = "PerfilPro — Seu perfil profissional na bio do Instagram";
+const description =
+  "Transforme o link da sua bio em uma página profissional para apresentar seus serviços, portfólio e receber clientes pelo WhatsApp.";
+
+export const metadata: Metadata = {
+  metadataBase: new URL("https://perfilpro.vercel.app"),
+  title,
+  description,
+  keywords: [
+    "link na bio",
+    "Instagram",
+    "página profissional",
+    "WhatsApp",
+    "autônomos",
+    "pequenos negócios",
+  ],
+  openGraph: {
+    title,
+    description,
+    type: "website",
+    locale: "pt_BR",
+    siteName: "PerfilPro",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html
+      lang="pt-BR"
+      className={`${sans.variable} ${serif.variable} h-full antialiased`}
+    >
+      <body className="min-h-full overflow-x-hidden bg-background font-sans text-foreground">
+        <Navbar />
+        {children}
+        <Footer />
+        <WhatsAppFloat />
+      </body>
+    </html>
+  );
+}
