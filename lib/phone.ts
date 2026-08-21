@@ -4,24 +4,24 @@ export function digitsOnly(value: string) {
 }
 
 /**
- * Número internacional para wa.me (E.164): só dígitos, até 15.
- * Inclua o código do país (ex.: 55 Brasil, 351 Portugal, 1 EUA).
- * Não força DDI brasileiro.
+ * Número internacional para wa.me (E.164): só dígitos, 10–15, com DDI.
+ * Ex.: 5511999999999 (BR), 351912345678 (PT), 5491123456789 (AR).
  */
 export function normalizeWhatsAppPhone(value: string) {
   return digitsOnly(value).slice(0, 15);
 }
 
-/** @deprecated Use normalizeWhatsAppPhone — mantido para imports antigos. */
+/** @deprecated Use normalizeWhatsAppPhone */
 export function withBrazilDdi(value: string) {
   return normalizeWhatsAppPhone(value);
 }
 
-/** Exibição amigável: +5511999999999 */
+/**
+ * Campo editável: mostra só dígitos (sem "+"), para bater com a API.
+ * O "+" fica só no hint / preview do link.
+ */
 export function formatWhatsAppPhone(value: string) {
-  const digits = normalizeWhatsAppPhone(value);
-  if (!digits) return "";
-  return `+${digits}`;
+  return normalizeWhatsAppPhone(value);
 }
 
 /** @deprecated Use formatWhatsAppPhone */
@@ -29,8 +29,8 @@ export function formatBrazilPhone(value: string) {
   return formatWhatsAppPhone(value);
 }
 
-/** wa.me aceita 8–15 dígitos com código do país. */
+/** Alinhado à API: 10–15 dígitos com código do país. */
 export function isValidWhatsAppPhone(value: string) {
   const digits = normalizeWhatsAppPhone(value);
-  return digits.length >= 8 && digits.length <= 15;
+  return digits.length >= 10 && digits.length <= 15;
 }

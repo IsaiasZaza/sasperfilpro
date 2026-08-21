@@ -388,11 +388,11 @@ export function BlockInspector({
                 placeholder="Falar no WhatsApp"
               />
             </Field>
-            <Field hint="Inclua o código do país. Ex.: 5511999999999 (BR), 351912345678 (PT), 5491123456789 (AR).">
+            <Field hint="Só números, com código do país (DDI). Ex.: 5511999999999, 351912345678, 5491123456789.">
               <Label>Telefone</Label>
               <Input
                 value={formatWhatsAppPhone(content.phone ?? "")}
-                inputMode="tel"
+                inputMode="numeric"
                 autoComplete="tel"
                 onChange={(event) =>
                   setContent({
@@ -400,18 +400,19 @@ export function BlockInspector({
                     phone: normalizeWhatsAppPhone(event.target.value),
                   })
                 }
-                placeholder="+55 11 99999-9999"
+                placeholder="5511999999999"
               />
             </Field>
             {isValidWhatsAppPhone(content.phone ?? "") ? (
               <p className="text-[12px] text-muted">
                 Abre wa.me/{normalizeWhatsAppPhone(content.phone ?? "")}
               </p>
-            ) : content.phone ? (
-              <p className="text-[12px] text-muted">
-                Inclua o código do país. Ex.: 5511999999999
+            ) : (
+              <p className="text-[12px] text-amber-800/80">
+                Preencha o telefone com DDI (10 a 15 dígitos) para o botão
+                abrir o WhatsApp certo. Ex.: 5511999999999
               </p>
-            ) : null}
+            )}
             <Field hint="Abre o WhatsApp já com este texto.">
               <Label>Mensagem automática</Label>
               <Textarea

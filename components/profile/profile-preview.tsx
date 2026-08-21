@@ -51,9 +51,11 @@ import { cn } from "@/lib/utils";
 function whatsappHref(phone: string, message?: string) {
   const digits = normalizeWhatsAppPhone(phone);
   const text = encodeURIComponent(message || "");
-  return digits
-    ? `https://wa.me/${digits}?text=${text}`
-    : `https://wa.me/?text=${text}`;
+  // Só monta link com número quando houver DDI completo (10–15 dígitos).
+  if (digits.length >= 10) {
+    return `https://wa.me/${digits}?text=${text}`;
+  }
+  return text ? `https://wa.me/?text=${text}` : "https://wa.me/";
 }
 
 function whatsappLabel(label?: string | null) {

@@ -147,7 +147,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         const digits = normalizeWhatsAppPhone(phone);
         if (!isValidWhatsAppPhone(digits)) {
           setError(
-            "Informe o WhatsApp com código do país. Ex.: 5511999999999",
+            "Informe o WhatsApp só com números e DDI (10 a 15 dígitos). Ex.: 5511999999999",
           );
           return;
         }
@@ -326,15 +326,16 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
               <Label>WhatsApp</Label>
               <Input
                 value={formatWhatsAppPhone(phone)}
-                inputMode="tel"
+                inputMode="numeric"
                 autoComplete="tel"
                 onChange={(event) =>
                   setPhone(normalizeWhatsAppPhone(event.target.value))
                 }
-                placeholder="+55 11 99999-9999"
+                placeholder="5511999999999"
               />
               <p className="mt-1.5 text-[12px] text-muted">
-                Inclua o código do país. Ex.: 55 Brasil, 351 Portugal, 1 EUA.
+                Só números com código do país (DDI). Ex.: 5511999999999 (BR),
+                351912345678 (PT).
               </p>
             </div>
             <div>

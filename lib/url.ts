@@ -1,4 +1,5 @@
 import type { BlockType } from "@/lib/types/profile";
+import { digitsOnly } from "@/lib/phone";
 
 const DEFAULT_URL: Record<"CTA_BUTTON" | "LINK_BUTTON" | "LOCATION" | "SOCIAL", string> =
   {
@@ -110,6 +111,15 @@ export function prepareBlockContent(
       normalizeHttpUrl(asString(prev.avatarUrl));
     if (avatar) next.avatarUrl = avatar;
     else delete next.avatarUrl;
+  }
+
+  if (type === "WHATSAPP") {
+    next.phone = digitsOnly(asString(next.phone, asString(prev.phone))).slice(
+      0,
+      15,
+    );
+    next.message = asString(next.message, asString(prev.message));
+    next.label = asString(next.label, asString(prev.label, "WhatsApp"));
   }
 
   return next;

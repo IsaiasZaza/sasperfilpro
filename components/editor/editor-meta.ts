@@ -39,7 +39,7 @@ export const BLOCK_TIPS: Record<BlockType, string> = {
   HERO: "Foto, nome, frase de destaque e tamanho da foto.",
   CTA_BUTTON: "Texto, link e cor do botão.",
   LINK_BUTTON: "Texto, link e ícone da rede.",
-  WHATSAPP: "Número internacional com código do país (ex.: 55, 351, 1).",
+  WHATSAPP: "Só números com DDI (10–15 dígitos). Ex.: 5511999999999.",
   SOCIAL: "Ícones das redes ou botões com texto.",
   SERVICES: "Itens e preços. Aparência no fim da lista.",
   TESTIMONIALS: "Depoimentos e nota. Aparência no fim da lista.",
