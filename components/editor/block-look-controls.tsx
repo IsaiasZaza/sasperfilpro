@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlignCenter, AlignLeft, AlignRight, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -274,9 +274,28 @@ function ColorControl({
   placeholder: string;
   onChange: (value: string | undefined) => void;
 }) {
-  const armed = useRef(false);
-  const picker = pickerHex(value, fallback);
+  const committed = (value || "").toLowerCase();
+  const base = pickerHex(value, fallback);
+  // Draft local evita loop: input type=color dispara onChange a cada frame
+  // enquanto o valor controlado no pai re-renderiza.
+  const [draft, setDraft] = useState<string | null>(null);
+  const draftRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    draftRef.current = null;
+    setDraft(null);
+  }, [committed]);
+
+  const picker = draft ?? base;
   const hexText = value || "";
+
+  function commitDraft() {
+    const next = (draftRef.current || draft || "").toLowerCase();
+    draftRef.current = null;
+    setDraft(null);
+    if (!next || next === committed) return;
+    onChange(next);
+  }
 
   return (
     <div>
@@ -285,18 +304,13 @@ function ColorControl({
         <input
           type="color"
           value={picker}
-          onPointerDown={() => {
-            armed.current = true;
-          }}
-          onBlur={() => {
-            armed.current = false;
-          }}
           onChange={(event) => {
-            if (!armed.current) return;
             const next = event.target.value.toLowerCase();
-            if (next === (value || "").toLowerCase()) return;
-            onChange(next);
+            draftRef.current = next;
+            setDraft(next);
           }}
+          onPointerUp={commitDraft}
+          onBlur={commitDraft}
           className="h-11 w-12 shrink-0 cursor-pointer rounded-lg border border-line bg-white p-1"
           aria-label={label}
         />
@@ -305,12 +319,12 @@ function ColorControl({
           onChange={(event) => {
             const raw = event.target.value.trim();
             if (!raw) {
-              onChange(undefined);
+              if (committed) onChange(undefined);
               return;
             }
             const next = pickerHex(raw, "");
             if (next === "#000000" && !/^#0+$/i.test(raw)) return;
-            if (next === (value || "").toLowerCase()) return;
+            if (next === committed) return;
             onChange(next);
           }}
           placeholder={placeholder}
