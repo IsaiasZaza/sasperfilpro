@@ -35,7 +35,7 @@ import type {
   WhatsAppContent,
 } from "@/lib/types/profile";
 import { formatPriceFromCents, parsePriceToCents } from "@/lib/types/profile";
-import { formatBrazilPhone, withBrazilDdi } from "@/lib/phone";
+import { formatWhatsAppPhone, isValidWhatsAppPhone, normalizeWhatsAppPhone } from "@/lib/phone";
 import { isCompleteHttpUrl, normalizeHttpUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
@@ -388,28 +388,28 @@ export function BlockInspector({
                 placeholder="Falar no WhatsApp"
               />
             </Field>
-            <Field hint="DDD + número. O 55 do Brasil entra sozinho.">
+            <Field hint="Inclua o código do país. Ex.: 5511999999999 (BR), 351912345678 (PT), 5491123456789 (AR).">
               <Label>Telefone</Label>
               <Input
-                value={formatBrazilPhone(content.phone ?? "")}
+                value={formatWhatsAppPhone(content.phone ?? "")}
                 inputMode="tel"
                 autoComplete="tel"
                 onChange={(event) =>
                   setContent({
                     ...content,
-                    phone: withBrazilDdi(event.target.value),
+                    phone: normalizeWhatsAppPhone(event.target.value),
                   })
                 }
-                placeholder="+55 (61) 99999-9999"
+                placeholder="+55 11 99999-9999"
               />
             </Field>
-            {withBrazilDdi(content.phone ?? "").length >= 12 ? (
+            {isValidWhatsAppPhone(content.phone ?? "") ? (
               <p className="text-[12px] text-muted">
-                Abre wa.me/{withBrazilDdi(content.phone ?? "")}
+                Abre wa.me/{normalizeWhatsAppPhone(content.phone ?? "")}
               </p>
             ) : content.phone ? (
               <p className="text-[12px] text-muted">
-                Falta o DDD. Ex.: 61 99999-9999
+                Inclua o código do país. Ex.: 5511999999999
               </p>
             ) : null}
             <Field hint="Abre o WhatsApp já com este texto.">

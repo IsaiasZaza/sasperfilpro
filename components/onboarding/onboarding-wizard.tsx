@@ -13,7 +13,7 @@ import {
   publicApi,
   servicesApi,
 } from "@/lib/api-client";
-import { formatBrazilPhone, withBrazilDdi } from "@/lib/phone";
+import { formatWhatsAppPhone, isValidWhatsAppPhone, normalizeWhatsAppPhone } from "@/lib/phone";
 import { readClaimedUsername } from "@/lib/claimed-username";
 import { normalizeUsername } from "@/lib/reserved-usernames";
 import {
@@ -144,9 +144,11 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
       }
 
       if (step === 3) {
-        const digits = withBrazilDdi(phone);
-        if (digits.length < 12) {
-          setError("Informe o WhatsApp com DDD. Ex.: 61 99999-9999");
+        const digits = normalizeWhatsAppPhone(phone);
+        if (!isValidWhatsAppPhone(digits)) {
+          setError(
+            "Informe o WhatsApp com código do país. Ex.: 5511999999999",
+          );
           return;
         }
         const blocks = await blocksApi.list();
@@ -323,14 +325,16 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
             <div>
               <Label>WhatsApp</Label>
               <Input
-                value={formatBrazilPhone(phone)}
+                value={formatWhatsAppPhone(phone)}
                 inputMode="tel"
                 autoComplete="tel"
-                onChange={(event) => setPhone(withBrazilDdi(event.target.value))}
-                placeholder="+55 (61) 99999-9999"
+                onChange={(event) =>
+                  setPhone(normalizeWhatsAppPhone(event.target.value))
+                }
+                placeholder="+55 11 99999-9999"
               />
               <p className="mt-1.5 text-[12px] text-muted">
-                DDD + número. O 55 do Brasil entra sozinho.
+                Inclua o código do país. Ex.: 55 Brasil, 351 Portugal, 1 EUA.
               </p>
             </div>
             <div>
