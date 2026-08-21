@@ -216,7 +216,7 @@ export const publicApi = {
   getPage(username: string) {
     return api<PublicPage>(`/p/${encodeURIComponent(username)}`, {
       credentials: "omit",
-      next: { revalidate: 60 },
+      cache: "no-store",
     });
   },
   checkUsername(username: string) {

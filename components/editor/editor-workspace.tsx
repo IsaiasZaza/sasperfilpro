@@ -899,7 +899,7 @@ export function EditorWorkspace() {
       await refresh();
       setMessage(
         wasPublished
-          ? "Página atualizada."
+          ? "Página atualizada. Abra o link público para ver."
           : "Página no ar. Seu link já pode ir na bio.",
       );
     } catch (err) {

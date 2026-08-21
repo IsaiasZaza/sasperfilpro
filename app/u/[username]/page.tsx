@@ -8,6 +8,8 @@ import { loadPublicPage } from "@/lib/public-page";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { resolvePaintTheme } from "@/lib/theme";
 
+export const dynamic = "force-dynamic";
+
 type PageProps = {
   params: Promise<{ username: string }>;
 };
