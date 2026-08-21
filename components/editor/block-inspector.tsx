@@ -46,6 +46,7 @@ export function BlockInspector({
   testimonials = [],
   onServicesChange,
   onTestimonialsChange,
+  hasLocationBlock = false,
 }: {
   block: ProfileBlock;
   onChange: (next: ProfileBlock) => void;
@@ -54,6 +55,7 @@ export function BlockInspector({
   testimonials?: TestimonialItem[];
   onServicesChange?: (next: ServiceItem[]) => void;
   onTestimonialsChange?: (next: TestimonialItem[]) => void;
+  hasLocationBlock?: boolean;
 }) {
   const setContent = (content: ProfileBlock["content"]) => {
     if (JSON.stringify(content) === JSON.stringify(block.content)) return;
@@ -133,16 +135,23 @@ export function BlockInspector({
                 placeholder="Uma frase sobre o seu trabalho"
               />
             </Field>
-            <Field>
-              <Label>Cidade no cabeçalho</Label>
-              <Input
-                value={location}
-                onChange={(event) =>
-                  setContent({ ...content, location: event.target.value })
-                }
-                placeholder="Brasília - DF"
-              />
-            </Field>
+            {hasLocationBlock ? (
+              <p className="rounded-xl bg-[#f7f4ef] px-3 py-2.5 text-[12px] leading-relaxed text-muted">
+                A cidade aparece no bloco Localização. Edite o endereço lá para
+                não ficar duplicada no cabeçalho.
+              </p>
+            ) : (
+              <Field>
+                <Label>Cidade no cabeçalho</Label>
+                <Input
+                  value={location}
+                  onChange={(event) =>
+                    setContent({ ...content, location: event.target.value })
+                  }
+                  placeholder="Brasília - DF"
+                />
+              </Field>
+            )}
           </Section>
           <BlockLookControls
             look={lookFrom(content)}

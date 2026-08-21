@@ -230,8 +230,9 @@ function BlockView({
     }
     case "LOCATION": {
       const content = block.content as LocationContent;
-      const text = content.address || page.location || "";
-      if (!text.trim()) return null;
+      // Só o endereço do bloco — não reutilizar page.location (evita cidade “presa” em 2 fontes).
+      const text = (content.address || "").trim();
+      if (!text) return null;
       const href = content.mapsUrl || content.url;
       const color = look.textColor || theme.text;
       const sizes = fontScale(look.fontSize);
@@ -755,10 +756,8 @@ export function ProfilePreview({
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const hero = blocks.find((block) => block.type === "HERO");
-  const location = blocks.find((block) => block.type === "LOCATION");
-  const rest = blocks.filter(
-    (block) => block.type !== "HERO" && block.type !== "LOCATION",
-  );
+  const hasLocationBlock = blocks.some((block) => block.type === "LOCATION");
+  const rest = blocks.filter((block) => block.type !== "HERO");
 
   return (
     <div
@@ -811,29 +810,17 @@ export function ProfilePreview({
             {page.headline ? (
               <p className="mt-2 text-[15px] font-medium">{page.headline}</p>
             ) : null}
+            {!hasLocationBlock && page.location ? (
+              <p
+                className="mt-2 flex items-center justify-center gap-1 text-[13px]"
+                style={{ color: theme.muted }}
+              >
+                <MapPin className="h-3.5 w-3.5" />
+                {page.location}
+              </p>
+            ) : null}
           </div>
         )}
-        {location ? (
-          <div className="mt-2">
-            <SelectableBlock
-              id={location.id}
-              label={BLOCK_META[location.type].label}
-              selected={selectedId === location.id}
-              hidden={!location.isVisible}
-              onSelect={onSelectBlock}
-            >
-              <BlockView block={location} theme={theme} page={page} />
-            </SelectableBlock>
-          </div>
-        ) : !hero && page.location ? (
-          <p
-            className="mt-2 flex items-center justify-center gap-1 text-[13px]"
-            style={{ color: theme.muted }}
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            {page.location}
-          </p>
-        ) : null}
         <div className="mt-3 space-y-2.5">
           {rest.map((block) => (
             <SelectableBlock

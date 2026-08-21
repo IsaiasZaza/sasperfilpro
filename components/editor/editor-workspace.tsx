@@ -514,6 +514,43 @@ export function EditorWorkspace() {
       });
       lastSavedBlock.current[block.id] = payload;
 
+      if (block.type === "LOCATION") {
+        const address = emptyToNull(
+          (block.content as { address?: string }).address,
+        );
+        const current = profileRef.current;
+        if (current && current.location !== address) {
+          const updatedProfile = await profileApi.update({
+            location: address,
+            theme: themeToApi(current.theme),
+          });
+          const { profile: merged, lost } = withPersistedTheme(
+            updatedProfile,
+            current,
+          );
+          lastSavedProfile.current = profileSnapshot(merged);
+          setProfile(merged);
+          setAuthProfile(merged);
+          if (lost) {
+            throw new Error("Não foi possível gravar o tema. Tente de novo.");
+          }
+        }
+        // Mantém o HERO alinhado para não “voltar” a cidade antiga se o bloco sumir.
+        const nextBlocks = blocksRef.current.map((item) => {
+          if (item.type !== "HERO") return item;
+          const heroContent = {
+            ...(item.content as Record<string, unknown>),
+            location: address ?? "",
+          };
+          const next = { ...item, content: heroContent };
+          lastSavedBlock.current[item.id] = snapshotBlock(next);
+          return next;
+        });
+        blocksRef.current = nextBlocks;
+        setBlocks(nextBlocks);
+        continue;
+      }
+
       if (block.type !== "HERO") continue;
       const hero = block.content as {
         name?: string;
@@ -523,6 +560,9 @@ export function EditorWorkspace() {
         avatarUrl?: string;
       };
       const current = profileRef.current;
+      const locationOwnedByBlock = blocksRef.current.some(
+        (item) => item.type === "LOCATION" && item.isVisible,
+      );
       const updatedProfile = await profileApi.update({
         displayName:
           hero.name !== undefined
@@ -536,8 +576,9 @@ export function EditorWorkspace() {
           hero.bio !== undefined
             ? emptyToNull(hero.bio)
             : emptyToNull(current?.bio),
-        location:
-          hero.location !== undefined
+        location: locationOwnedByBlock
+          ? emptyToNull(current?.location)
+          : hero.location !== undefined
             ? emptyToNull(hero.location)
             : emptyToNull(current?.location),
         avatarUrl:
@@ -626,12 +667,17 @@ export function EditorWorkspace() {
     const snapshot = profileSnapshot(pending);
     if (snapshot === lastSavedProfile.current) return;
     const gen = ++profileSaveGen.current;
+    const locationOwnedByBlock = blocksRef.current.some(
+      (item) => item.type === "LOCATION" && item.isVisible,
+    );
     const updated = await profileApi.update({
       username: pending.username || undefined,
       displayName: pickHeroText(heroContent, "name", pending.displayName),
       headline: pickHeroText(heroContent, "headline", pending.headline),
       bio: pickHeroText(heroContent, "bio", pending.bio),
-      location: pickHeroText(heroContent, "location", pending.location),
+      location: locationOwnedByBlock
+        ? emptyToNull(pending.location)
+        : pickHeroText(heroContent, "location", pending.location),
       avatarUrl: pickHeroText(heroContent, "avatarUrl", pending.avatarUrl),
       theme: themeToApi(pending.theme),
     });
@@ -1476,6 +1522,9 @@ export function EditorWorkspace() {
                   testimonials={testimonials}
                   onServicesChange={handleServicesChange}
                   onTestimonialsChange={handleTestimonialsChange}
+                  hasLocationBlock={blocks.some(
+                    (b) => b.type === "LOCATION" && b.isVisible,
+                  )}
                 />
               </div>
             </div>
