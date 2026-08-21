@@ -17,8 +17,10 @@ import {
   fontScale,
   justifyAlign,
   lookFrom,
+  lookRadius,
   pulseStyle,
   socialIconPixels,
+  surfaceStyle,
 } from "@/lib/block-look";
 import {
   brandFill,
@@ -101,6 +103,7 @@ function BlockView({
       const sizes = fontScale(look.fontSize);
       const photo = avatarPixels(look.avatarSize);
       const radius = avatarRadius(look.avatarShape);
+      const stacked = !look.align || look.align === "center";
       const avatar = avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -111,6 +114,7 @@ function BlockView({
             width: photo,
             height: photo,
             borderRadius: radius,
+            border: look.borderColor ? `2px solid ${look.borderColor}` : undefined,
           }}
         />
       ) : (
@@ -121,17 +125,29 @@ function BlockView({
             height: photo,
             borderRadius: radius,
             fontSize: Math.max(14, photo * 0.28),
-            background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
+            background: look.backgroundColor
+              ? `linear-gradient(145deg, ${theme.muted}, ${look.backgroundColor})`
+              : `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
+            border: look.borderColor ? `2px solid ${look.borderColor}` : undefined,
           }}
         >
           {initials(name)}
         </div>
       );
-      return (
-        <div className="flex flex-col items-center px-3 pb-4 pt-3 text-center">
-          {avatar}
+      const texts = (
+        <div
+          className={cn(
+            "min-w-0",
+            stacked ? "w-full" : "flex-1",
+            stacked
+              ? "text-center"
+              : look.align === "right"
+                ? "text-right"
+                : "text-left",
+          )}
+        >
           <h1
-            className="mt-4 break-words font-serif leading-[1.15] tracking-tight"
+            className="break-words font-serif leading-[1.15] tracking-tight"
             style={{ color, fontSize: sizes.title }}
           >
             {name}
@@ -162,13 +178,45 @@ function BlockView({
           ) : null}
           {locationText && !hasLocationBlock ? (
             <p
-              className="mt-2 flex items-center justify-center gap-1"
+              className={cn(
+                "mt-2 flex items-center gap-1",
+                stacked
+                  ? "justify-center"
+                  : look.align === "right"
+                    ? "justify-end"
+                    : "justify-start",
+              )}
               style={{ color: theme.muted, fontSize: sizes.meta }}
             >
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0 break-words">{locationText}</span>
             </p>
           ) : null}
+        </div>
+      );
+      return (
+        <div
+          className={cn(
+            "flex px-3 pb-4 pt-3",
+            stacked
+              ? "flex-col items-center gap-4"
+              : look.align === "right"
+                ? "flex-row-reverse items-center gap-3.5"
+                : "flex-row items-center gap-3.5",
+          )}
+          style={surfaceStyle(look, {
+            padding:
+              look.backgroundColor || look.borderColor || look.shadow === "soft"
+                ? "16px 14px"
+                : undefined,
+            radius:
+              look.backgroundColor || look.borderColor || look.shadow === "soft"
+                ? "1.35rem"
+                : undefined,
+          })}
+        >
+          {avatar}
+          {texts}
         </div>
       );
     }
@@ -184,15 +232,19 @@ function BlockView({
       const card = (
         <div
           className={cn(
-            "flex items-center gap-3 rounded-2xl px-3.5 py-3.5",
+            "flex items-center gap-3",
             align === "right" && "flex-row-reverse",
             align === "center" && !full && "justify-center",
             look.pulse && "block-pulse",
           )}
           style={{
-            background: theme.card,
-            border: `1px solid ${theme.line}`,
-            color,
+            ...surfaceStyle(look, {
+              background: theme.card,
+              color,
+              radius: "1rem",
+              border: `1px solid ${theme.line}`,
+              padding: "14px",
+            }),
             ...pulseStyle(theme.accent),
           }}
         >
@@ -253,28 +305,36 @@ function BlockView({
     case "CTA_BUTTON": {
       const content = block.content as CtaButtonContent;
       const style = content.style || "primary";
-      const radius = theme.buttonRadius;
       const sizes = fontScale(look.fontSize);
-      const lookStyle =
-        style === "outline"
-          ? {
-              background: "transparent",
-              color: look.textColor || theme.accent,
-              border: `1.5px solid ${theme.accent}`,
-              borderRadius: radius,
-            }
+      const fill =
+        look.backgroundColor ||
+        (style === "outline"
+          ? "transparent"
           : style === "secondary"
-            ? {
-                background: theme.card,
-                color: look.textColor || theme.text,
-                border: `1px solid ${theme.line}`,
-                borderRadius: radius,
-              }
-            : {
-                background: theme.accent,
-                color: look.textColor || "#fff",
-                borderRadius: radius,
-              };
+            ? theme.card
+            : theme.accent);
+      const lookStyle = {
+        ...surfaceStyle(look, {
+          background: fill,
+          color:
+            look.textColor ||
+            (style === "outline"
+              ? theme.accent
+              : style === "secondary"
+                ? theme.text
+                : "#fff"),
+          radius: theme.buttonRadius,
+          border:
+            style === "outline"
+              ? `1.5px solid ${look.borderColor || theme.accent}`
+              : style === "secondary"
+                ? `1px solid ${look.borderColor || theme.line}`
+                : look.borderColor
+                  ? `1px solid ${look.borderColor}`
+                  : undefined,
+          padding: "12px 16px",
+        }),
+      };
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
@@ -286,7 +346,9 @@ function BlockView({
               ...lookStyle,
               fontSize: sizes.button,
               ...pulseStyle(
-                style === "primary" ? theme.accent : theme.text,
+                style === "primary"
+                  ? look.backgroundColor || theme.accent
+                  : theme.text,
               ),
             }}
           >
@@ -318,11 +380,14 @@ function BlockView({
               look.pulse && "block-pulse",
             )}
             style={{
-              background: theme.card,
-              color,
-              border: `1px solid ${theme.line}`,
-              borderRadius: theme.buttonRadius,
-              boxShadow: "0 1px 2px rgba(20,17,14,0.05)",
+              ...surfaceStyle(look, {
+                background: theme.card,
+                color,
+                radius: theme.buttonRadius,
+                border: `1px solid ${theme.line}`,
+                padding: "8px 10px",
+                shadow: "0 1px 2px rgba(20,17,14,0.05)",
+              }),
               ...pulseStyle(fill.background),
             }}
           >
@@ -375,11 +440,14 @@ function BlockView({
             rel="noopener noreferrer"
             className={buttonShellClass(look)}
             style={{
-              background: "#128c4b",
-              color,
-              borderRadius: theme.buttonRadius,
+              ...surfaceStyle(look, {
+                background: "#128c4b",
+                color,
+                radius: theme.buttonRadius,
+                padding: "12px 16px",
+              }),
               fontSize: sizes.button,
-              ...pulseStyle("#128c4b"),
+              ...pulseStyle(look.backgroundColor || "#128c4b"),
             }}
           >
             <WhatsAppIcon className="h-[18px] w-[18px]" />
@@ -414,11 +482,14 @@ function BlockView({
                     rel="noopener noreferrer"
                     className={buttonShellClass(look, "min-h-11 font-medium")}
                     style={{
-                      background: brand.background,
-                      color: look.textColor || brand.color,
-                      borderRadius: theme.buttonRadius,
+                      ...surfaceStyle(look, {
+                        background: brand.background,
+                        color: look.textColor || brand.color,
+                        radius: theme.buttonRadius,
+                        padding: "10px 14px",
+                      }),
                       fontSize: sizes.body,
-                      ...pulseStyle(brand.background),
+                      ...pulseStyle(look.backgroundColor || brand.background),
                     }}
                   >
                     <SocialIcon
@@ -434,7 +505,13 @@ function BlockView({
         );
       }
       return (
-        <div className={cn("flex flex-wrap gap-2.5", justifyAlign(look.align))}>
+        <div
+          className={cn("flex flex-wrap gap-2.5", justifyAlign(look.align))}
+          style={surfaceStyle(look, {
+            radius: look.backgroundColor ? "1.25rem" : undefined,
+            padding: look.backgroundColor ? "12px" : undefined,
+          })}
+        >
           {items.map((item, index) => {
             const brand = SOCIAL_BRAND[item.network] || SOCIAL_BRAND.site;
             return (
@@ -445,7 +522,7 @@ function BlockView({
                 rel="noopener noreferrer"
                 aria-label={item.label || networkFallback(item.network)}
                 className={cn(
-                  "flex items-center justify-center rounded-full",
+                  "flex items-center justify-center",
                   look.pulse && "block-pulse",
                 )}
                 style={{
@@ -453,6 +530,10 @@ function BlockView({
                   height: iconBox,
                   background: brand.background,
                   color: look.textColor || brand.color,
+                  borderRadius: lookRadius(look.radius, "9999px"),
+                  border: look.borderColor
+                    ? `1px solid ${look.borderColor}`
+                    : undefined,
                   ...pulseStyle(brand.background),
                 }}
               >
@@ -476,7 +557,13 @@ function BlockView({
       const headingColor = look.textColor || theme.muted;
       const sizes = fontScale(look.fontSize);
       return (
-        <div className={cn("flex flex-col", alignStack(look.align))}>
+        <div
+          className={cn("flex flex-col", alignStack(look.align))}
+          style={surfaceStyle(look, {
+            radius: look.backgroundColor ? "1.35rem" : undefined,
+            padding: look.backgroundColor ? "14px" : undefined,
+          })}
+        >
           <p
             className="mb-2 w-full font-semibold uppercase tracking-[0.16em]"
             style={{ color: headingColor, fontSize: sizes.label }}
@@ -521,10 +608,12 @@ function BlockView({
                 </>
               );
               const className =
-                "flex min-h-12 w-full items-start justify-between gap-2 rounded-2xl px-3.5 py-3";
+                "flex min-h-12 w-full items-start justify-between gap-2";
               const style = {
-                background: theme.card,
-                border: `1px solid ${theme.line}`,
+                background: look.backgroundColor ? "transparent" : theme.card,
+                border: `1px solid ${look.borderColor || theme.line}`,
+                borderRadius: lookRadius(look.radius, "1rem"),
+                padding: "12px 14px",
                 color: theme.text,
               };
               if (whatsapp?.phone) {
@@ -566,7 +655,13 @@ function BlockView({
       const headingColor = look.textColor || theme.muted;
       const sizes = fontScale(look.fontSize);
       return (
-        <div className={cn("flex flex-col", alignStack(look.align))}>
+        <div
+          className={cn("flex flex-col", alignStack(look.align))}
+          style={surfaceStyle(look, {
+            radius: look.backgroundColor ? "1.35rem" : undefined,
+            padding: look.backgroundColor ? "14px" : undefined,
+          })}
+        >
           <p
             className="mb-2 w-full font-semibold uppercase tracking-[0.16em]"
             style={{ color: headingColor, fontSize: sizes.label }}
@@ -577,10 +672,11 @@ function BlockView({
             {items.map((item: TestimonialItem) => (
               <div
                 key={item.id}
-                className="rounded-2xl px-3.5 py-3.5"
                 style={{
-                  background: theme.card,
-                  border: `1px solid ${theme.line}`,
+                  background: look.backgroundColor ? "transparent" : theme.card,
+                  border: `1px solid ${look.borderColor || theme.line}`,
+                  borderRadius: lookRadius(look.radius, "1rem"),
+                  padding: "14px",
                 }}
               >
                 <div className="mb-1.5 flex gap-0.5 text-amber-500">
@@ -633,19 +729,21 @@ export function ProfilePreview({
   page,
   className,
   showStatusBar = true,
+  showHidden = false,
   selectedId,
   onSelectBlock,
 }: {
   page: PublicPage;
   className?: string;
   showStatusBar?: boolean;
+  showHidden?: boolean;
   selectedId?: string | null;
   onSelectBlock?: (id: string) => void;
 }) {
   const theme = resolvePaintTheme(page.theme);
   const editable = Boolean(onSelectBlock);
   const blocks = [...(page.blocks || [])]
-    .filter((block) => editable || block.isVisible)
+    .filter((block) => editable || showHidden || block.isVisible)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const hero = blocks.find((block) => block.type === "HERO");

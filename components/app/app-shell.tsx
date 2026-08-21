@@ -126,8 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               : "border-line/80 bg-[#f6f3ee]/90",
           )}
         >
-          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-6">
+          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-6">
               <Logo
                 href={isOnboarding ? "/onboarding" : workspace ? "/app" : "/assinatura"}
                 size="sm"
@@ -150,11 +150,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </nav>
               ) : null}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
               {!isOnboarding ? (
                 <button
                   type="button"
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 sm:hidden"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/70 sm:hidden"
                   aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
                   onClick={() => setMenuOpen((value) => !value)}
                 >

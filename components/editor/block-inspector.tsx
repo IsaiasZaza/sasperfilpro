@@ -1,7 +1,11 @@
 "use client";
 
 import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
-import { SOCIAL_NETWORKS } from "@/components/editor/editor-meta";
+import {
+  SOCIAL_NETWORKS,
+  socialUrlPlaceholder,
+  urlForSocialNetwork,
+} from "@/components/editor/editor-meta";
 import {
   BlockLookControls,
   mergeLook,
@@ -11,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { lookFrom } from "@/lib/block-look";
+import { avatarPixels, avatarRadius, lookFrom } from "@/lib/block-look";
 import type {
   CtaButtonContent,
   CtaStyle,
@@ -49,8 +53,10 @@ export function BlockInspector({
   onServicesChange?: (next: ServiceItem[]) => void;
   onTestimonialsChange?: (next: TestimonialItem[]) => void;
 }) {
-  const setContent = (content: ProfileBlock["content"]) =>
+  const setContent = (content: ProfileBlock["content"]) => {
+    if (JSON.stringify(content) === JSON.stringify(block.content)) return;
     onChange({ ...block, content });
+  };
 
   switch (block.type) {
     case "HERO": {
@@ -60,6 +66,9 @@ export function BlockInspector({
       const headline = content.headline || profile?.headline || "";
       const bio = content.bio || profile?.bio || "";
       const location = content.location || profile?.location || "";
+      const look = lookFrom(content);
+      const photo = avatarPixels(look.avatarSize);
+      const photoRadius = avatarRadius(look.avatarShape);
       return (
         <div className="space-y-5">
           <Section title="Foto">
@@ -68,7 +77,13 @@ export function BlockInspector({
               <img
                 src={avatarUrl}
                 alt=""
-                className="mb-3 h-16 w-16 rounded-full object-cover"
+                className="mb-3 object-cover"
+                style={{
+                  width: photo,
+                  height: photo,
+                  borderRadius: photoRadius,
+                  maxWidth: "100%",
+                }}
               />
             ) : null}
             <Field hint="Cole o link de uma imagem (https://...).">
@@ -84,6 +99,20 @@ export function BlockInspector({
                 placeholder="https://..."
               />
             </Field>
+            <BlockLookControls
+              look={lookFrom(content)}
+              onChange={(look) => setContent(mergeLook(content, look))}
+              title={null}
+              showAvatar
+              showTextColor={false}
+              showBackground={false}
+              showBorder={false}
+              showAlign={false}
+              showFontSize={false}
+              showRadius={false}
+              showPadding={false}
+              showShadow={false}
+            />
           </Section>
           <Section title="Textos do topo">
             <Field hint="Como o nome aparece no cabeçalho da página.">
@@ -130,8 +159,8 @@ export function BlockInspector({
           <BlockLookControls
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
-            showAvatar
-            showAlign={false}
+            showAvatar={false}
+            showAlign
           />
         </div>
       );
@@ -242,6 +271,7 @@ export function BlockInspector({
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
             fallbackTextColor="#ffffff"
+            fallbackBackground="#14110e"
             showWidth
             showPulse
           />
@@ -389,6 +419,7 @@ export function BlockInspector({
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
             fallbackTextColor="#ffffff"
+            fallbackBackground="#128c4b"
             showWidth
             showPulse
           />
@@ -460,8 +491,18 @@ export function BlockInspector({
                       key={network.id}
                       type="button"
                       onClick={() => {
+                        if (network.id === item.network) return;
                         const next = [...items];
-                        next[index] = { ...item, network: network.id };
+                        const label =
+                          !item.label || item.label === networkLabel(item.network)
+                            ? undefined
+                            : item.label;
+                        next[index] = {
+                          ...item,
+                          network: network.id,
+                          url: urlForSocialNetwork(network.id, item.url),
+                          label,
+                        };
                         setContent({ ...content, items: next });
                       }}
                       className={cn(
@@ -485,7 +526,7 @@ export function BlockInspector({
                       next[index] = { ...item, url: event.target.value };
                       setContent({ ...content, items: next });
                     }}
-                    placeholder="https://instagram.com/seuuser"
+                    placeholder={socialUrlPlaceholder(item.network)}
                   />
                 </Field>
                 <Field hint="Usado no estilo de botões. Se vazio, usa o nome da rede.">
@@ -511,7 +552,10 @@ export function BlockInspector({
                   ...content,
                   items: [
                     ...items,
-                    { network: "instagram", url: "https://instagram.com/" },
+                    {
+                      network: "instagram",
+                      url: urlForSocialNetwork("instagram"),
+                    },
                   ],
                 })
               }

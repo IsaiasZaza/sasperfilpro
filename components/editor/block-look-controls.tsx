@@ -1,13 +1,18 @@
 "use client";
 
+import { useRef } from "react";
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { pickerHex } from "@/lib/block-look";
 import type {
   AvatarShape,
   AvatarSize,
   BlockAlign,
   BlockLook,
+  BlockPadding,
+  BlockRadius,
+  BlockShadow,
   ButtonWidth,
   FontSize,
 } from "@/lib/types/profile";
@@ -17,86 +22,59 @@ export function BlockLookControls({
   look,
   onChange,
   fallbackTextColor = "#14110e",
+  fallbackBackground = "#ffffff",
+  title = "Aparência deste bloco",
   showTextColor = true,
+  showBackground = true,
+  showBorder = true,
   showAlign = true,
   showWidth = false,
   showPulse = false,
   showFontSize = true,
   showAvatar = false,
+  showRadius = true,
+  showPadding = true,
+  showShadow = true,
 }: {
   look: BlockLook;
   onChange: (next: BlockLook) => void;
   fallbackTextColor?: string;
+  fallbackBackground?: string;
+  title?: string | null;
   showTextColor?: boolean;
+  showBackground?: boolean;
+  showBorder?: boolean;
   showAlign?: boolean;
   showWidth?: boolean;
   showPulse?: boolean;
   showFontSize?: boolean;
   showAvatar?: boolean;
+  showRadius?: boolean;
+  showPadding?: boolean;
+  showShadow?: boolean;
 }) {
-  const patch = (partial: Partial<BlockLook>) =>
-    onChange({ ...look, ...partial });
+  const patch = (partial: Partial<BlockLook>) => {
+    const next = { ...look, ...partial };
+    if (JSON.stringify(next) === JSON.stringify(look)) return;
+    onChange(next);
+  };
+
+  const showColors = showTextColor || showBackground || showBorder;
+  const showShape =
+    showFontSize ||
+    showAlign ||
+    showWidth ||
+    showRadius ||
+    showPadding ||
+    showShadow ||
+    showPulse;
 
   return (
-    <section className="space-y-3">
-      <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
-        Aparência deste bloco
-      </h3>
-      {showTextColor ? (
-        <div>
-          <Label>Cor do texto</Label>
-          <div className="flex items-center gap-2">
-            <input
-              type="color"
-              value={look.textColor || fallbackTextColor}
-              onChange={(event) => patch({ textColor: event.target.value })}
-              className="h-11 w-12 cursor-pointer rounded-lg border border-line bg-white p-1"
-              aria-label="Cor do texto"
-            />
-            <Input
-              value={look.textColor || ""}
-              onChange={(event) =>
-                patch({ textColor: event.target.value || undefined })
-              }
-              placeholder="Tema da página"
-              className="font-mono text-[13px]"
-            />
-            {look.textColor ? (
-              <button
-                type="button"
-                className="shrink-0 text-[12px] font-semibold text-muted hover:text-ink"
-                onClick={() => patch({ textColor: undefined })}
-              >
-                Tema
-              </button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-      {showFontSize ? (
-        <ChoiceRow
-          label="Tamanho da letra"
-          value={look.fontSize || "md"}
-          onChange={(fontSize) => patch({ fontSize })}
-          options={[
-            { value: "sm", label: "P" },
-            { value: "md", label: "M" },
-            { value: "lg", label: "G" },
-            { value: "xl", label: "GG" },
-          ]}
-        />
-      ) : null}
-      {showAlign ? (
-        <ChoiceRow
-          label={showAvatar ? "Posição (foto e textos)" : "Posição"}
-          value={look.align || "center"}
-          onChange={(align) => patch({ align })}
-          options={[
-            { value: "left", label: "Esquerda", icon: AlignLeft },
-            { value: "center", label: "Centro", icon: AlignCenter },
-            { value: "right", label: "Direita", icon: AlignRight },
-          ]}
-        />
+    <section className="space-y-4">
+      {title ? (
+        <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {title}
+        </h3>
       ) : null}
       {showAvatar ? (
         <>
@@ -105,10 +83,12 @@ export function BlockLookControls({
             value={look.avatarSize || "md"}
             onChange={(avatarSize) => patch({ avatarSize })}
             options={[
+              { value: "xs", label: "Mini" },
               { value: "sm", label: "P" },
               { value: "md", label: "M" },
               { value: "lg", label: "G" },
               { value: "xl", label: "GG" },
+              { value: "2xl", label: "Máx" },
             ]}
           />
           <ChoiceRow
@@ -117,35 +97,201 @@ export function BlockLookControls({
             onChange={(avatarShape) => patch({ avatarShape })}
             options={[
               { value: "circle", label: "Redonda" },
-              { value: "rounded", label: "Arredondada" },
-              { value: "square", label: "Quadrada" },
+              { value: "rounded", label: "Suave" },
+              { value: "square", label: "Reta" },
             ]}
           />
         </>
       ) : null}
-      {showWidth ? (
-        <ChoiceRow
-          label="Largura"
-          value={look.width || "full"}
-          onChange={(width) => patch({ width })}
-          options={[
-            { value: "full", label: "Toda a linha" },
-            { value: "fit", label: "Encaixar" },
-          ]}
-        />
+      {showColors ? (
+        <div className="space-y-3">
+          {showBackground ? (
+            <ColorControl
+              label="Fundo do bloco"
+              value={look.backgroundColor}
+              fallback={fallbackBackground}
+              placeholder="Transparente / tema"
+              onChange={(backgroundColor) => patch({ backgroundColor })}
+            />
+          ) : null}
+          {showTextColor ? (
+            <ColorControl
+              label="Cor do texto"
+              value={look.textColor}
+              fallback={fallbackTextColor}
+              placeholder="Tema da página"
+              onChange={(textColor) => patch({ textColor })}
+            />
+          ) : null}
+          {showBorder ? (
+            <ColorControl
+              label="Cor da borda"
+              value={look.borderColor}
+              fallback="#eadfd8"
+              placeholder="Sem borda extra"
+              onChange={(borderColor) => patch({ borderColor })}
+            />
+          ) : null}
+        </div>
       ) : null}
-      {showPulse ? (
-        <ChoiceRow
-          label="O botão pulsa"
-          value={look.pulse ? "yes" : "no"}
-          onChange={(value) => patch({ pulse: value === "yes" })}
-          options={[
-            { value: "yes", label: "Sim" },
-            { value: "no", label: "Não" },
-          ]}
-        />
+      {showShape ? (
+        <div className="space-y-3">
+          {showFontSize ? (
+            <ChoiceRow
+              label="Tamanho da letra"
+              value={look.fontSize || "md"}
+              onChange={(fontSize) => patch({ fontSize })}
+              options={[
+                { value: "sm", label: "P" },
+                { value: "md", label: "M" },
+                { value: "lg", label: "G" },
+                { value: "xl", label: "GG" },
+              ]}
+            />
+          ) : null}
+          {showAlign ? (
+            <ChoiceRow
+              label={showAvatar ? "Posição (foto e textos)" : "Posição"}
+              value={look.align || "center"}
+              onChange={(align) => patch({ align })}
+              options={[
+                { value: "left", label: "Esquerda", icon: AlignLeft },
+                { value: "center", label: "Centro", icon: AlignCenter },
+                { value: "right", label: "Direita", icon: AlignRight },
+              ]}
+            />
+          ) : null}
+          {showWidth ? (
+            <ChoiceRow
+              label="Largura"
+              value={look.width || "full"}
+              onChange={(width) => patch({ width })}
+              options={[
+                { value: "full", label: "Toda a linha" },
+                { value: "fit", label: "Encaixar" },
+              ]}
+            />
+          ) : null}
+          {showRadius ? (
+            <ChoiceRow
+              label="Cantos"
+              value={look.radius || "md"}
+              onChange={(radius) => patch({ radius })}
+              options={[
+                { value: "none", label: "Reto" },
+                { value: "sm", label: "Leve" },
+                { value: "md", label: "Médio" },
+                { value: "lg", label: "Grande" },
+                { value: "pill", label: "Pílula" },
+              ]}
+            />
+          ) : null}
+          {showPadding ? (
+            <ChoiceRow
+              label="Espaço interno"
+              value={look.padding || "md"}
+              onChange={(padding) => patch({ padding })}
+              options={[
+                { value: "sm", label: "Compacto" },
+                { value: "md", label: "Médio" },
+                { value: "lg", label: "Folgado" },
+              ]}
+            />
+          ) : null}
+          {showShadow ? (
+            <ChoiceRow
+              label="Sombra"
+              value={look.shadow || "none"}
+              onChange={(shadow) => patch({ shadow })}
+              options={[
+                { value: "none", label: "Sem" },
+                { value: "soft", label: "Suave" },
+              ]}
+            />
+          ) : null}
+          {showPulse ? (
+            <ChoiceRow
+              label="O botão pulsa"
+              value={look.pulse ? "yes" : "no"}
+              onChange={(value) => patch({ pulse: value === "yes" })}
+              options={[
+                { value: "yes", label: "Sim" },
+                { value: "no", label: "Não" },
+              ]}
+            />
+          ) : null}
+        </div>
       ) : null}
     </section>
+  );
+}
+
+function ColorControl({
+  label,
+  value,
+  fallback,
+  placeholder,
+  onChange,
+}: {
+  label: string;
+  value?: string;
+  fallback: string;
+  placeholder: string;
+  onChange: (value: string | undefined) => void;
+}) {
+  const armed = useRef(false);
+  const picker = pickerHex(value, fallback);
+  const hexText = value || "";
+
+  return (
+    <div>
+      <Label>{label}</Label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={picker}
+          onPointerDown={() => {
+            armed.current = true;
+          }}
+          onBlur={() => {
+            armed.current = false;
+          }}
+          onChange={(event) => {
+            if (!armed.current) return;
+            const next = event.target.value.toLowerCase();
+            if (next === (value || "").toLowerCase()) return;
+            onChange(next);
+          }}
+          className="h-11 w-12 shrink-0 cursor-pointer rounded-lg border border-line bg-white p-1"
+          aria-label={label}
+        />
+        <Input
+          value={hexText}
+          onChange={(event) => {
+            const raw = event.target.value.trim();
+            if (!raw) {
+              onChange(undefined);
+              return;
+            }
+            const next = pickerHex(raw, "");
+            if (next === "#000000" && !/^#0+$/i.test(raw)) return;
+            if (next === (value || "").toLowerCase()) return;
+            onChange(next);
+          }}
+          placeholder={placeholder}
+          className="font-mono text-[13px]"
+        />
+        {value ? (
+          <button
+            type="button"
+            className="shrink-0 text-[12px] font-semibold text-muted hover:text-ink"
+            onClick={() => onChange(undefined)}
+          >
+            Tema
+          </button>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -160,19 +306,21 @@ function ChoiceRow<T extends string>({
   onChange: (value: T) => void;
   options: { value: T; label: string; icon?: typeof AlignLeft }[];
 }) {
+  const cols =
+    options.length >= 6
+      ? "grid-cols-3"
+      : options.length === 5
+        ? "grid-cols-3 sm:grid-cols-5"
+        : options.length === 4
+          ? "grid-cols-4"
+          : options.length === 3
+            ? "grid-cols-3"
+            : "grid-cols-2";
+
   return (
     <div>
       <Label>{label}</Label>
-      <div
-        className={cn(
-          "grid gap-1.5",
-          options.length === 4
-            ? "grid-cols-4"
-            : options.length === 3
-              ? "grid-cols-3"
-              : "grid-cols-2",
-        )}
-      >
+      <div className={cn("grid gap-1.5", cols)}>
         {options.map((option) => {
           const Icon = option.icon;
           const selected = value === option.value;
@@ -180,15 +328,18 @@ function ChoiceRow<T extends string>({
             <button
               key={option.value}
               type="button"
-              onClick={() => onChange(option.value)}
+              onClick={() => {
+                if (option.value === value) return;
+                onChange(option.value);
+              }}
               className={cn(
-                "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border px-2 text-[12px] font-semibold transition",
+                "inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border px-1.5 text-[11px] font-semibold transition sm:text-[12px]",
                 selected
                   ? "border-ink bg-ink text-white"
                   : "border-line bg-white text-ink hover:border-bronze/40",
               )}
             >
-              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+              {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
               {option.label}
             </button>
           );
@@ -202,22 +353,37 @@ export function mergeLook<T extends object>(
   content: T,
   look: BlockLook,
 ): T & BlockLook {
-  return {
-    ...content,
-    textColor: look.textColor,
-    align: look.align,
-    width: look.width,
-    pulse: look.pulse,
-    fontSize: look.fontSize,
-    avatarSize: look.avatarSize,
-    avatarShape: look.avatarShape,
+  const next = { ...content } as T & BlockLook;
+  const assign = <K extends keyof BlockLook>(key: K, value: BlockLook[K]) => {
+    if (value === undefined || value === false) {
+      delete next[key];
+    } else {
+      next[key] = value;
+    }
   };
+
+  assign("textColor", look.textColor);
+  assign("backgroundColor", look.backgroundColor);
+  assign("borderColor", look.borderColor);
+  assign("align", look.align);
+  assign("width", look.width);
+  assign("pulse", look.pulse);
+  assign("fontSize", look.fontSize);
+  assign("avatarSize", look.avatarSize);
+  assign("avatarShape", look.avatarShape);
+  assign("radius", look.radius);
+  assign("padding", look.padding);
+  assign("shadow", look.shadow);
+  return next;
 }
 
 export type {
   AvatarShape,
   AvatarSize,
   BlockAlign,
+  BlockPadding,
+  BlockRadius,
+  BlockShadow,
   ButtonWidth,
   FontSize,
 };

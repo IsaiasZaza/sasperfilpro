@@ -4,7 +4,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -18,7 +19,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowLeft,
   Check,
+  ChevronDown,
+  ChevronUp,
   Copy,
   ExternalLink,
   Eye,
@@ -161,11 +165,19 @@ function SortableBlockRow({
   selected,
   onSelect,
   onToggleVisible,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   block: ProfileBlock;
   selected: boolean;
   onSelect: () => void;
   onToggleVisible: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
 }) {
   const {
     attributes,
@@ -185,12 +197,11 @@ function SortableBlockRow({
         transition,
       }}
       className={cn(
-        "flex cursor-pointer items-center gap-1.5 rounded-xl px-1.5 py-1.5 transition-colors",
+        "flex items-center gap-1 rounded-xl px-1 py-1.5 transition-colors",
         selected ? "bg-background" : "hover:bg-background/80",
-        isDragging && "z-10 cursor-grabbing bg-white opacity-95",
+        isDragging && "z-10 bg-white opacity-95 shadow-sm",
         !block.isVisible && "opacity-50",
       )}
-      onClick={onSelect}
     >
       <span
         className={cn(
@@ -200,15 +211,19 @@ function SortableBlockRow({
       />
       <button
         type="button"
-        className="inline-flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-soft active:cursor-grabbing"
-        aria-label="Arrastar para reordenar"
-        onClick={(event) => event.stopPropagation()}
+        className="inline-flex h-11 w-10 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-muted-soft active:cursor-grabbing"
+        style={{ touchAction: "none" }}
+        aria-label="Segure e arraste para reordenar"
         {...attributes}
         {...listeners}
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-5 w-5" />
       </button>
-      <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-center gap-2.5 py-0.5 text-left"
+        onClick={onSelect}
+      >
         <span
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
@@ -225,15 +240,32 @@ function SortableBlockRow({
             {blockSummary(block)}
           </span>
         </span>
-      </span>
+      </button>
+      <div className="flex shrink-0 flex-col lg:hidden">
+        <button
+          type="button"
+          className="inline-flex h-6 w-9 items-center justify-center rounded-t-md text-muted disabled:opacity-25"
+          aria-label="Subir bloco"
+          disabled={!canMoveUp}
+          onClick={onMoveUp}
+        >
+          <ChevronUp className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="inline-flex h-6 w-9 items-center justify-center rounded-b-md text-muted disabled:opacity-25"
+          aria-label="Descer bloco"
+          disabled={!canMoveDown}
+          onClick={onMoveDown}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </button>
+      </div>
       <button
         type="button"
-        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white hover:text-ink"
+        className="inline-flex h-11 w-10 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white hover:text-ink"
         aria-label={block.isVisible ? "Ocultar bloco" : "Mostrar bloco"}
-        onClick={(event) => {
-          event.stopPropagation();
-          onToggleVisible();
-        }}
+        onClick={onToggleVisible}
       >
         {block.isVisible ? (
           <Eye className="h-3.5 w-3.5" />
@@ -298,7 +330,10 @@ export function EditorWorkspace() {
   }, [profile, orderedBlocks, services, testimonials]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 180, tolerance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -635,15 +670,7 @@ export function EditorWorkspace() {
     }
   }
 
-  async function onDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = orderedBlocks.findIndex((b) => b.id === active.id);
-    const newIndex = orderedBlocks.findIndex((b) => b.id === over.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove(orderedBlocks, oldIndex, newIndex).map(
-      (block, sortOrder) => ({ ...block, sortOrder }),
-    );
+  async function persistOrder(reordered: ProfileBlock[]) {
     setBlocks(reordered);
     try {
       const saved = await blocksApi.reorder(
@@ -655,8 +682,38 @@ export function EditorWorkspace() {
     }
   }
 
+  async function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = orderedBlocks.findIndex((b) => b.id === active.id);
+    const newIndex = orderedBlocks.findIndex((b) => b.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(orderedBlocks, oldIndex, newIndex).map(
+      (block, sortOrder) => ({ ...block, sortOrder }),
+    );
+    await persistOrder(reordered);
+  }
+
+  async function moveBlock(id: string, direction: -1 | 1) {
+    const oldIndex = orderedBlocks.findIndex((b) => b.id === id);
+    const newIndex = oldIndex + direction;
+    if (oldIndex < 0 || newIndex < 0 || newIndex >= orderedBlocks.length) {
+      return;
+    }
+    const reordered = arrayMove(orderedBlocks, oldIndex, newIndex).map(
+      (block, sortOrder) => ({ ...block, sortOrder }),
+    );
+    await persistOrder(reordered);
+  }
+
   function updateSelected(next: ProfileBlock) {
-    setBlocks((prev) => prev.map((b) => (b.id === next.id ? next : b)));
+    setBlocks((prev) => {
+      const current = prev.find((item) => item.id === next.id);
+      if (current && JSON.stringify(current) === JSON.stringify(next)) {
+        return prev;
+      }
+      return prev.map((item) => (item.id === next.id ? next : item));
+    });
   }
 
   function handleServicesChange(next: ServiceItem[]) {
@@ -798,7 +855,7 @@ export function EditorWorkspace() {
               <button
                 type="button"
                 onClick={() => void copyPublicLink()}
-                className="inline-flex h-11 max-w-[9.5rem] items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[12px] font-medium text-muted hover:text-ink sm:max-w-none"
+                className="inline-flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[12px] font-medium text-muted hover:text-ink"
                 aria-label="Copiar link da página"
               >
                 {copied ? (
@@ -806,7 +863,7 @@ export function EditorWorkspace() {
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
-                <span className="truncate">
+                <span className="hidden max-w-[8.5rem] truncate sm:inline">
                   {copied ? "Copiado" : `/u/${profile.username}`}
                 </span>
               </button>
@@ -941,6 +998,9 @@ export function EditorWorkspace() {
             <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
               Na página
             </p>
+            <p className="mb-3 px-1 text-[12px] leading-relaxed text-muted lg:hidden">
+              Segure as listras para arrastar, ou use as setas.
+            </p>
             {orderedBlocks.length === 0 ? (
               <p className="px-1 py-8 text-[13px] leading-relaxed text-muted">
                 Nenhum bloco ainda. Toque em Adicionar bloco para montar a
@@ -957,13 +1017,17 @@ export function EditorWorkspace() {
                 strategy={verticalListSortingStrategy}
               >
                 <div className="space-y-1">
-                  {orderedBlocks.map((block) => (
+                  {orderedBlocks.map((block, index) => (
                     <SortableBlockRow
                       key={block.id}
                       block={block}
                       selected={
                         editorPanel === "block" && selectedId === block.id
                       }
+                      canMoveUp={index > 0}
+                      canMoveDown={index < orderedBlocks.length - 1}
+                      onMoveUp={() => void moveBlock(block.id, -1)}
+                      onMoveDown={() => void moveBlock(block.id, 1)}
                       onSelect={() => {
                         setEditorPanel("block");
                         setSelectedId(block.id);
@@ -973,7 +1037,6 @@ export function EditorWorkspace() {
                       onToggleVisible={() => {
                         setEditorPanel("block");
                         setSelectedId(block.id);
-                        setMobileTab("edit");
                         setBlocks((prev) =>
                           prev.map((item) =>
                             item.id === block.id
@@ -993,30 +1056,55 @@ export function EditorWorkspace() {
 
         <aside
           className={cn(
-            "relative flex min-h-0 items-center justify-center overflow-y-auto bg-background",
+            "relative min-h-0 flex-col bg-background",
             mobileTab === "preview" ? "flex" : "hidden lg:flex",
           )}
         >
           {previewPage ? (
-            <div className="flex flex-col items-center py-8">
-              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-soft">
-                Prévia
-              </p>
-              <PhoneFrame>
-                <ProfilePreview
-                  page={previewPage}
-                  selectedId={
-                    editorPanel === "block" ? selectedId : null
-                  }
-                  onSelectBlock={(id) => {
-                    setEditorPanel("block");
-                    setSelectedId(id);
-                    setMobileTab("edit");
-                    setInserterOpen(false);
-                  }}
-                />
-              </PhoneFrame>
-            </div>
+            <>
+              <div className="hidden w-full flex-col items-center overflow-y-auto py-8 lg:flex">
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-soft">
+                  Prévia
+                </p>
+                <PhoneFrame>
+                  <ProfilePreview
+                    page={previewPage}
+                    selectedId={
+                      editorPanel === "block" ? selectedId : null
+                    }
+                    onSelectBlock={(id) => {
+                      setEditorPanel("block");
+                      setSelectedId(id);
+                      setInserterOpen(false);
+                    }}
+                  />
+                </PhoneFrame>
+              </div>
+              <div className="flex min-h-0 w-full flex-1 flex-col lg:hidden">
+                <div className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-2.5">
+                  <p className="text-[12px] font-medium text-muted">
+                    Prévia — só visualização
+                  </p>
+                  {profile.username ? (
+                    <Link
+                      href={`/u/${profile.username}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink"
+                    >
+                      Abrir
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  ) : null}
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <ProfilePreview
+                    page={previewPage}
+                    showHidden
+                    showStatusBar={false}
+                  />
+                </div>
+              </div>
+            </>
           ) : null}
         </aside>
 
@@ -1028,7 +1116,15 @@ export function EditorWorkspace() {
         >
           {editorPanel === "appearance" ? (
             <div className="flex h-full min-h-0 flex-col">
-              <div className="border-b border-line px-5 py-4">
+              <div className="border-b border-line px-4 py-4 sm:px-5">
+                <button
+                  type="button"
+                  className="mb-3 inline-flex h-10 items-center gap-1.5 text-[13px] font-medium text-muted lg:hidden"
+                  onClick={() => setMobileTab("blocks")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Blocos
+                </button>
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                     <Palette className="h-4 w-4" />
@@ -1073,7 +1169,15 @@ export function EditorWorkspace() {
             </div>
           ) : selected && SelectedIcon ? (
             <div className="flex h-full min-h-0 flex-col">
-              <div className="border-b border-line px-5 py-4">
+              <div className="border-b border-line px-4 py-4 sm:px-5">
+                <button
+                  type="button"
+                  className="mb-3 inline-flex h-10 items-center gap-1.5 text-[13px] font-medium text-muted lg:hidden"
+                  onClick={() => setMobileTab("blocks")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Blocos
+                </button>
                 <div className="flex items-start gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                     <SelectedIcon className="h-4 w-4" />

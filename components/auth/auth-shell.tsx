@@ -48,25 +48,25 @@ export function AuthShell({
   aside?: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      <aside className="relative hidden flex-col bg-lime lg:flex">
+    <div className="grid min-h-dvh overflow-x-hidden lg:grid-cols-2">
+      <aside className="relative hidden min-h-0 flex-col overflow-hidden bg-lime lg:flex">
         <div className="px-10 pt-8">
           <Logo href="/" mark="contrast" size="lg" />
         </div>
-        <div className="flex flex-1 items-center justify-center px-10 py-16">
+        <div className="flex flex-1 items-center justify-center px-8 py-16 xl:px-10">
           {aside ?? <AuthPreview />}
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col bg-[#fffcf8]">
-        <header className="flex items-center justify-between px-5 py-5 sm:px-8">
+      <div className="flex min-h-dvh flex-col bg-[#fffcf8]">
+        <header className="flex items-center justify-between gap-3 px-5 py-4 sm:px-8 sm:py-5">
           <span className="lg:invisible">
             <Logo href="/" />
           </span>
           {action ? (
             <Link
               href={action.href}
-              className="text-[13px] font-medium text-muted transition-colors hover:text-ink"
+              className="shrink-0 text-[13px] font-medium text-muted transition-colors hover:text-ink"
             >
               {action.label}
             </Link>
@@ -75,9 +75,13 @@ export function AuthShell({
           )}
         </header>
 
-        <div className="flex flex-1 items-center justify-center px-5 py-10">
-          <div className={wide ? "w-full max-w-[440px]" : "w-full max-w-[380px]"}>
-            <h1 className="font-serif text-[2rem] leading-[1.1] tracking-tight text-ink">
+        <div className="flex flex-1 items-start justify-center px-5 pb-12 pt-4 sm:items-center sm:px-8 sm:py-10">
+          <div
+            className={
+              wide ? "w-full max-w-[440px]" : "w-full max-w-[min(100%,380px)]"
+            }
+          >
+            <h1 className="font-serif text-[1.75rem] leading-[1.12] tracking-tight text-ink sm:text-[2rem] sm:leading-[1.1]">
               {title}
             </h1>
             {subtitle ? (
@@ -85,7 +89,7 @@ export function AuthShell({
                 {subtitle}
               </p>
             ) : null}
-            <div className="mt-8">{children}</div>
+            <div className="mt-7 sm:mt-8">{children}</div>
             {footer ? (
               <p className="mt-8 text-center text-[13px] text-muted">{footer}</p>
             ) : null}

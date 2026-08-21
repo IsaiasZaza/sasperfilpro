@@ -27,17 +27,25 @@ export type BlockAlign = "left" | "center" | "right";
 export type ButtonWidth = "full" | "fit";
 export type SocialLayout = "icons" | "buttons";
 export type FontSize = "sm" | "md" | "lg" | "xl";
-export type AvatarSize = "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type AvatarShape = "circle" | "rounded" | "square";
+export type BlockRadius = "none" | "sm" | "md" | "lg" | "pill";
+export type BlockPadding = "sm" | "md" | "lg";
+export type BlockShadow = "none" | "soft";
 
 export type BlockLook = {
   textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
   align?: BlockAlign;
   width?: ButtonWidth;
   pulse?: boolean;
   fontSize?: FontSize;
   avatarSize?: AvatarSize;
   avatarShape?: AvatarShape;
+  radius?: BlockRadius;
+  padding?: BlockPadding;
+  shadow?: BlockShadow;
 };
 
 export type HeroContent = BlockLook & {

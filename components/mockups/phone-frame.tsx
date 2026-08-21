@@ -12,8 +12,8 @@ export function PhoneFrame({
   return (
     <div
       className={cn(
-        "relative mx-auto",
-        size === "sm" ? "w-[220px]" : "w-[260px] sm:w-[280px]",
+        "relative mx-auto w-full",
+        size === "sm" ? "max-w-[220px]" : "max-w-[260px] sm:max-w-[280px]",
         className,
       )}
     >
@@ -36,7 +36,7 @@ export function PhoneFrame({
             "relative overflow-hidden bg-white",
             size === "sm"
               ? "h-[440px] rounded-[1.4rem]"
-              : "h-[520px] rounded-[1.7rem] sm:h-[560px]",
+              : "h-[480px] rounded-[1.7rem] sm:h-[560px]",
           )}
         >
           {children}
