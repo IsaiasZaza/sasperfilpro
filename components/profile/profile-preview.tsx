@@ -101,7 +101,6 @@ function BlockView({
       const sizes = fontScale(look.fontSize);
       const photo = avatarPixels(look.avatarSize);
       const radius = avatarRadius(look.avatarShape);
-      const side = look.align === "left" || look.align === "right";
       const avatar = avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -128,28 +127,18 @@ function BlockView({
           {initials(name)}
         </div>
       );
-      const texts = (
-        <div
-          className={cn(
-            "min-w-0",
-            side ? "flex-1" : "w-full",
-            !side && alignStack(look.align),
-            side && look.align === "right" && "text-right",
-            side && look.align === "left" && "text-left",
-          )}
-        >
+      return (
+        <div className="flex flex-col items-center px-3 pb-4 pt-3 text-center">
+          {avatar}
           <h1
-            className={cn(
-              "font-serif leading-tight tracking-tight",
-              side ? "mt-0" : "mt-4",
-            )}
+            className="mt-4 break-words font-serif leading-[1.15] tracking-tight"
             style={{ color, fontSize: sizes.title }}
           >
             {name}
           </h1>
           {page.username ? (
             <p
-              className="mt-1 font-medium"
+              className="mt-1 break-all font-medium"
               style={{ color: theme.muted, fontSize: sizes.meta }}
             >
               @{page.username}
@@ -157,7 +146,7 @@ function BlockView({
           ) : null}
           {headline ? (
             <p
-              className="mt-2 font-medium"
+              className="mt-2 break-words font-medium"
               style={{ color, fontSize: sizes.headline }}
             >
               {headline}
@@ -165,7 +154,7 @@ function BlockView({
           ) : null}
           {content.bio || page.bio ? (
             <p
-              className="mt-2.5 max-w-[280px] leading-relaxed"
+              className="mt-2.5 max-w-[280px] break-words leading-relaxed"
               style={{ color: theme.muted, fontSize: sizes.body }}
             >
               {content.bio || page.bio}
@@ -173,36 +162,13 @@ function BlockView({
           ) : null}
           {locationText && !hasLocationBlock ? (
             <p
-              className={cn(
-                "mt-2 flex items-center gap-1",
-                side
-                  ? look.align === "right"
-                    ? "justify-end"
-                    : "justify-start"
-                  : justifyAlign(look.align),
-              )}
+              className="mt-2 flex items-center justify-center gap-1"
               style={{ color: theme.muted, fontSize: sizes.meta }}
             >
               <MapPin className="h-3.5 w-3.5 shrink-0" />
-              {locationText}
+              <span className="min-w-0 break-words">{locationText}</span>
             </p>
           ) : null}
-        </div>
-      );
-      return (
-        <div
-          className={cn(
-            "px-3 pb-4 pt-3",
-            side
-              ? cn(
-                  "flex items-start gap-3",
-                  look.align === "right" && "flex-row-reverse",
-                )
-              : cn("flex flex-col", alignStack(look.align)),
-          )}
-        >
-          {avatar}
-          {texts}
         </div>
       );
     }

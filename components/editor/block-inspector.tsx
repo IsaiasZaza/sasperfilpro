@@ -131,6 +131,7 @@ export function BlockInspector({
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
             showAvatar
+            showAlign={false}
           />
         </div>
       );
