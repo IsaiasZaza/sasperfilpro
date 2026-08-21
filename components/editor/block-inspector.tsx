@@ -40,7 +40,6 @@ import { cn } from "@/lib/utils";
 export function BlockInspector({
   block,
   onChange,
-  profile,
   services = [],
   testimonials = [],
   onServicesChange,
@@ -62,21 +61,11 @@ export function BlockInspector({
   switch (block.type) {
     case "HERO": {
       const content = block.content as HeroContent;
-      const avatarUrl =
-        content.avatarUrl !== undefined
-          ? content.avatarUrl
-          : profile?.avatarUrl || "";
-      const name =
-        content.name !== undefined ? content.name : profile?.displayName || "";
-      const headline =
-        content.headline !== undefined
-          ? content.headline
-          : profile?.headline || "";
-      const bio = content.bio !== undefined ? content.bio : profile?.bio || "";
-      const location =
-        content.location !== undefined
-          ? content.location
-          : profile?.location || "";
+      const name = content.name ?? "";
+      const headline = content.headline ?? "";
+      const bio = content.bio ?? "";
+      const location = content.location ?? "";
+      const avatarUrl = content.avatarUrl ?? "";
       const look = lookFrom(content);
       const photo = avatarPixels(look.avatarSize);
       const photoRadius = avatarRadius(look.avatarShape);

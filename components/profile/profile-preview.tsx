@@ -93,9 +93,9 @@ function BlockView({
     case "HERO": {
       const content = block.content as HeroContent;
       const name =
-        (content.name !== undefined ? content.name : page.displayName) ||
-        page.username ||
-        "Seu nome";
+        content.name !== undefined
+          ? content.name.trim() || page.username || "Seu nome"
+          : page.displayName || page.username || "Seu nome";
       const headline =
         content.headline !== undefined ? content.headline : page.headline || "";
       const avatarUrl =

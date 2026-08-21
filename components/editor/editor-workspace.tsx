@@ -94,6 +94,28 @@ function snapshotBlock(block: ProfileBlock) {
   });
 }
 
+function withHeroFromProfile(block: ProfileBlock, profile: Profile): ProfileBlock {
+  if (block.type !== "HERO") return block;
+  const content = { ...(block.content as Record<string, unknown>) };
+  if (!("name" in content)) content.name = profile.displayName ?? "";
+  if (!("headline" in content)) content.headline = profile.headline ?? "";
+  if (!("bio" in content)) content.bio = profile.bio ?? "";
+  if (!("location" in content)) content.location = profile.location ?? "";
+  if (!("avatarUrl" in content)) content.avatarUrl = profile.avatarUrl ?? "";
+  return { ...block, content };
+}
+
+function pickHeroText(
+  content: Record<string, unknown> | undefined,
+  key: string,
+  fallback: string | null | undefined,
+) {
+  if (content && key in content) {
+    return emptyToNull(content[key] as string | null | undefined);
+  }
+  return emptyToNull(fallback);
+}
+
 function profileSnapshot(profile: Profile) {
   return JSON.stringify({
     username: profile.username,
@@ -370,8 +392,10 @@ export function EditorWorkspace() {
         servicesApi.list(),
         testimonialsApi.list(),
       ]);
-      const ordered = sortBlocks(b);
       const loaded = { ...p, theme: themeFromApi(p.theme) };
+      const ordered = sortBlocks(b).map((block) =>
+        withHeroFromProfile(block, loaded),
+      );
       setProfile(loaded);
       setAuthProfile(loaded);
       setBlocks(ordered);
@@ -554,16 +578,18 @@ export function EditorWorkspace() {
   const persistDirtyProfile = useCallback(async () => {
     const pending = profileRef.current;
     if (!pending) return;
+    const hero = blocksRef.current.find((block) => block.type === "HERO");
+    const heroContent = hero?.content as Record<string, unknown> | undefined;
     const snapshot = profileSnapshot(pending);
     if (snapshot === lastSavedProfile.current) return;
     const gen = ++profileSaveGen.current;
     const updated = await profileApi.update({
       username: pending.username || undefined,
-      displayName: emptyToNull(pending.displayName),
-      headline: emptyToNull(pending.headline),
-      bio: emptyToNull(pending.bio),
-      location: emptyToNull(pending.location),
-      avatarUrl: emptyToNull(pending.avatarUrl),
+      displayName: pickHeroText(heroContent, "name", pending.displayName),
+      headline: pickHeroText(heroContent, "headline", pending.headline),
+      bio: pickHeroText(heroContent, "bio", pending.bio),
+      location: pickHeroText(heroContent, "location", pending.location),
+      avatarUrl: pickHeroText(heroContent, "avatarUrl", pending.avatarUrl),
       theme: themeToApi(pending.theme),
     });
     if (gen !== profileSaveGen.current) return;
@@ -793,6 +819,37 @@ export function EditorWorkspace() {
         return prev;
       }
       return prev.map((item) => (item.id === next.id ? next : item));
+    });
+    if (next.type !== "HERO") return;
+    const hero = next.content as {
+      name?: string;
+      headline?: string;
+      bio?: string;
+      location?: string;
+      avatarUrl?: string;
+    };
+    setProfile((current) => {
+      if (!current) return current;
+      const patched = {
+        ...current,
+        displayName:
+          hero.name !== undefined ? emptyToNull(hero.name) : current.displayName,
+        headline:
+          hero.headline !== undefined
+            ? emptyToNull(hero.headline)
+            : current.headline,
+        bio: hero.bio !== undefined ? emptyToNull(hero.bio) : current.bio,
+        location:
+          hero.location !== undefined
+            ? emptyToNull(hero.location)
+            : current.location,
+        avatarUrl:
+          hero.avatarUrl !== undefined
+            ? emptyToNull(hero.avatarUrl)
+            : current.avatarUrl,
+      };
+      if (profileSnapshot(patched) === profileSnapshot(current)) return current;
+      return patched;
     });
   }
 

@@ -35,19 +35,6 @@ function asString(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
 
-function minChars(
-  raw: unknown,
-  fallback: unknown,
-  preset: string,
-  min = 3,
-): string {
-  const current = asString(raw).trim();
-  if (current.length >= min) return current;
-  const previous = asString(fallback).trim();
-  if (previous.length >= min) return previous;
-  return preset;
-}
-
 function urlOrFallback(
   raw: unknown,
   fallback: unknown,
@@ -85,12 +72,8 @@ export function prepareBlockContent(
   }
 
   if (type === "LOCATION") {
-    next.address = minChars(
-      next.address,
-      prev.address,
-      "Minha cidade",
-    );
-    next.label = minChars(next.label, prev.label, "Ver no mapa");
+    next.address = asString(next.address);
+    next.label = asString(next.label, asString(prev.label, "Ver no mapa"));
     const maps = urlOrFallback(
       next.mapsUrl ?? next.url,
       prev.mapsUrl ?? prev.url,
