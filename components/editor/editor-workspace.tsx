@@ -30,7 +30,6 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppearancePanel } from "@/components/editor/appearance-panel";
@@ -44,9 +43,9 @@ import {
 import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
+import { Toast } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api";
 import {
-  authApi,
   blocksApi,
   profileApi,
   servicesApi,
@@ -57,6 +56,7 @@ import {
   themeFromApi,
   themeToApi,
 } from "@/lib/theme";
+import { normalizeHttpUrl, prepareBlockContent } from "@/lib/url";
 import {
   BLOCK_META,
   type BlockType,
@@ -105,30 +105,52 @@ function blockSummary(block: ProfileBlock): string {
   return BLOCK_META[block.type].description;
 }
 
-function defaultContent(type: BlockType): ProfileBlock["content"] {
+function defaultContent(
+  type: BlockType,
+  location?: string | null,
+): ProfileBlock["content"] {
   switch (type) {
     case "HERO":
       return { name: "", headline: "" };
     case "CTA_BUTTON":
-      return { label: "Agendar horário", url: "https://", style: "primary" };
+      return {
+        label: "Agendar horário",
+        url: "https://wa.me/",
+        style: "primary",
+      };
     case "LINK_BUTTON":
-      return { label: "Conheça meu trabalho", url: "https://" };
+      return {
+        label: "Conheça meu trabalho",
+        url: "https://instagram.com/",
+      };
     case "WHATSAPP":
       return {
         phone: "",
         message: "Oi! Vi seu perfil no PerfilPro",
         label: "WhatsApp",
+        pulse: true,
       };
     case "SOCIAL":
       return {
+        layout: "icons",
         items: [{ network: "instagram", url: "https://instagram.com/" }],
       };
     case "SERVICES":
       return { heading: "Serviços" };
     case "TESTIMONIALS":
       return { heading: "Depoimentos" };
-    case "LOCATION":
-      return { address: "" };
+    case "LOCATION": {
+      const address =
+        location && location.trim().length >= 3
+          ? location.trim()
+          : "Minha cidade";
+      return {
+        address,
+        label: "Ver no mapa",
+        url: "https://maps.google.com/",
+        mapsUrl: "https://maps.google.com/",
+      };
+    }
   }
 }
 
@@ -161,19 +183,22 @@ function SortableBlockRow({
         transition,
       }}
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-xl border px-2 py-2 transition-colors",
-        selected
-          ? "border-ink/15 bg-[#efeae3]"
-          : "border-transparent hover:bg-[#f6f3ee]",
-        isDragging && "z-10 cursor-grabbing border-ink/20 bg-white opacity-95 shadow-lg",
-        !block.isVisible && "opacity-55",
+        "flex cursor-pointer items-center gap-1.5 rounded-xl px-1.5 py-1.5 transition-colors",
+        selected ? "bg-background" : "hover:bg-background/80",
+        isDragging && "z-10 cursor-grabbing bg-white opacity-95",
+        !block.isVisible && "opacity-50",
       )}
       onClick={onSelect}
     >
-      <span className={cn("h-8 w-0.5 shrink-0 rounded-full", selected ? "bg-ink" : "bg-transparent")} />
+      <span
+        className={cn(
+          "h-10 w-0.5 shrink-0 rounded-full",
+          selected ? "bg-lime" : "bg-transparent",
+        )}
+      />
       <button
         type="button"
-        className="inline-flex h-8 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-soft active:cursor-grabbing"
+        className="inline-flex h-11 w-8 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-soft active:cursor-grabbing"
         aria-label="Arrastar para reordenar"
         onClick={(event) => event.stopPropagation()}
         {...attributes}
@@ -184,8 +209,8 @@ function SortableBlockRow({
       <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
         <span
           className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-            selected ? "bg-ink text-white" : "bg-white text-ink",
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+            selected ? "bg-ink text-white" : "bg-background text-ink",
           )}
         >
           <Icon className="h-3.5 w-3.5" />
@@ -201,7 +226,7 @@ function SortableBlockRow({
       </span>
       <button
         type="button"
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white hover:text-ink"
+        className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white hover:text-ink"
         aria-label={block.isVisible ? "Ocultar bloco" : "Mostrar bloco"}
         onClick={(event) => {
           event.stopPropagation();
@@ -219,8 +244,7 @@ function SortableBlockRow({
 }
 
 export function EditorWorkspace() {
-  const router = useRouter();
-  const { clearSession, refresh, setProfile: setAuthProfile } = useAuth();
+  const { refresh, setProfile: setAuthProfile } = useAuth();
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
@@ -234,7 +258,7 @@ export function EditorWorkspace() {
   );
   const [message, setMessage] = useState<string | null>(null);
   const [inserterOpen, setInserterOpen] = useState(false);
-  const [mobileTab, setMobileTab] = useState<MobileTab>("edit");
+  const [mobileTab, setMobileTab] = useState<MobileTab>("blocks");
   const [editorPanel, setEditorPanel] = useState<EditorPanel>("block");
   const [copied, setCopied] = useState(false);
 
@@ -326,6 +350,12 @@ export function EditorWorkspace() {
     profileRef.current = profile;
   }, [profile]);
 
+  useEffect(() => {
+    if (!message) return;
+    const timer = window.setTimeout(() => setMessage(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   // Autosave bloco selecionado (sem loop)
   useEffect(() => {
     if (!selected) return;
@@ -347,7 +377,23 @@ export function EditorWorkspace() {
     saveTimer.current = window.setTimeout(() => {
       void (async () => {
         try {
-          await blocksApi.update(blockId, { content, isVisible, title });
+          let previousContent: Record<string, unknown> | undefined;
+          try {
+            previousContent = JSON.parse(
+              lastSavedBlock.current[blockId] || "{}",
+            ).content;
+          } catch {
+            previousContent = undefined;
+          }
+          await blocksApi.update(blockId, {
+            content: prepareBlockContent(
+              blockType,
+              content as Record<string, unknown>,
+              previousContent,
+            ),
+            isVisible,
+            title,
+          });
           lastSavedBlock.current[blockId] = payload;
 
           if (blockType === "HERO") {
@@ -364,7 +410,9 @@ export function EditorWorkspace() {
               headline: hero.headline || current?.headline || undefined,
               bio: hero.bio || current?.bio || undefined,
               location: hero.location || current?.location || undefined,
-              avatarUrl: hero.avatarUrl || current?.avatarUrl || undefined,
+              avatarUrl:
+                normalizeHttpUrl(hero.avatarUrl || current?.avatarUrl || "") ||
+                undefined,
               theme: themeToApi(current?.theme),
             });
             const { profile: merged, lost } = withPersistedTheme(
@@ -537,7 +585,10 @@ export function EditorWorkspace() {
       setSaveState("saving");
       const created = await blocksApi.create({
         type,
-        content: defaultContent(type),
+        content: prepareBlockContent(
+          type,
+          defaultContent(type, profile?.location) as Record<string, unknown>,
+        ),
         sortOrder: blocks.length,
       });
       setBlocks((prev) => [...prev, created]);
@@ -552,7 +603,14 @@ export function EditorWorkspace() {
       setMobileTab("edit");
       setSaveState("saved");
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Erro ao criar bloco");
+      const detail =
+        err instanceof ApiError && Array.isArray(err.details)
+          ? (err.details[0] as { message?: string } | undefined)?.message
+          : null;
+      setMessage(
+        detail ||
+          (err instanceof ApiError ? err.message : "Erro ao criar bloco"),
+      );
       setSaveState("error");
     }
   }
@@ -655,33 +713,34 @@ export function EditorWorkspace() {
     const url = `${window.location.origin}/u/${profile.username}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
+    setMessage("Link copiado. Cole na bio.");
     window.setTimeout(() => setCopied(false), 1600);
-  }
-
-  async function handleLogout() {
-    try {
-      await authApi.logout();
-    } catch {
-      // ignore
-    }
-    clearSession();
-    router.push("/login");
   }
 
   const SelectedIcon = selected ? BLOCK_ICONS[selected.type] : null;
 
   if (loading) {
     return (
-      <div className="flex h-dvh items-center justify-center bg-[#f6f3ee] text-muted">
-        Carregando editor...
+      <div className="flex h-dvh flex-col bg-background">
+        <div className="h-16 border-b border-line bg-white" />
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[272px_minmax(0,1fr)_minmax(280px,380px)]">
+          <div className="hidden border-r border-line bg-white lg:block" />
+          <div className="flex items-center justify-center bg-background">
+            <div className="h-[520px] w-[260px] rounded-[2.4rem] bg-line/70" />
+          </div>
+          <div className="hidden border-l border-line bg-white lg:block" />
+        </div>
+        <p className="sr-only">Carregando editor</p>
       </div>
     );
   }
 
   if (loadError || !profile) {
     return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-[#f6f3ee] px-5 text-center">
-        <p className="font-serif text-xl text-ink">Não foi possível abrir o editor</p>
+      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background px-5 text-center">
+        <p className="text-[17px] font-semibold text-ink">
+          Não foi possível abrir o editor
+        </p>
         <p className="max-w-sm text-[14px] text-muted">
           {loadError || "Perfil indisponível. Verifique se a API está no ar."}
         </p>
@@ -698,45 +757,42 @@ export function EditorWorkspace() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[#f6f3ee]">
+    <div className="flex h-dvh flex-col bg-background">
       <header className="border-b border-line bg-white">
-        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-5">
+        <div className="flex h-14 items-center justify-between gap-3 px-3 sm:h-16 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/app" className="shrink-0 font-serif text-[1.35rem] leading-none text-ink">
+            <Link
+              href="/app"
+              className="shrink-0 font-serif text-[1.3rem] leading-none text-ink"
+            >
               PerfilPro
             </Link>
-            <nav className="hidden items-center gap-1 sm:flex">
-              <Link
-                href="/app"
-                className="rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-muted hover:bg-[#f6f3ee] hover:text-ink"
-              >
-                Página
-              </Link>
-              <span className="rounded-lg bg-[#f6f3ee] px-2.5 py-1.5 text-[13px] font-medium text-ink">
-                Editor
-              </span>
-            </nav>
             <span
               className={cn(
-                "hidden rounded-full px-2.5 py-0.5 text-[11px] font-semibold sm:inline",
+                "hidden rounded-full px-2.5 py-1 text-[11px] font-semibold sm:inline",
                 profile.status === "PUBLISHED"
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-[#efeae3] text-muted",
+                  ? "bg-lime text-ink"
+                  : "bg-background text-muted",
               )}
             >
-              {profile.status === "PUBLISHED" ? "Publicada" : "Rascunho"}
+              {profile.status === "PUBLISHED" ? "No ar" : "Rascunho"}
             </span>
-            <span className="hidden items-center gap-1 text-[12px] text-muted md:inline-flex">
-              {saveState === "saving"
-                ? "Salvando..."
-                : saveState === "error"
-                  ? "Erro ao salvar"
-                  : (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-600" />
-                        Salvo
-                      </>
-                    )}
+            <span
+              className={cn(
+                "hidden items-center gap-1.5 text-[12px] md:inline-flex",
+                saveState === "error" ? "text-red-700" : "text-muted",
+              )}
+            >
+              {saveState === "saving" ? (
+                "Salvando..."
+              ) : saveState === "error" ? (
+                "Não salvou"
+              ) : (
+                <>
+                  <Check className="h-3.5 w-3.5 text-ink/50" />
+                  Salvo
+                </>
+              )}
             </span>
           </div>
 
@@ -745,55 +801,45 @@ export function EditorWorkspace() {
               <button
                 type="button"
                 onClick={() => void copyPublicLink()}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-line bg-white px-2.5 text-[12px] font-medium text-muted hover:text-ink sm:px-3"
+                className="inline-flex h-11 max-w-[9.5rem] items-center gap-1.5 rounded-full border border-line bg-white px-3 text-[12px] font-medium text-muted hover:text-ink sm:max-w-none"
+                aria-label="Copiar link da página"
               >
                 {copied ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  <Check className="h-3.5 w-3.5 text-ink" />
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}
-                <span className="hidden sm:inline">
+                <span className="truncate">
                   {copied ? "Copiado" : `/u/${profile.username}`}
                 </span>
               </button>
             ) : null}
             {profile.status === "PUBLISHED" && profile.username ? (
-              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="hidden h-11 sm:inline-flex"
+              >
                 <Link href={`/u/${profile.username}`} target="_blank">
                   <ExternalLink className="h-3.5 w-3.5" />
                   Ver
                 </Link>
               </Button>
             ) : null}
-            <Button type="button" size="sm" onClick={() => void onPublish()}>
+            <Button type="button" className="h-11" onClick={() => void onPublish()}>
               {profile.status === "PUBLISHED" ? "Atualizar" : "Publicar"}
             </Button>
-            <button
-              type="button"
-              className="hidden text-[13px] text-muted hover:text-ink sm:inline"
-              onClick={() => void handleLogout()}
-            >
-              Sair
-            </button>
           </div>
         </div>
-
-        {message ? (
-          <div className="flex items-center justify-between gap-3 border-t border-line bg-white px-4 py-2 text-[13px] text-muted">
-            <span>{message}</span>
-            <button type="button" onClick={() => setMessage(null)}>
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : null}
       </header>
 
-      <div className="grid grid-cols-3 border-b border-line bg-white p-1.5 lg:hidden">
+      <div className="grid grid-cols-3 border-b border-line bg-white p-1 lg:hidden">
         {(
           [
             ["blocks", "Blocos"],
             ["edit", "Editar"],
-            ["preview", "Preview"],
+            ["preview", "Página"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -801,10 +847,8 @@ export function EditorWorkspace() {
             type="button"
             onClick={() => setMobileTab(id)}
             className={cn(
-              "rounded-full py-2 text-[13px] font-medium",
-              mobileTab === id
-                ? "bg-ink text-white"
-                : "text-muted",
+              "h-11 rounded-full text-[13px] font-medium",
+              mobileTab === id ? "bg-ink text-white" : "text-muted",
             )}
           >
             {label}
@@ -822,8 +866,7 @@ export function EditorWorkspace() {
           <div className="border-b border-line p-3">
             <Button
               type="button"
-              className="w-full"
-              size="sm"
+              className="h-11 w-full"
               variant={inserterOpen ? "secondary" : "primary"}
               onClick={() => setInserterOpen((v) => !v)}
             >
@@ -839,10 +882,10 @@ export function EditorWorkspace() {
                 setInserterOpen(false);
               }}
               className={cn(
-                "mt-2 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13px] font-semibold transition",
+                "mt-2 flex h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-[13px] font-semibold transition-colors",
                 editorPanel === "appearance"
-                  ? "border-ink/15 bg-[#efeae3] text-ink"
-                  : "border-transparent text-muted hover:bg-[#f6f3ee] hover:text-ink",
+                  ? "bg-background text-ink"
+                  : "text-muted hover:bg-background hover:text-ink",
               )}
             >
               <Palette className="h-4 w-4" />
@@ -851,7 +894,7 @@ export function EditorWorkspace() {
           </div>
 
           {inserterOpen ? (
-            <div className="border-b border-line bg-[#f6f3ee]/50 p-3">
+            <div className="border-b border-line bg-background/70 p-3">
               <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
                 Novo bloco
               </p>
@@ -875,7 +918,7 @@ export function EditorWorkspace() {
                         }
                         void addBlock(type);
                       }}
-                      className="flex items-center gap-2.5 rounded-xl border border-transparent bg-white px-2.5 py-2 text-left hover:border-ink/10"
+                      className="flex min-h-11 items-center gap-2.5 rounded-xl border border-transparent bg-white px-2.5 py-2 text-left hover:border-ink/10"
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                         <Icon className="h-3.5 w-3.5" />
@@ -899,8 +942,14 @@ export function EditorWorkspace() {
 
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-              Estrutura ({orderedBlocks.length})
+              Na página
             </p>
+            {orderedBlocks.length === 0 ? (
+              <p className="px-1 py-8 text-[13px] leading-relaxed text-muted">
+                Nenhum bloco ainda. Toque em Adicionar bloco para montar a
+                página.
+              </p>
+            ) : (
             <DndContext
               sensors={sensors}
               collisionDetection={closestCenter}
@@ -941,17 +990,21 @@ export function EditorWorkspace() {
                 </div>
               </SortableContext>
             </DndContext>
+            )}
           </div>
         </aside>
 
         <aside
           className={cn(
-            "relative flex min-h-0 items-center justify-center overflow-y-auto bg-[#efeae3]",
+            "relative flex min-h-0 items-center justify-center overflow-y-auto bg-background",
             mobileTab === "preview" ? "flex" : "hidden lg:flex",
           )}
         >
           {previewPage ? (
-            <div className="py-8">
+            <div className="flex flex-col items-center py-8">
+              <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-soft">
+                Prévia
+              </p>
               <PhoneFrame>
                 <ProfilePreview
                   page={previewPage}
@@ -1039,7 +1092,10 @@ export function EditorWorkspace() {
                   <div className="flex gap-1">
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-[#f6f3ee] hover:text-ink"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-background hover:text-ink"
+                      aria-label={
+                        selected.isVisible ? "Ocultar bloco" : "Mostrar bloco"
+                      }
                       onClick={() =>
                         updateSelected({
                           ...selected,
@@ -1055,7 +1111,8 @@ export function EditorWorkspace() {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                      aria-label="Remover bloco"
                       onClick={() => void removeBlock(selected.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1077,17 +1134,16 @@ export function EditorWorkspace() {
             </div>
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center">
-              <p className="text-[15px] font-medium text-ink">
-                Selecione um bloco
+              <p className="text-[15px] font-semibold text-ink">
+                Toque num bloco para editar
               </p>
-              <p className="mt-1 max-w-[220px] text-[13px] text-muted">
-                Ou abra a aparência para mudar cores e o endereço da página.
+              <p className="mt-1 max-w-[240px] text-[13px] leading-relaxed text-muted">
+                A lista à esquerda e o celular no centro abrem os campos aqui.
               </p>
               <Button
                 type="button"
                 variant="secondary"
-                size="sm"
-                className="mt-5"
+                className="mt-6 h-11"
                 onClick={() => {
                   setEditorPanel("appearance");
                   setSelectedId(null);
@@ -1101,6 +1157,7 @@ export function EditorWorkspace() {
           )}
         </section>
       </div>
+      <Toast message={message || ""} show={Boolean(message)} />
     </div>
   );
 }

@@ -1,57 +1,40 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api";
-import { publicApi } from "@/lib/api-client";
+import { loadPublicPage } from "@/lib/public-page";
 import { resolvePaintTheme } from "@/lib/theme";
-import type { PublicPage } from "@/lib/types/profile";
 
-export default function PublicProfilePage() {
-  const params = useParams<{ username: string }>();
-  const username = params.username;
-  const [page, setPage] = useState<PublicPage | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+type PageProps = {
+  params: Promise<{ username: string }>;
+};
 
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await publicApi.getPage(username);
-        if (!cancelled) setPage(data);
-      } catch (err) {
-        if (!cancelled) {
-          setPage(null);
-          setError(
-            err instanceof ApiError ? err.message : "Página não encontrada",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [username]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee] text-muted">
-        Carregando...
-      </div>
-    );
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
+  const { username } = await params;
+  const page = await loadPublicPage(username);
+  if (!page) {
+    return { title: "Página não encontrada" };
   }
+  const name = page.displayName || page.username || username;
+  const headline = page.headline?.trim();
+  return {
+    title: headline ? `${name} · ${headline}` : name,
+    description:
+      page.bio?.trim() ||
+      headline ||
+      `Página de ${name} no PerfilPro`,
+  };
+}
+
+export default async function PublicProfilePage({ params }: PageProps) {
+  const { username } = await params;
+  const page = await loadPublicPage(username);
 
   if (!page) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#f6f3ee] px-5 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
         <Link href="/" className="font-serif text-[1.55rem] text-ink">
           PerfilPro
         </Link>
@@ -59,7 +42,7 @@ export default function PublicProfilePage() {
           Página não encontrada
         </h1>
         <p className="mt-2 max-w-sm text-[15px] text-muted">
-          {error || "Este perfil não existe ou ainda não foi publicado."}
+          Este perfil não existe ou ainda não foi publicado.
         </p>
         <Button asChild className="mt-8" size="lg">
           <Link href="/cadastro">Criar minha página</Link>
@@ -69,25 +52,29 @@ export default function PublicProfilePage() {
   }
 
   const painted = resolvePaintTheme(page.theme);
+  const fontClass =
+    painted.font === "serif"
+      ? "font-serif"
+      : painted.font === "mono"
+        ? "font-mono"
+        : "font-sans";
 
   return (
     <div
-      className={
-        painted.font === "serif"
-          ? "relative min-h-screen pb-16 font-serif"
-          : painted.font === "mono"
-            ? "relative min-h-screen pb-16 font-mono"
-            : "relative min-h-screen pb-16 font-sans"
-      }
+      className={`relative min-h-screen ${fontClass}`}
       style={{ background: painted.background }}
     >
       <div className="mx-auto min-h-screen w-full max-w-md">
-        <ProfilePreview page={page} showStatusBar={false} />
+        <ProfilePreview
+          page={page}
+          showStatusBar={false}
+          className="min-h-screen"
+        />
       </div>
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 flex justify-center pb-4 pt-10 bg-gradient-to-t from-black/10 to-transparent">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-5">
         <Link
           href="/"
-          className="pointer-events-auto rounded-full border border-line bg-white/95 px-3.5 py-1.5 text-[11px] font-medium text-muted shadow-sm backdrop-blur"
+          className="pointer-events-auto rounded-full px-3 py-1 text-[11px] font-medium text-muted/80 hover:text-ink"
         >
           Feito com PerfilPro
         </Link>

@@ -165,7 +165,7 @@ export function AppearancePanel({
                   "rounded-xl border p-2.5 text-left transition",
                   active
                     ? "border-ink bg-white shadow-sm"
-                    : "border-line bg-[#fffcf8] hover:border-bronze/40",
+                    : "border-line bg-card hover:border-ink/15",
                 )}
               >
                 <span

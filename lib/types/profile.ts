@@ -21,7 +21,18 @@ export type SocialNetwork =
 
 export type CtaStyle = "primary" | "secondary" | "outline";
 
-export type HeroContent = {
+export type BlockAlign = "left" | "center" | "right";
+export type ButtonWidth = "full" | "fit";
+export type SocialLayout = "icons" | "buttons";
+
+export type BlockLook = {
+  textColor?: string;
+  align?: BlockAlign;
+  width?: ButtonWidth;
+  pulse?: boolean;
+};
+
+export type HeroContent = BlockLook & {
   name?: string;
   headline?: string;
   bio?: string;
@@ -29,39 +40,41 @@ export type HeroContent = {
   location?: string;
 };
 
-export type CtaButtonContent = {
+export type CtaButtonContent = BlockLook & {
   label: string;
-  url: string;
+  url?: string;
   style: CtaStyle;
 };
 
-export type LinkButtonContent = {
+export type LinkButtonContent = BlockLook & {
   label: string;
-  url: string;
+  url?: string;
   icon?: string;
 };
 
-export type WhatsAppContent = {
+export type WhatsAppContent = BlockLook & {
   phone: string;
   message?: string;
   label?: string;
 };
 
-export type SocialContent = {
+export type SocialContent = BlockLook & {
   items: { network: SocialNetwork; url: string; label?: string }[];
+  layout?: SocialLayout;
 };
 
-export type ServicesContent = {
+export type ServicesContent = BlockLook & {
   heading?: string;
 };
 
-export type TestimonialsContent = {
+export type TestimonialsContent = BlockLook & {
   heading?: string;
 };
 
-export type LocationContent = {
+export type LocationContent = BlockLook & {
   address: string;
   mapsUrl?: string;
+  url?: string;
   label?: string;
 };
 

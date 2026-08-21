@@ -36,14 +36,14 @@ export const BLOCK_ICONS: Record<BlockType, LucideIcon> = {
 };
 
 export const BLOCK_TIPS: Record<BlockType, string> = {
-  HERO: "Foto, nome, headline e bio no topo da página.",
-  CTA_BUTTON: "Botão principal — agendar, orçamento ou site.",
-  LINK_BUTTON: "Link secundário para qualquer URL.",
-  WHATSAPP: "Número com DDI, ex.: 5561999999999.",
-  SOCIAL: "Instagram, TikTok e outras redes.",
-  SERVICES: "Nome, descrição e preço de cada serviço.",
-  TESTIMONIALS: "Nome, texto e nota de cada cliente.",
-  LOCATION: "Cidade, texto do link e URL do Maps.",
+  HERO: "Foto, textos, cor e alinhamento do topo.",
+  CTA_BUTTON: "Texto, link, estilo, posição e pulso.",
+  LINK_BUTTON: "Link secundário, cor, largura e pulso.",
+  WHATSAPP: "Número com DDI. Ícone, pulso e posição.",
+  SOCIAL: "Ícones das redes, ou botões com texto.",
+  SERVICES: "Nome, descrição, preço, cor e alinhamento.",
+  TESTIMONIALS: "Nome, texto, nota, cor e alinhamento.",
+  LOCATION: "Endereço em card, com link do Maps.",
 };
 
 export const SOCIAL_NETWORKS: { id: SocialNetwork; label: string }[] = [

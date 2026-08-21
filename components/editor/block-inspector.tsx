@@ -2,10 +2,16 @@
 
 import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
 import { SOCIAL_NETWORKS } from "@/components/editor/editor-meta";
+import {
+  BlockLookControls,
+  mergeLook,
+} from "@/components/editor/block-look-controls";
+import { SocialIcon } from "@/components/profile/brand-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { lookFrom } from "@/lib/block-look";
 import type {
   CtaButtonContent,
   CtaStyle,
@@ -17,6 +23,7 @@ import type {
   ServiceItem,
   ServicesContent,
   SocialContent,
+  SocialLayout,
   SocialNetwork,
   TestimonialsContent,
   TestimonialItem,
@@ -120,6 +127,10 @@ export function BlockInspector({
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+          />
         </div>
       );
     }
@@ -135,6 +146,7 @@ export function BlockInspector({
                 onChange={(event) =>
                   setContent({ ...content, address: event.target.value })
                 }
+                minLength={3}
                 placeholder="Asa Norte, Brasília - DF"
               />
             </Field>
@@ -151,14 +163,24 @@ export function BlockInspector({
             <Field>
               <Label>Link do Maps</Label>
               <Input
-                value={content.mapsUrl ?? ""}
+                value={content.mapsUrl || content.url || ""}
                 onChange={(event) =>
-                  setContent({ ...content, mapsUrl: event.target.value })
+                  setContent({
+                    ...content,
+                    mapsUrl: event.target.value,
+                    url: event.target.value,
+                  })
                 }
-                placeholder="https://maps.google.com/..."
+                placeholder="https://maps.google.com/?q=Brasilia"
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+            showWidth
+            showPulse
+          />
         </div>
       );
     }
@@ -178,14 +200,14 @@ export function BlockInspector({
                 placeholder="Agendar horário"
               />
             </Field>
-            <Field hint="WhatsApp, Instagram, site ou link de agenda.">
+            <Field hint="Cole o link completo, com https://">
               <Label>URL</Label>
               <Input
                 value={content.url ?? ""}
                 onChange={(event) =>
                   setContent({ ...content, url: event.target.value })
                 }
-                placeholder="https://"
+                placeholder="https://wa.me/5561999999999"
               />
             </Field>
           </Section>
@@ -214,6 +236,13 @@ export function BlockInspector({
               ))}
             </div>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+            fallbackTextColor="#ffffff"
+            showWidth
+            showPulse
+          />
         </div>
       );
     }
@@ -232,14 +261,14 @@ export function BlockInspector({
                 placeholder="Portfólio"
               />
             </Field>
-            <Field>
+            <Field hint="Cole o link completo, com https://">
               <Label>URL</Label>
               <Input
                 value={content.url ?? ""}
                 onChange={(event) =>
                   setContent({ ...content, url: event.target.value })
                 }
-                placeholder="https://"
+                placeholder="https://instagram.com/seuuser"
               />
             </Field>
             <Field hint="Opcional. Ex.: ✨ ou o nome da rede.">
@@ -253,6 +282,12 @@ export function BlockInspector({
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+            showWidth
+            showPulse
+          />
         </div>
       );
     }
@@ -296,14 +331,46 @@ export function BlockInspector({
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+            fallbackTextColor="#ffffff"
+            showWidth
+            showPulse
+          />
         </div>
       );
     }
     case "SOCIAL": {
       const content = block.content as SocialContent;
       const items = content.items ?? [];
+      const layout: SocialLayout = content.layout || "icons";
       return (
         <div className="space-y-4">
+          <Section title="Estilo">
+            <div className="grid grid-cols-2 gap-1.5">
+              {(
+                [
+                  ["icons", "Só ícones"],
+                  ["buttons", "Botões com texto"],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setContent({ ...content, layout: value })}
+                  className={cn(
+                    "min-h-11 rounded-xl border px-2 text-[12px] font-semibold",
+                    layout === value
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white text-ink hover:border-bronze/40",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Section>
           <Section title="Redes">
             {items.length === 0 ? (
               <p className="text-[13px] text-muted">
@@ -316,7 +383,8 @@ export function BlockInspector({
                 className="space-y-3 rounded-2xl border border-line bg-white p-3.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[12px] font-semibold text-ink">
+                  <p className="flex items-center gap-2 text-[12px] font-semibold text-ink">
+                    <SocialIcon network={item.network} className="h-4 w-4" />
                     Rede {index + 1}
                   </p>
                   <button
@@ -324,6 +392,7 @@ export function BlockInspector({
                     className="text-[12px] font-medium text-red-600"
                     onClick={() =>
                       setContent({
+                        ...content,
                         items: items.filter((_, i) => i !== index),
                       })
                     }
@@ -339,15 +408,16 @@ export function BlockInspector({
                       onClick={() => {
                         const next = [...items];
                         next[index] = { ...item, network: network.id };
-                        setContent({ items: next });
+                        setContent({ ...content, items: next });
                       }}
                       className={cn(
-                        "rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
                         item.network === network.id
                           ? "border-ink bg-ink text-white"
-                          : "border-line bg-[#fffcf8] text-ink",
+                          : "border-line bg-card text-ink",
                       )}
                     >
+                      <SocialIcon network={network.id} className="h-3 w-3" />
                       {network.label}
                     </button>
                   ))}
@@ -359,19 +429,19 @@ export function BlockInspector({
                     onChange={(event) => {
                       const next = [...items];
                       next[index] = { ...item, url: event.target.value };
-                      setContent({ items: next });
+                      setContent({ ...content, items: next });
                     }}
                     placeholder="https://instagram.com/seuuser"
                   />
                 </Field>
-                <Field hint="Se vazio, usa o nome da rede.">
+                <Field hint="Usado no estilo de botões. Se vazio, usa o nome da rede.">
                   <Label>Texto no botão</Label>
                   <Input
                     value={item.label ?? ""}
                     onChange={(event) => {
                       const next = [...items];
                       next[index] = { ...item, label: event.target.value };
-                      setContent({ items: next });
+                      setContent({ ...content, items: next });
                     }}
                     placeholder={networkLabel(item.network)}
                   />
@@ -384,6 +454,7 @@ export function BlockInspector({
               size="sm"
               onClick={() =>
                 setContent({
+                  ...content,
                   items: [
                     ...items,
                     { network: "instagram", url: "https://instagram.com/" },
@@ -395,6 +466,12 @@ export function BlockInspector({
               Adicionar rede
             </Button>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+            showWidth={layout === "buttons"}
+            showPulse
+          />
         </div>
       );
     }
@@ -413,6 +490,10 @@ export function BlockInspector({
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+          />
           <Section title="Itens">
             {services.length === 0 ? (
               <p className="text-[13px] text-muted">
@@ -566,6 +647,10 @@ export function BlockInspector({
               />
             </Field>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+          />
           <Section title="Depoimentos">
             {testimonials.length === 0 ? (
               <p className="text-[13px] text-muted">
@@ -659,7 +744,7 @@ export function BlockInspector({
                             ),
                           )
                         }
-                        className="rounded-lg p-1.5 hover:bg-[#f6f3ee]"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg hover:bg-background"
                         aria-label={`${rating} estrelas`}
                       >
                         <Star

@@ -206,7 +206,9 @@ export const testimonialsApi = {
 
 export const publicApi = {
   getPage(username: string) {
-    return api<PublicPage>(`/p/${encodeURIComponent(username)}`);
+    return api<PublicPage>(`/p/${encodeURIComponent(username)}`, {
+      cache: "no-store",
+    });
   },
   checkUsername(username: string) {
     return api<UsernameCheck>(
