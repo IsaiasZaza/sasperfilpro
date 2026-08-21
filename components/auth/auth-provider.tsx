@@ -14,6 +14,7 @@ import {
   setSubscriptionRequiredHandler,
 } from "@/lib/api";
 import { authApi, profileApi } from "@/lib/api-client";
+import { clearSessionCookie } from "@/lib/session";
 import { EMPTY_SUBSCRIPTION } from "@/lib/types/billing";
 import type { Subscription } from "@/lib/types/billing";
 import type { AuthUser, Profile } from "@/lib/types/profile";
@@ -58,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfile(null);
     setSubscription(EMPTY_SUBSCRIPTION);
     setSessionError(null);
+    void clearSessionCookie();
   }, []);
 
   const refresh = useCallback(async () => {

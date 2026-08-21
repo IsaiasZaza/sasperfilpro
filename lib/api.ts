@@ -1,3 +1,5 @@
+import { getAccessToken, setAccessToken } from "@/lib/session";
+
 export type ApiErrorBody = {
   code: string;
   message: string;
@@ -71,6 +73,14 @@ function notifySubscriptionRequired(path: string) {
   subscriptionRequiredHandler?.();
 }
 
+function withAuthHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getAccessToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(extra || {}),
+  };
+}
+
 async function tryRefreshSession(): Promise<"ok" | "expired" | "subscription"> {
   if (refreshPromise) return refreshPromise;
 
@@ -79,12 +89,15 @@ async function tryRefreshSession(): Promise<"ok" | "expired" | "subscription"> {
       const res = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...withAuthHeaders(),
+        },
         body: JSON.stringify({}),
       });
-      let json: ApiResponse<unknown> | null = null;
+      let json: ApiResponse<{ accessToken?: string }> | null = null;
       try {
-        json = (await res.json()) as ApiResponse<unknown>;
+        json = (await res.json()) as ApiResponse<{ accessToken?: string }>;
       } catch {
         return "expired";
       }
@@ -92,6 +105,15 @@ async function tryRefreshSession(): Promise<"ok" | "expired" | "subscription"> {
         return "subscription";
       }
       if (!res.ok || json.error) return "expired";
+      const nextToken = json.data?.accessToken;
+      if (typeof nextToken === "string" && nextToken) {
+        setAccessToken(nextToken);
+        void fetch("/api/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accessToken: nextToken }),
+        }).catch(() => undefined);
+      }
       return "ok";
     } catch {
       return "expired";
@@ -110,10 +132,10 @@ export async function api<T>(path: string, options: ApiOptions = {}): Promise<T>
     ...rest,
     credentials: credentials ?? "include",
     headers: formData
-      ? { ...(headers || {}) }
+      ? withAuthHeaders(headers)
       : {
           "Content-Type": "application/json",
-          ...(headers || {}),
+          ...withAuthHeaders(headers),
         },
     body:
       body === undefined

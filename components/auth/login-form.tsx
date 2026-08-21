@@ -21,6 +21,7 @@ import {
   readPendingEmail,
   savePendingEmail,
 } from "@/lib/claimed-username";
+import { persistSessionCookie } from "@/lib/session";
 import type { Plan, PlanId } from "@/lib/types/billing";
 import { needsOnboarding } from "@/lib/types/profile";
 
@@ -36,7 +37,7 @@ export function LoginForm({
   nextPath?: string;
 }) {
   const router = useRouter();
-  const { setSession, refresh, ready, user, profile, subscription } = useAuth();
+  const { setSession, ready, user, profile, subscription } = useAuth();
   const [email, setEmail] = useState(initialEmail ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -105,6 +106,9 @@ export function LoginForm({
 
   async function enterApp() {
     const result = await authApi.login({ email, password });
+    if (result.accessToken) {
+      await persistSessionCookie(result.accessToken);
+    }
     let nextProfile = null;
     try {
       nextProfile = await profileApi.get();
@@ -113,17 +117,12 @@ export function LoginForm({
     }
     clearPendingEmail();
     setSession(result.user, nextProfile, result.subscription);
-    try {
-      await refresh();
-    } catch {
-      // sessão já setada localmente
-    }
     const fallback = hasWorkspaceAccess(result.subscription)
       ? needsOnboarding(nextProfile)
         ? "/onboarding"
         : "/app"
       : "/assinatura";
-    router.push(safeNext() || fallback);
+    window.location.assign(safeNext() || fallback);
   }
 
   async function resumeCheckout() {

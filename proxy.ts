@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const COOKIE = "pp_access_token";
+import { ACCESS_TOKEN_COOKIE } from "@/lib/session-cookie";
 
 export function proxy(request: NextRequest) {
-  const token = request.cookies.get(COOKIE)?.value;
+  const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   if (token) return NextResponse.next();
 
   const login = new URL("/login", request.url);
