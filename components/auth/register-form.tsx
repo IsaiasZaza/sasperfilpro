@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AUTH_INPUT_CLASS,
+  PasswordInput,
+} from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
 import { authApi, profileApi } from "@/lib/api-client";
+import { readClaimedUsername, saveClaimedUsername } from "@/lib/claimed-username";
+import { normalizeUsername } from "@/lib/reserved-usernames";
 import { needsOnboarding } from "@/lib/types/profile";
 
 export function RegisterForm() {
@@ -18,9 +24,18 @@ export function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [claimed, setClaimed] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = params.get("u") || params.get("username");
+    const username = normalizeUsername(fromQuery || readClaimedUsername());
+    if (!username) return;
+    saveClaimedUsername(username);
+    setClaimed(username);
+  }, []);
 
   useEffect(() => {
     if (!ready || !user) return;
@@ -30,19 +45,13 @@ export function RegisterForm() {
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
-
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem.");
-      return;
-    }
-
     setPending(true);
     try {
       const result = await authApi.register({
         name,
         email,
         password,
-        confirmPassword,
+        confirmPassword: password,
       });
       let nextProfile = null;
       try {
@@ -71,13 +80,18 @@ export function RegisterForm() {
   return (
     <AuthShell
       title="Criar conta"
-      subtitle="Monte sua página profissional em minutos."
+      subtitle={
+        claimed
+          ? `Depois você confirma o link /u/${claimed}.`
+          : "Três campos. Depois você monta a página."
+      }
+      action={{ href: "/login", label: "Entrar" }}
       footer={
         <>
           Já tem conta?{" "}
           <Link
             href="/login"
-            className="font-medium text-ink underline-offset-4 hover:underline"
+            className="font-semibold text-ink underline-offset-4 hover:underline"
           >
             Entrar
           </Link>
@@ -91,9 +105,11 @@ export function RegisterForm() {
             id="name"
             required
             autoComplete="name"
+            autoFocus
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Maria Oliveira"
+            className={AUTH_INPUT_CLASS}
           />
         </div>
         <div>
@@ -106,41 +122,25 @@ export function RegisterForm() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
+            className={AUTH_INPUT_CLASS}
           />
         </div>
-        <div>
-          <Label htmlFor="password">Senha</Label>
-          <Input
-            id="password"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Mínimo 8 caracteres"
-          />
-        </div>
-        <div>
-          <Label htmlFor="confirmPassword">Confirmar senha</Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            required
-            minLength={8}
-            autoComplete="new-password"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="Repita a senha"
-          />
-        </div>
+        <PasswordInput
+          id="password"
+          label="Senha"
+          value={password}
+          onChange={setPassword}
+          placeholder="Mínimo 8 caracteres"
+          autoComplete="new-password"
+          minLength={8}
+        />
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
             {error}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" size="lg" disabled={pending}>
-          {pending ? "Criando..." : "Criar minha página"}
+        <Button type="submit" className="mt-2 w-full" size="lg" disabled={pending}>
+          {pending ? "Criando..." : "Continuar"}
         </Button>
       </form>
     </AuthShell>

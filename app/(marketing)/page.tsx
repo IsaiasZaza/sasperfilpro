@@ -1,29 +1,23 @@
-import { About } from "@/components/sections/about";
-import { Benefits } from "@/components/sections/benefits";
-import { Comparison } from "@/components/sections/comparison";
-import { CtaBanner } from "@/components/sections/cta-banner";
 import { Examples } from "@/components/sections/examples";
 import { FAQ } from "@/components/sections/faq";
+import { FeaturesShowcase } from "@/components/sections/features-showcase";
 import { FinalCta } from "@/components/sections/final-cta";
 import { ForWho } from "@/components/sections/for-who";
+import { Comparison } from "@/components/sections/comparison";
 import { Hero } from "@/components/sections/hero";
 import { HowItWorks } from "@/components/sections/how-it-works";
-import { Problem } from "@/components/sections/problem";
-import { Solution } from "@/components/sections/solution";
+import { ProofMarquee } from "@/components/sections/proof-marquee";
 
 export default function Home() {
   return (
     <main>
       <Hero />
-      <Problem />
-      <Solution />
+      <ProofMarquee />
       <HowItWorks />
-      <About />
-      <ForWho />
+      <FeaturesShowcase />
       <Examples />
       <Comparison />
-      <Benefits />
-      <CtaBanner />
+      <ForWho />
       <FAQ />
       <FinalCta />
     </main>

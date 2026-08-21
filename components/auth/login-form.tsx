@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import {
+  AUTH_INPUT_CLASS,
+  PasswordInput,
+} from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,15 +60,16 @@ export function LoginForm() {
   return (
     <AuthShell
       title="Entrar"
-      subtitle="Acesse sua conta para editar e publicar sua página."
+      subtitle="Acesse sua página e continue editando."
+      action={{ href: "/cadastro", label: "Criar página" }}
       footer={
         <>
-          Ainda não tem conta?{" "}
+          Não tem conta?{" "}
           <Link
             href="/cadastro"
-            className="font-medium text-ink underline-offset-4 hover:underline"
+            className="font-semibold text-ink underline-offset-4 hover:underline"
           >
-            Criar conta
+            Criar página
           </Link>
         </>
       }
@@ -76,46 +81,49 @@ export function LoginForm() {
             id="email"
             type="email"
             autoComplete="email"
+            autoFocus
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
+            className={AUTH_INPUT_CLASS}
           />
         </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between">
-            <Label htmlFor="password" className="mb-0">
-              Senha
-            </Label>
+        <PasswordInput
+          id="password"
+          label="Senha"
+          value={password}
+          onChange={setPassword}
+          placeholder="Sua senha"
+          autoComplete="current-password"
+          extra={
             <Link
               href="/recuperar-senha"
               className="text-[12px] font-medium text-muted hover:text-ink"
             >
-              Esqueci a senha
+              Esqueci
             </Link>
-          </div>
-          <Input
-            id="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="••••••••"
-          />
-        </div>
+          }
+        />
         {error ? (
-          <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
             {error}
           </p>
         ) : null}
-        <Button type="submit" className="w-full" size="lg" disabled={pending}>
+        <Button type="submit" className="mt-2 w-full" size="lg" disabled={pending}>
           {pending ? "Entrando..." : "Entrar"}
         </Button>
         {process.env.NODE_ENV === "development" ? (
-          <p className="text-center text-[11px] text-muted-soft">
-            Dev: maria@demo.com / Demo1234!
-          </p>
+          <button
+            type="button"
+            className="w-full text-center text-[12px] text-muted-soft hover:text-ink"
+            onClick={() => {
+              setEmail("maria@demo.com");
+              setPassword("Demo1234!");
+            }}
+          >
+            Conta demo
+          </button>
         ) : null}
       </form>
     </AuthShell>

@@ -1,25 +1,22 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ClaimUsername } from "@/components/marketing/claim-username";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 
 export function FinalCta() {
   return (
-    <section className="pb-24 pt-8 sm:pb-28">
+    <section className="bg-lime py-20 sm:py-28">
       <Container>
         <Reveal>
-          <div className="mx-auto max-w-xl text-center">
-            <h2 className="font-serif text-[2.15rem] leading-[1.12] text-ink sm:text-[2.75rem]">
-              Pronto para profissionalizar sua bio?
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-serif text-[2.3rem] leading-[1.08] text-ink sm:text-[3.2rem]">
+              Comece o seu canto da internet hoje.
             </h2>
-            <p className="mt-5 text-base leading-[1.7] text-muted">
-              Pare de mandar seus clientes para uma lista de links. Monte uma
-              página profissional e publique no seu ritmo.
+            <p className="mt-5 text-base leading-[1.7] text-ink/70">
+              Reserve o link, monte a página e cole na bio. Seu próximo cliente
+              pode estar a um toque de distância.
             </p>
-            <div className="mt-8">
-              <Button asChild size="xl">
-                <Link href="/cadastro">Criar minha página agora</Link>
-              </Button>
+            <div className="mt-8 flex justify-center">
+              <ClaimUsername buttonLabel="Criar minha página" />
             </div>
           </div>
         </Reveal>

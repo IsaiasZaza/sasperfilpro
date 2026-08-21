@@ -12,6 +12,7 @@ import type {
   HeroContent,
   LinkButtonContent,
   LocationContent,
+  Profile,
   ProfileBlock,
   ServiceItem,
   ServicesContent,
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 export function BlockInspector({
   block,
   onChange,
+  profile,
   services = [],
   testimonials = [],
   onServicesChange,
@@ -34,6 +36,7 @@ export function BlockInspector({
 }: {
   block: ProfileBlock;
   onChange: (next: ProfileBlock) => void;
+  profile?: Profile | null;
   services?: ServiceItem[];
   testimonials?: TestimonialItem[];
   onServicesChange?: (next: ServiceItem[]) => void;
@@ -45,23 +48,31 @@ export function BlockInspector({
   switch (block.type) {
     case "HERO": {
       const content = block.content as HeroContent;
+      const avatarUrl = content.avatarUrl || profile?.avatarUrl || "";
+      const name = content.name || profile?.displayName || "";
+      const headline = content.headline || profile?.headline || "";
+      const bio = content.bio || profile?.bio || "";
+      const location = content.location || profile?.location || "";
       return (
         <div className="space-y-5">
           <Section title="Foto">
-            {content.avatarUrl ? (
+            {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={content.avatarUrl}
+                src={avatarUrl}
                 alt=""
                 className="mb-3 h-16 w-16 rounded-full object-cover"
               />
             ) : null}
             <Field hint="Cole o link de uma imagem (https://...).">
-              <Label>URL do avatar</Label>
+              <Label>URL da foto</Label>
               <Input
-                value={content.avatarUrl ?? ""}
+                value={avatarUrl}
                 onChange={(event) =>
-                  setContent({ ...content, avatarUrl: event.target.value })
+                  setContent({
+                    ...content,
+                    avatarUrl: event.target.value,
+                  })
                 }
                 placeholder="https://..."
               />
@@ -71,7 +82,7 @@ export function BlockInspector({
             <Field hint="Como o nome aparece no cabeçalho da página.">
               <Label>Nome</Label>
               <Input
-                value={content.name ?? ""}
+                value={name}
                 onChange={(event) =>
                   setContent({ ...content, name: event.target.value })
                 }
@@ -81,7 +92,7 @@ export function BlockInspector({
             <Field>
               <Label>Headline</Label>
               <Input
-                value={content.headline ?? ""}
+                value={headline}
                 onChange={(event) =>
                   setContent({ ...content, headline: event.target.value })
                 }
@@ -91,7 +102,7 @@ export function BlockInspector({
             <Field>
               <Label>Bio</Label>
               <Textarea
-                value={content.bio ?? ""}
+                value={bio}
                 onChange={(event) =>
                   setContent({ ...content, bio: event.target.value })
                 }
@@ -101,7 +112,7 @@ export function BlockInspector({
             <Field>
               <Label>Cidade no cabeçalho</Label>
               <Input
-                value={content.location ?? ""}
+                value={location}
                 onChange={(event) =>
                   setContent({ ...content, location: event.target.value })
                 }
@@ -708,7 +719,7 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
+      <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
         {title}
       </h3>
       {children}
@@ -727,7 +738,7 @@ function Field({
     <div>
       {children}
       {hint ? (
-        <p className="mt-1.5 text-[12px] leading-relaxed text-muted-soft">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
           {hint}
         </p>
       ) : null}

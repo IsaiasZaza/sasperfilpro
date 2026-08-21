@@ -7,6 +7,7 @@ import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api";
 import { publicApi } from "@/lib/api-client";
+import { resolvePaintTheme } from "@/lib/theme";
 import type { PublicPage } from "@/lib/types/profile";
 
 export default function PublicProfilePage() {
@@ -67,12 +68,19 @@ export default function PublicProfilePage() {
     );
   }
 
-  const bg =
-    (page.theme?.background as string) ||
-    "#faf6f2";
+  const painted = resolvePaintTheme(page.theme);
 
   return (
-    <div className="relative min-h-screen pb-16" style={{ background: bg }}>
+    <div
+      className={
+        painted.font === "serif"
+          ? "relative min-h-screen pb-16 font-serif"
+          : painted.font === "mono"
+            ? "relative min-h-screen pb-16 font-mono"
+            : "relative min-h-screen pb-16 font-sans"
+      }
+      style={{ background: painted.background }}
+    >
       <div className="mx-auto min-h-screen w-full max-w-md">
         <ProfilePreview page={page} showStatusBar={false} />
       </div>

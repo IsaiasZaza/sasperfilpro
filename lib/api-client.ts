@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { ApiTheme } from "@/lib/theme";
 import type {
   AuthPayload,
   AuthUser,
@@ -11,7 +12,6 @@ import type {
   UsernameCheck,
   BlockType,
   BlockContent,
-  ProfileTheme,
 } from "@/lib/types/profile";
 
 export const authApi = {
@@ -70,7 +70,7 @@ export const profileApi = {
     bio?: string;
     avatarUrl?: string;
     location?: string;
-    theme?: ProfileTheme;
+    theme?: ApiTheme;
   }) {
     return api<Profile>("/me/profile", { method: "PUT", body: input });
   },

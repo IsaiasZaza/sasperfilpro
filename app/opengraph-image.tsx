@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "PerfilPro — Seu perfil profissional na bio do Instagram";
+export const alt = "PerfilPro — Tudo o que você é, em um só link";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -14,7 +14,7 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: "#F6F3EE",
+          background: "#D4E05C",
           padding: "72px",
           color: "#14110E",
         }}
@@ -24,7 +24,7 @@ export default function OpenGraphImage() {
             fontSize: 28,
             letterSpacing: 4,
             textTransform: "uppercase",
-            color: "#9A7048",
+            color: "#14110E",
           }}
         >
           PerfilPro
@@ -32,16 +32,16 @@ export default function OpenGraphImage() {
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
             style={{
-              fontSize: 64,
-              lineHeight: 1.1,
-              maxWidth: 900,
+              fontSize: 68,
+              lineHeight: 1.05,
+              maxWidth: 920,
             }}
           >
-            Transforme o link da sua bio em uma página que vende por você.
+            Tudo o que você é. Em um só link.
           </div>
-          <div style={{ fontSize: 28, color: "#6B645C", maxWidth: 780 }}>
-            Seu Instagram apresenta. Seu PerfilPro transforma visitantes em
-            clientes.
+          <div style={{ fontSize: 28, color: "#3d3a32", maxWidth: 780 }}>
+            Monte sua página, mostre serviços e leve o cliente direto para o
+            WhatsApp.
           </div>
         </div>
       </div>

@@ -19,8 +19,6 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Check,
-  CheckCircle2,
-  Circle,
   Copy,
   ExternalLink,
   Eye,
@@ -41,6 +39,7 @@ import {
   BLOCK_ICONS,
   BLOCK_TIPS,
   INSERTABLE_BLOCKS,
+  UNIQUE_BLOCKS,
 } from "@/components/editor/editor-meta";
 import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfilePreview } from "@/components/profile/profile-preview";
@@ -54,6 +53,11 @@ import {
   testimonialsApi,
 } from "@/lib/api-client";
 import {
+  mergeThemeResponse,
+  themeFromApi,
+  themeToApi,
+} from "@/lib/theme";
+import {
   BLOCK_META,
   type BlockType,
   type Profile,
@@ -66,6 +70,26 @@ import { cn } from "@/lib/utils";
 
 type MobileTab = "blocks" | "edit" | "preview";
 type EditorPanel = "block" | "appearance";
+
+function profileSnapshot(profile: Profile) {
+  return JSON.stringify({
+    username: profile.username,
+    displayName: profile.displayName,
+    headline: profile.headline,
+    bio: profile.bio,
+    location: profile.location,
+    avatarUrl: profile.avatarUrl,
+    theme: themeToApi(profile.theme) ?? {},
+  });
+}
+
+function withPersistedTheme(
+  updated: Profile,
+  local: Profile | null | undefined,
+): { profile: Profile; lost: boolean } {
+  const merged = mergeThemeResponse(updated.theme, local?.theme);
+  return { profile: { ...updated, theme: merged.theme }, lost: merged.lost };
+}
 
 function sortBlocks(blocks: ProfileBlock[]) {
   return [...blocks].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -84,7 +108,7 @@ function blockSummary(block: ProfileBlock): string {
 function defaultContent(type: BlockType): ProfileBlock["content"] {
   switch (type) {
     case "HERO":
-      return { name: "Seu nome", headline: "Sua profissão" };
+      return { name: "", headline: "" };
     case "CTA_BUTTON":
       return { label: "Agendar horário", url: "https://", style: "primary" };
     case "LINK_BUTTON":
@@ -137,45 +161,44 @@ function SortableBlockRow({
         transition,
       }}
       className={cn(
-        "flex items-center gap-2 rounded-xl border px-2 py-2 transition-colors",
+        "flex cursor-pointer items-center gap-2 rounded-xl border px-2 py-2 transition-colors",
         selected
-          ? "border-bronze/40 bg-white shadow-[0_8px_20px_-14px_rgba(20,17,14,0.45)]"
-          : "border-transparent hover:border-line hover:bg-white/80",
-        isDragging && "z-10 border-bronze/50 bg-white opacity-95 shadow-lg",
+          ? "border-ink/15 bg-[#efeae3]"
+          : "border-transparent hover:bg-[#f6f3ee]",
+        isDragging && "z-10 cursor-grabbing border-ink/20 bg-white opacity-95 shadow-lg",
         !block.isVisible && "opacity-55",
       )}
+      onClick={onSelect}
     >
+      <span className={cn("h-8 w-0.5 shrink-0 rounded-full", selected ? "bg-ink" : "bg-transparent")} />
       <button
         type="button"
         className="inline-flex h-8 w-7 shrink-0 cursor-grab items-center justify-center rounded-lg text-muted-soft active:cursor-grabbing"
         aria-label="Arrastar para reordenar"
+        onClick={(event) => event.stopPropagation()}
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
-      <button
-        type="button"
-        onClick={onSelect}
-        className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
-      >
+      <span className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
         <span
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-            selected ? "bg-ink text-white" : "bg-[#efeae3] text-ink",
+            selected ? "bg-ink text-white" : "bg-white text-ink",
           )}
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <span className="min-w-0">
-          <span className="block truncate text-[13px] font-semibold text-ink">
+        <span className="min-w-0 flex-1">
+          <span className="block text-[13px] font-semibold text-ink">
             {BLOCK_META[block.type].label}
           </span>
           <span className="block truncate text-[11px] text-muted">
             {blockSummary(block)}
           </span>
         </span>
-      </button>
+      </span>
       <button
         type="button"
         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white hover:text-ink"
@@ -223,6 +246,8 @@ export function EditorWorkspace() {
   const lastSavedServices = useRef("");
   const lastSavedTestimonials = useRef("");
   const lastSavedProfile = useRef("");
+  const profileRef = useRef<Profile | null>(null);
+  const profileSaveGen = useRef(0);
 
   const orderedBlocks = useMemo(() => sortBlocks(blocks), [blocks]);
   const selected = orderedBlocks.find((b) => b.id === selectedId) ?? null;
@@ -246,39 +271,6 @@ export function EditorWorkspace() {
     };
   }, [profile, orderedBlocks, services, testimonials]);
 
-  const checklist = useMemo(() => {
-    const hero = orderedBlocks.find((b) => b.type === "HERO" && b.isVisible);
-    const whatsapp = orderedBlocks.find(
-      (b) => b.type === "WHATSAPP" && b.isVisible,
-    );
-    const heroName =
-      hero && "name" in hero.content ? String(hero.content.name || "") : "";
-    const phone =
-      whatsapp && "phone" in whatsapp.content
-        ? String(whatsapp.content.phone || "")
-        : "";
-    return [
-      {
-        id: "username",
-        label: "Username definido",
-        done: Boolean(profile?.username && !profile.username.startsWith("user-")),
-      },
-      {
-        id: "name",
-        label: "Nome no perfil",
-        done: Boolean(profile?.displayName || heroName),
-      },
-      { id: "whatsapp", label: "WhatsApp preenchido", done: Boolean(phone) },
-      {
-        id: "services",
-        label: "Pelo menos um serviço",
-        done: services.length > 0,
-      },
-    ];
-  }, [orderedBlocks, profile, services.length]);
-
-  const readyCount = checklist.filter((i) => i.done).length;
-
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, {
@@ -297,8 +289,9 @@ export function EditorWorkspace() {
         testimonialsApi.list(),
       ]);
       const ordered = sortBlocks(b);
-      setProfile(p);
-      setAuthProfile(p);
+      const loaded = { ...p, theme: themeFromApi(p.theme) };
+      setProfile(loaded);
+      setAuthProfile(loaded);
       setBlocks(ordered);
       setServices(s);
       setTestimonials(t);
@@ -313,15 +306,7 @@ export function EditorWorkspace() {
       }
       lastSavedServices.current = JSON.stringify(s);
       lastSavedTestimonials.current = JSON.stringify(t);
-      lastSavedProfile.current = JSON.stringify({
-        username: p.username,
-        displayName: p.displayName,
-        headline: p.headline,
-        bio: p.bio,
-        location: p.location,
-        avatarUrl: p.avatarUrl,
-        theme: p.theme,
-      });
+      lastSavedProfile.current = profileSnapshot(loaded);
     } catch (err) {
       setLoadError(
         err instanceof ApiError
@@ -336,6 +321,10 @@ export function EditorWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
 
   // Autosave bloco selecionado (sem loop)
   useEffect(() => {
@@ -369,15 +358,27 @@ export function EditorWorkspace() {
               location?: string;
               avatarUrl?: string;
             };
+            const current = profileRef.current;
             const updatedProfile = await profileApi.update({
-              displayName: hero.name || undefined,
-              headline: hero.headline || undefined,
-              bio: hero.bio || undefined,
-              location: hero.location || undefined,
-              avatarUrl: hero.avatarUrl || undefined,
+              displayName: hero.name || current?.displayName || undefined,
+              headline: hero.headline || current?.headline || undefined,
+              bio: hero.bio || current?.bio || undefined,
+              location: hero.location || current?.location || undefined,
+              avatarUrl: hero.avatarUrl || current?.avatarUrl || undefined,
+              theme: themeToApi(current?.theme),
             });
-            setProfile(updatedProfile);
-            setAuthProfile(updatedProfile);
+            const { profile: merged, lost } = withPersistedTheme(
+              updatedProfile,
+              current,
+            );
+            lastSavedProfile.current = profileSnapshot(merged);
+            setProfile(merged);
+            setAuthProfile(merged);
+            if (lost) {
+              setSaveState("error");
+              setMessage("Não foi possível gravar o tema. Tente de novo.");
+              return;
+            }
           }
           setSaveState("saved");
         } catch {
@@ -482,44 +483,41 @@ export function EditorWorkspace() {
   // Autosave aparência / dados da página
   useEffect(() => {
     if (loading || loadError || !profile) return;
-    const snapshot = JSON.stringify({
-      username: profile.username,
-      displayName: profile.displayName,
-      headline: profile.headline,
-      bio: profile.bio,
-      location: profile.location,
-      avatarUrl: profile.avatarUrl,
-      theme: profile.theme,
-    });
+    const snapshot = profileSnapshot(profile);
     if (snapshot === lastSavedProfile.current) return;
 
     if (profileTimer.current) window.clearTimeout(profileTimer.current);
     setSaveState("saving");
+    const gen = ++profileSaveGen.current;
+    const pending = profile;
     profileTimer.current = window.setTimeout(() => {
       void (async () => {
         try {
           const updated = await profileApi.update({
-            username: profile.username || undefined,
-            displayName: profile.displayName || undefined,
-            headline: profile.headline || undefined,
-            bio: profile.bio || undefined,
-            location: profile.location || undefined,
-            avatarUrl: profile.avatarUrl || undefined,
-            theme: profile.theme || undefined,
+            username: pending.username || undefined,
+            displayName: pending.displayName || undefined,
+            headline: pending.headline || undefined,
+            bio: pending.bio || undefined,
+            location: pending.location || undefined,
+            avatarUrl: pending.avatarUrl || undefined,
+            theme: themeToApi(pending.theme),
           });
-          lastSavedProfile.current = JSON.stringify({
-            username: updated.username,
-            displayName: updated.displayName,
-            headline: updated.headline,
-            bio: updated.bio,
-            location: updated.location,
-            avatarUrl: updated.avatarUrl,
-            theme: updated.theme,
-          });
-          setProfile(updated);
-          setAuthProfile(updated);
+          if (gen !== profileSaveGen.current) return;
+          const { profile: merged, lost } = withPersistedTheme(
+            updated,
+            pending,
+          );
+          lastSavedProfile.current = profileSnapshot(merged);
+          setProfile(merged);
+          setAuthProfile(merged);
+          if (lost) {
+            setSaveState("error");
+            setMessage("Não foi possível gravar o tema. Tente de novo.");
+            return;
+          }
           setSaveState("saved");
         } catch (err) {
+          if (gen !== profileSaveGen.current) return;
           setSaveState("error");
           setMessage(
             err instanceof ApiError
@@ -624,7 +622,13 @@ export function EditorWorkspace() {
   async function onPublish() {
     try {
       const published = await profileApi.publish();
-      setProfile(published);
+      const { profile: merged } = withPersistedTheme(
+        published,
+        profileRef.current,
+      );
+      lastSavedProfile.current = profileSnapshot(merged);
+      setProfile(merged);
+      setAuthProfile(merged);
       await refresh();
       setMessage("Página publicada! Seu link já pode ir na bio.");
     } catch (err) {
@@ -635,7 +639,10 @@ export function EditorWorkspace() {
   async function onUnpublish() {
     try {
       const draft = await profileApi.unpublish();
-      setProfile(draft);
+      const { profile: merged } = withPersistedTheme(draft, profileRef.current);
+      lastSavedProfile.current = profileSnapshot(merged);
+      setProfile(merged);
+      setAuthProfile(merged);
       await refresh();
       setMessage("Página despublicada.");
     } catch (err) {
@@ -691,55 +698,49 @@ export function EditorWorkspace() {
   }
 
   return (
-    <div className="flex h-dvh flex-col bg-[linear-gradient(180deg,#f3efe8_0%,#efeae3_40%,#e8e1d6_100%)]">
-      <header className="border-b border-line/80 bg-[#fffcf8]/95 backdrop-blur-md">
-        <div className="flex h-14 items-center justify-between gap-3 px-4">
+    <div className="flex h-dvh flex-col bg-[#f6f3ee]">
+      <header className="border-b border-line bg-white">
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Link href="/app" className="shrink-0 font-serif text-[1.25rem] text-ink">
+            <Link href="/app" className="shrink-0 font-serif text-[1.35rem] leading-none text-ink">
               PerfilPro
             </Link>
-            <span className="hidden h-4 w-px bg-line sm:block" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[13px] font-medium text-ink">Editor</span>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                    profile.status === "PUBLISHED"
-                      ? "bg-emerald-100 text-emerald-800"
-                      : "bg-[#efeae3] text-muted",
-                  )}
-                >
-                  {profile.status === "PUBLISHED" ? "Publicada" : "Rascunho"}
-                </span>
-                <span className="hidden items-center gap-1 text-[11px] text-muted sm:inline-flex">
-                  {saveState === "saving"
-                    ? "Salvando..."
-                    : saveState === "error"
-                      ? "Erro ao salvar"
-                      : (
-                          <>
-                            <Check className="h-3 w-3 text-emerald-600" />
-                            Salvo
-                          </>
-                        )}
-                </span>
-              </div>
-              {profile.username ? (
-                <p className="truncate text-[11px] text-muted">
-                  /u/{profile.username}
-                </p>
-              ) : null}
-            </div>
+            <nav className="hidden items-center gap-1 sm:flex">
+              <Link
+                href="/app"
+                className="rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-muted hover:bg-[#f6f3ee] hover:text-ink"
+              >
+                Página
+              </Link>
+              <span className="rounded-lg bg-[#f6f3ee] px-2.5 py-1.5 text-[13px] font-medium text-ink">
+                Editor
+              </span>
+            </nav>
+            <span
+              className={cn(
+                "hidden rounded-full px-2.5 py-0.5 text-[11px] font-semibold sm:inline",
+                profile.status === "PUBLISHED"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-[#efeae3] text-muted",
+              )}
+            >
+              {profile.status === "PUBLISHED" ? "Publicada" : "Rascunho"}
+            </span>
+            <span className="hidden items-center gap-1 text-[12px] text-muted md:inline-flex">
+              {saveState === "saving"
+                ? "Salvando..."
+                : saveState === "error"
+                  ? "Erro ao salvar"
+                  : (
+                      <>
+                        <Check className="h-3 w-3 text-emerald-600" />
+                        Salvo
+                      </>
+                    )}
+            </span>
           </div>
 
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Link
-              href="/app"
-              className="hidden px-2 text-[13px] font-medium text-muted hover:text-ink sm:inline"
-            >
-              Painel
-            </Link>
             {profile.username ? (
               <button
                 type="button"
@@ -752,35 +753,24 @@ export function EditorWorkspace() {
                   <Copy className="h-3.5 w-3.5" />
                 )}
                 <span className="hidden sm:inline">
-                  {copied ? "Copiado" : "Copiar link"}
+                  {copied ? "Copiado" : `/u/${profile.username}`}
                 </span>
               </button>
             ) : null}
             {profile.status === "PUBLISHED" && profile.username ? (
-              <Button asChild variant="secondary" size="sm" className="hidden sm:inline-flex">
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex">
                 <Link href={`/u/${profile.username}`} target="_blank">
                   <ExternalLink className="h-3.5 w-3.5" />
                   Ver
                 </Link>
               </Button>
             ) : null}
-            {profile.status === "PUBLISHED" ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="hidden md:inline-flex"
-                onClick={() => void onUnpublish()}
-              >
-                Despublicar
-              </Button>
-            ) : null}
             <Button type="button" size="sm" onClick={() => void onPublish()}>
-              Publicar
+              {profile.status === "PUBLISHED" ? "Atualizar" : "Publicar"}
             </Button>
             <button
               type="button"
-              className="hidden text-[13px] font-medium text-ink underline-offset-4 hover:underline sm:inline"
+              className="hidden text-[13px] text-muted hover:text-ink sm:inline"
               onClick={() => void handleLogout()}
             >
               Sair
@@ -798,7 +788,7 @@ export function EditorWorkspace() {
         ) : null}
       </header>
 
-      <div className="grid grid-cols-3 border-b border-line bg-[#fffcf8] lg:hidden">
+      <div className="grid grid-cols-3 border-b border-line bg-white p-1.5 lg:hidden">
         {(
           [
             ["blocks", "Blocos"],
@@ -811,9 +801,9 @@ export function EditorWorkspace() {
             type="button"
             onClick={() => setMobileTab(id)}
             className={cn(
-              "py-2.5 text-[13px] font-medium",
+              "rounded-full py-2 text-[13px] font-medium",
               mobileTab === id
-                ? "border-b-2 border-ink text-ink"
+                ? "bg-ink text-white"
                 : "text-muted",
             )}
           >
@@ -822,10 +812,10 @@ export function EditorWorkspace() {
         ))}
       </div>
 
-      <div className="grid min-h-0 flex-1 lg:grid-cols-[280px_minmax(0,1fr)_300px]">
+      <div className="grid min-h-0 flex-1 lg:grid-cols-[272px_minmax(0,1fr)_minmax(280px,380px)]">
         <aside
           className={cn(
-            "min-h-0 flex-col border-r border-line bg-[#fffcf8]/90",
+            "min-h-0 flex-col border-r border-line bg-white",
             mobileTab === "blocks" ? "flex" : "hidden lg:flex",
           )}
         >
@@ -834,10 +824,11 @@ export function EditorWorkspace() {
               type="button"
               className="w-full"
               size="sm"
+              variant={inserterOpen ? "secondary" : "primary"}
               onClick={() => setInserterOpen((v) => !v)}
             >
-              <Plus className="h-4 w-4" />
-              {inserterOpen ? "Fechar inseridor" : "Adicionar bloco"}
+              {inserterOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {inserterOpen ? "Fechar" : "Adicionar bloco"}
             </Button>
             <button
               type="button"
@@ -845,36 +836,59 @@ export function EditorWorkspace() {
                 setEditorPanel("appearance");
                 setSelectedId(null);
                 setMobileTab("edit");
+                setInserterOpen(false);
               }}
               className={cn(
                 "mt-2 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-[13px] font-semibold transition",
                 editorPanel === "appearance"
-                  ? "border-bronze/40 bg-white text-ink shadow-sm"
-                  : "border-transparent text-muted hover:border-line hover:bg-white/80 hover:text-ink",
+                  ? "border-ink/15 bg-[#efeae3] text-ink"
+                  : "border-transparent text-muted hover:bg-[#f6f3ee] hover:text-ink",
               )}
             >
               <Palette className="h-4 w-4" />
-              Aparência e página
+              Aparência
             </button>
           </div>
 
           {inserterOpen ? (
-            <div className="border-b border-line bg-white p-3">
-              <div className="grid grid-cols-2 gap-2">
+            <div className="border-b border-line bg-[#f6f3ee]/50 p-3">
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
+                Novo bloco
+              </p>
+              <div className="grid grid-cols-1 gap-1">
                 {INSERTABLE_BLOCKS.map((type) => {
                   const Icon = BLOCK_ICONS[type];
+                  const existing = UNIQUE_BLOCKS.includes(type)
+                    ? orderedBlocks.find((block) => block.type === type)
+                    : undefined;
                   return (
                     <button
                       key={type}
                       type="button"
-                      onClick={() => void addBlock(type)}
-                      className="flex flex-col items-start gap-2 rounded-xl border border-line bg-[#fffcf8] p-2.5 text-left hover:border-bronze/40 hover:bg-white"
+                      onClick={() => {
+                        if (existing) {
+                          setEditorPanel("block");
+                          setSelectedId(existing.id);
+                          setInserterOpen(false);
+                          setMobileTab("edit");
+                          return;
+                        }
+                        void addBlock(type);
+                      }}
+                      className="flex items-center gap-2.5 rounded-xl border border-transparent bg-white px-2.5 py-2 text-left hover:border-ink/10"
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-ink text-white">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <span className="text-[12px] font-semibold text-ink">
-                        {BLOCK_META[type].label}
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13px] font-semibold text-ink">
+                          {BLOCK_META[type].label}
+                        </span>
+                        {existing ? (
+                          <span className="block text-[11px] text-muted">
+                            Já na página — clicar para editar
+                          </span>
+                        ) : null}
                       </span>
                     </button>
                   );
@@ -908,6 +922,7 @@ export function EditorWorkspace() {
                         setEditorPanel("block");
                         setSelectedId(block.id);
                         setMobileTab("edit");
+                        setInserterOpen(false);
                       }}
                       onToggleVisible={() => {
                         setEditorPanel("block");
@@ -926,65 +941,59 @@ export function EditorWorkspace() {
                 </div>
               </SortableContext>
             </DndContext>
+          </div>
+        </aside>
 
-            <div className="mt-5 rounded-2xl border border-line bg-white p-3">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-                Pronto para publicar?
-              </p>
-              <p className="mt-1 text-[12px] text-muted">
-                {readyCount}/{checklist.length}
-              </p>
-              <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-[#efeae3]">
-                <div
-                  className="h-full rounded-full bg-bronze transition-all"
-                  style={{
-                    width: `${(readyCount / checklist.length) * 100}%`,
+        <aside
+          className={cn(
+            "relative flex min-h-0 items-center justify-center overflow-y-auto bg-[#efeae3]",
+            mobileTab === "preview" ? "flex" : "hidden lg:flex",
+          )}
+        >
+          {previewPage ? (
+            <div className="py-8">
+              <PhoneFrame>
+                <ProfilePreview
+                  page={previewPage}
+                  selectedId={
+                    editorPanel === "block" ? selectedId : null
+                  }
+                  onSelectBlock={(id) => {
+                    setEditorPanel("block");
+                    setSelectedId(id);
+                    setMobileTab("edit");
+                    setInserterOpen(false);
                   }}
                 />
-              </div>
-              <ul className="mt-3 space-y-1.5">
-                {checklist.map((item) => (
-                  <li
-                    key={item.id}
-                    className="flex items-center gap-2 text-[12px]"
-                  >
-                    {item.done ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                    ) : (
-                      <Circle className="h-3.5 w-3.5 text-muted-soft" />
-                    )}
-                    {item.label}
-                  </li>
-                ))}
-              </ul>
+              </PhoneFrame>
             </div>
-          </div>
+          ) : null}
         </aside>
 
         <section
           className={cn(
-            "min-h-0 overflow-y-auto p-4 sm:p-6",
+            "min-h-0 overflow-y-auto border-l border-line bg-white",
             mobileTab === "edit" ? "block" : "hidden lg:block",
           )}
         >
           {editorPanel === "appearance" ? (
-            <div className="mx-auto max-w-xl">
-              <div className="mb-4 rounded-2xl border border-line/80 bg-[#fffcf8] p-4">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b border-line px-5 py-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink text-white">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                     <Palette className="h-4 w-4" />
                   </span>
                   <div>
-                    <h2 className="font-serif text-[1.4rem] text-ink">
-                      Aparência e página
+                    <h2 className="text-[15px] font-semibold text-ink">
+                      Aparência
                     </h2>
-                    <p className="mt-1 text-[13px] text-muted">
-                      Fundo, cores, botões e dados gerais do perfil.
+                    <p className="mt-0.5 text-[13px] text-muted">
+                      Fundo, cores e endereço da página.
                     </p>
                   </div>
                 </div>
               </div>
-              <div className="rounded-2xl border border-line bg-[#fffcf8] p-5 sm:p-6">
+              <div className="px-5 py-5">
                 <AppearancePanel
                   profile={profile}
                   onChange={(patch) => {
@@ -994,34 +1003,43 @@ export function EditorWorkspace() {
                             ...prev,
                             ...patch,
                             theme: patch.theme
-                              ? { ...(prev.theme || {}), ...patch.theme }
+                              ? { ...patch.theme }
                               : prev.theme,
                           }
                         : prev,
                     );
                   }}
                 />
+                {profile.status === "PUBLISHED" ? (
+                  <button
+                    type="button"
+                    className="mt-8 text-[12px] text-muted hover:text-ink"
+                    onClick={() => void onUnpublish()}
+                  >
+                    Despublicar página
+                  </button>
+                ) : null}
               </div>
             </div>
           ) : selected && SelectedIcon ? (
-            <div className="mx-auto max-w-xl">
-              <div className="mb-4 rounded-2xl border border-line/80 bg-[#fffcf8] p-4">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b border-line px-5 py-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ink text-white">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
                     <SelectedIcon className="h-4 w-4" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <h2 className="font-serif text-[1.4rem] text-ink">
+                    <h2 className="text-[15px] font-semibold text-ink">
                       {BLOCK_META[selected.type].label}
                     </h2>
-                    <p className="mt-1 text-[13px] text-muted">
+                    <p className="mt-0.5 text-[13px] leading-relaxed text-muted">
                       {BLOCK_TIPS[selected.type]}
                     </p>
                   </div>
                   <div className="flex gap-1">
                     <button
                       type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-muted"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-[#f6f3ee] hover:text-ink"
                       onClick={() =>
                         updateSelected({
                           ...selected,
@@ -1037,7 +1055,7 @@ export function EditorWorkspace() {
                     </button>
                     <button
                       type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white text-red-600"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
                       onClick={() => void removeBlock(selected.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -1045,11 +1063,11 @@ export function EditorWorkspace() {
                   </div>
                 </div>
               </div>
-
-              <div className="rounded-2xl border border-line bg-[#fffcf8] p-5 sm:p-6">
+              <div className="px-5 py-5">
                 <BlockInspector
                   block={selected}
                   onChange={updateSelected}
+                  profile={profile}
                   services={services}
                   testimonials={testimonials}
                   onServicesChange={handleServicesChange}
@@ -1058,72 +1076,30 @@ export function EditorWorkspace() {
               </div>
             </div>
           ) : (
-            <div className="mx-auto max-w-md rounded-2xl border border-dashed border-line bg-white/60 px-6 py-16 text-center">
-              <p className="font-serif text-xl text-ink">
-                Selecione um bloco ou a aparência
+            <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center">
+              <p className="text-[15px] font-medium text-ink">
+                Selecione um bloco
               </p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setEditorPanel("appearance");
-                    setMobileTab("edit");
-                  }}
-                >
-                  <Palette className="h-4 w-4" />
-                  Aparência
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => {
-                    setInserterOpen(true);
-                    setMobileTab("blocks");
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar bloco
-                </Button>
-              </div>
+              <p className="mt-1 max-w-[220px] text-[13px] text-muted">
+                Ou abra a aparência para mudar cores e o endereço da página.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="mt-5"
+                onClick={() => {
+                  setEditorPanel("appearance");
+                  setSelectedId(null);
+                  setMobileTab("edit");
+                }}
+              >
+                <Palette className="h-4 w-4" />
+                Aparência
+              </Button>
             </div>
           )}
         </section>
-
-        <aside
-          className={cn(
-            "min-h-0 overflow-y-auto border-l border-line bg-[#ebe4d8]/70 p-4",
-            mobileTab === "preview" ? "block" : "hidden lg:block",
-          )}
-        >
-          <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-            Preview
-          </p>
-          <p className="mb-3 text-center text-[11px] text-muted">
-            Clique no bloco para editar
-          </p>
-          {previewPage ? (
-            <div className="mx-auto w-fit p-3">
-              <PhoneFrame size="sm">
-                <ProfilePreview
-                  page={previewPage}
-                  selectedId={
-                    editorPanel === "block" ? selectedId : null
-                  }
-                  onSelectBlock={(id) => {
-                    setEditorPanel("block");
-                    setSelectedId(id);
-                    setMobileTab("edit");
-                  }}
-                  onSelectBackground={() => {
-                    setEditorPanel("appearance");
-                    setSelectedId(null);
-                    setMobileTab("edit");
-                  }}
-                />
-              </PhoneFrame>
-            </div>
-          ) : null}
-        </aside>
       </div>
     </div>
   );

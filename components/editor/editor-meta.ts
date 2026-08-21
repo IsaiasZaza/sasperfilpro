@@ -22,6 +22,8 @@ export const INSERTABLE_BLOCKS: BlockType[] = [
   "LOCATION",
 ];
 
+export const UNIQUE_BLOCKS: BlockType[] = ["HERO", "SERVICES", "TESTIMONIALS"];
+
 export const BLOCK_ICONS: Record<BlockType, LucideIcon> = {
   HERO: UserRound,
   CTA_BUTTON: Crosshair,

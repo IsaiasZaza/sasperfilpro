@@ -9,6 +9,13 @@ import { authApi } from "@/lib/api-client";
 import { needsOnboarding } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "P";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -32,26 +39,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
-  if (!ready) {
+  if (!ready || !user || (needsOnboarding(profile) && !isOnboarding)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee] text-muted">
         Carregando...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee] text-muted">
-        Redirecionando...
-      </div>
-    );
-  }
-
-  if (needsOnboarding(profile) && !isOnboarding) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee] text-muted">
-        Redirecionando...
       </div>
     );
   }
@@ -66,20 +57,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }
 
+  const isDashboard = pathname === "/app";
+
   return (
-    <div className="min-h-screen bg-[#f6f3ee]">
+    <div className={cn("min-h-screen", isDashboard ? "bg-lime" : "bg-[#f6f3ee]")}>
       {!isEditor ? (
-        <header className="sticky top-0 z-40 border-b border-line/80 bg-[#f6f3ee]/92 backdrop-blur-md">
-          <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+        <header
+          className={cn(
+            "sticky top-0 z-40 border-b backdrop-blur-md",
+            isDashboard
+              ? "border-transparent bg-lime/85"
+              : "border-line/80 bg-[#f6f3ee]/90",
+          )}
+        >
+          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
             <div className="flex items-center gap-6">
               <Link
                 href={isOnboarding ? "/onboarding" : "/app"}
-                className="font-serif text-[1.3rem] text-ink"
+                className="font-serif text-[1.3rem] leading-none text-ink"
               >
                 PerfilPro
               </Link>
               {!isOnboarding ? (
-                <nav className="hidden items-center gap-4 sm:flex">
+                <nav className="hidden items-center gap-5 sm:flex">
                   <Link
                     href="/app"
                     className={cn(
@@ -89,7 +89,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         : "text-muted hover:text-ink",
                     )}
                   >
-                    Painel
+                    Página
                   </Link>
                   <Link
                     href="/app/editor"
@@ -106,15 +106,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </div>
             <div className="flex items-center gap-3">
-              <span className="hidden text-[13px] text-muted sm:inline">
-                {user.name}
-              </span>
               {!isOnboarding ? (
                 <button
                   type="button"
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/70 sm:hidden"
                   aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
-                  onClick={() => setMenuOpen((v) => !v)}
+                  onClick={() => setMenuOpen((value) => !value)}
                 >
                   {menuOpen ? (
                     <X className="h-4 w-4" />
@@ -123,9 +120,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   )}
                 </button>
               ) : null}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-[11px] font-semibold text-white">
+                {initials(user.name)}
+              </div>
               <button
                 type="button"
-                className="text-[13px] font-medium text-ink underline-offset-4 hover:underline"
+                className="text-[13px] text-muted hover:text-ink"
                 onClick={() => void handleLogout()}
               >
                 Sair
@@ -133,13 +133,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
           {menuOpen && !isOnboarding ? (
-            <div className="border-t border-line bg-[#f6f3ee] sm:hidden">
+            <div
+              className={cn(
+                "border-t sm:hidden",
+                isDashboard
+                  ? "border-ink/10 bg-lime"
+                  : "border-line bg-[#f6f3ee]",
+              )}
+            >
               <div className="mx-auto flex max-w-6xl flex-col px-5 py-2">
                 <Link
                   href="/app"
                   className="rounded-lg px-2 py-3 text-[14px] font-medium text-ink"
                 >
-                  Painel
+                  Página
                 </Link>
                 <Link
                   href="/app/editor"

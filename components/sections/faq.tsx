@@ -4,37 +4,36 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/section-heading";
 import { cn } from "@/lib/utils";
 
 const faqs = [
   {
     q: "Preciso ter um site?",
-    a: "Não. O PerfilPro é uma página profissional simples para colocar direto na bio do Instagram.",
+    a: "Não. O PerfilPro é a página que você cola na bio — sem domínio, hospedagem ou WordPress.",
   },
   {
     q: "Funciona no celular?",
-    a: "Sim. Eu penso a experiência principalmente para quem abre pelo celular.",
+    a: "Sim. A página e o editor foram pensados para quem abre tudo pelo celular.",
   },
   {
     q: "Posso colocar meu WhatsApp?",
-    a: "Sim. O WhatsApp fica em destaque para o cliente falar com você em um clique.",
+    a: "Sim. O cliente toca no botão e já cai na conversa, com mensagem pronta se você quiser.",
   },
   {
-    q: "Posso adicionar meus serviços?",
-    a: "Sim. Seus serviços ficam organizados na página, com valores se você quiser mostrar.",
+    q: "Dá para mostrar serviços e preços?",
+    a: "Dá. Você adiciona cada serviço no editor, com valor e descrição.",
   },
   {
-    q: "Posso colocar fotos do meu trabalho?",
-    a: "Sim. Dá para incluir portfólio e fotos do que você entrega.",
+    q: "Posso mudar o visual depois?",
+    a: "Pode. Cores, foto, textos e a ordem dos blocos ficam no editor, quando você quiser.",
   },
   {
-    q: "Quanto tempo leva para ficar pronto?",
-    a: "Assim que você me envia as informações, eu começo a montar a sua página.",
+    q: "Quanto tempo leva?",
+    a: "Minutos. Escolhe o link, monta os blocos, publica e cola na bio.",
   },
   {
     q: "Preciso saber programar?",
-    a: "Não. Você me manda nome, foto, serviços e WhatsApp. Eu cuido do resto.",
+    a: "Não. Se você já usa Instagram, você consegue usar o PerfilPro.",
   },
 ];
 
@@ -42,12 +41,16 @@ export function FAQ() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="scroll-mt-20 bg-[#efeae3]/40 py-16 sm:py-24">
+    <section id="faq" className="scroll-mt-20 bg-background py-16 sm:py-24">
       <Container>
         <Reveal>
-          <SectionHeading title="Perguntas frequentes" />
+          <div className="mx-auto max-w-2xl text-center">
+            <h2 className="font-serif text-[1.95rem] leading-[1.12] text-ink sm:text-[2.7rem]">
+              Dúvidas? Respondidas.
+            </h2>
+          </div>
         </Reveal>
-        <div className="mx-auto mt-10 max-w-2xl divide-y divide-line rounded-2xl border border-line bg-card">
+        <div className="mx-auto mt-10 max-w-2xl divide-y divide-line overflow-hidden rounded-[1.6rem] border border-line bg-card">
           {faqs.map((item, index) => {
             const isOpen = open === index;
             return (

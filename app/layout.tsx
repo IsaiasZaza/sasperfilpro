@@ -16,9 +16,9 @@ const serif = Fraunces({
   axes: ["opsz", "SOFT"],
 });
 
-const title = "PerfilPro — Seu perfil profissional na bio do Instagram";
+const title = "PerfilPro — Tudo o que você é, em um só link";
 const description =
-  "Transforme o link da sua bio em uma página profissional para apresentar seus serviços, portfólio e receber clientes pelo WhatsApp.";
+  "Crie sua página profissional para a bio do Instagram. Mostre serviços, depoimentos e leve o cliente direto para o WhatsApp."
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://perfilpro.vercel.app"),
@@ -58,6 +58,7 @@ export default function RootLayout({
   return (
     <html
       lang="pt-BR"
+      data-scroll-behavior="smooth"
       className={`${sans.variable} ${serif.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-hidden bg-background font-sans text-foreground">

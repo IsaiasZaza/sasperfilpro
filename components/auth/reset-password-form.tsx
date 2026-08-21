@@ -4,9 +4,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { PasswordInput } from "@/components/auth/password-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api";
 import { authApi } from "@/lib/api-client";
 
@@ -52,6 +51,7 @@ function ResetPasswordFormInner() {
     <AuthShell
       title="Nova senha"
       subtitle="Escolha uma senha forte para proteger sua conta."
+      action={{ href: "/login", label: "Entrar" }}
       footer={
         <Link
           href="/login"
@@ -77,34 +77,26 @@ function ResetPasswordFormInner() {
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="password">Nova senha</Label>
-            <Input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Mínimo 8 caracteres"
-            />
-          </div>
-          <div>
-            <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Repita a senha"
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            label="Nova senha"
+            value={password}
+            onChange={setPassword}
+            placeholder="Mínimo 8 caracteres"
+            autoComplete="new-password"
+            minLength={8}
+          />
+          <PasswordInput
+            id="confirmPassword"
+            label="Confirmar senha"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            placeholder="Repita a senha"
+            autoComplete="new-password"
+            minLength={8}
+          />
           {error ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+            <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
               {error}
             </p>
           ) : null}

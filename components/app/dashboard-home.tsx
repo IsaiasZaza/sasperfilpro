@@ -1,22 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { Copy, ExternalLink, Pencil } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
+import { Container } from "@/components/ui/container";
 import { profileApi } from "@/lib/api-client";
 import type { PublicPage } from "@/lib/types/profile";
 
+function publishedLabel(iso: string | null) {
+  if (!iso) return "No ar";
+  const formatted = new Date(iso).toLocaleDateString("pt-BR", {
+    day: "numeric",
+    month: "long",
+  });
+  return `No ar desde ${formatted}`;
+}
+
 export function DashboardHome() {
-  const { user, profile, refresh } = useAuth();
+  const { user, profile, setProfile, refresh } = useAuth();
   const [preview, setPreview] = useState<PublicPage | null>(null);
   const [previewState, setPreviewState] = useState<
     "loading" | "ready" | "error"
   >("loading");
   const [copied, setCopied] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   async function loadPreview() {
     setPreviewState("loading");
@@ -36,11 +47,15 @@ export function DashboardHome() {
 
   if (!user || !profile) {
     return (
-      <div className="px-5 py-16 text-center text-muted">Carregando painel...</div>
+      <div className="px-5 py-16 text-center text-ink/60">Carregando...</div>
     );
   }
 
   const publicPath = profile.username ? `/u/${profile.username}` : null;
+  const published = profile.status === "PUBLISHED";
+  const name =
+    profile.displayName || preview?.displayName || user.name.split(" ")[0];
+  const headline = profile.headline || preview?.headline || null;
 
   async function copyLink() {
     if (!publicPath) return;
@@ -48,98 +63,139 @@ export function DashboardHome() {
       `${window.location.origin}${publicPath}`,
     );
     setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function publish() {
+    setPublishing(true);
+    try {
+      const updated = await profileApi.publish();
+      setProfile(updated);
+      await loadPreview();
+    } catch {
+      // o editor cobre o erro com mais contexto
+    } finally {
+      setPublishing(false);
+    }
   }
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-5 py-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
-      <div>
-        <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-bronze">
-          Painel
-        </p>
-        <h1 className="mt-2 font-serif text-[2.15rem] leading-tight text-ink">
-          Olá, {user.name.split(" ")[0]}
-        </h1>
-        <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-muted">
-          Edite sua página, publique e cole o link na bio do Instagram.
-        </p>
+    <section className="relative overflow-hidden bg-lime pb-16 pt-8 sm:pb-20 sm:pt-12">
+      <div className="pointer-events-none absolute -left-24 top-8 h-72 w-72 rounded-full bg-[#f4d7b8]/80 blur-3xl" />
+      <div className="pointer-events-none absolute right-[-6rem] bottom-[-4rem] h-80 w-80 rounded-full bg-white/35 blur-3xl" />
 
-        <div className="mt-7 flex flex-wrap gap-2.5">
-          <Button asChild size="lg">
-            <Link href="/app/editor">
-              <Pencil className="h-4 w-4" />
-              Abrir editor
-            </Link>
-          </Button>
-          {publicPath && profile.status === "PUBLISHED" ? (
-            <Button asChild variant="secondary" size="lg">
-              <Link href={publicPath} target="_blank">
-                <ExternalLink className="h-4 w-4" />
-                Ver página
-              </Link>
-            </Button>
+      <Container className="relative grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8">
+        <div className="max-w-xl">
+          <p className="mb-4 inline-flex items-center rounded-full border border-ink/10 bg-white/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink">
+            {published ? "Sua página no ar" : "Sua página · rascunho"}
+          </p>
+          <h1 className="font-serif text-[2.6rem] leading-[0.98] text-ink sm:text-[3.6rem] lg:text-[4.15rem]">
+            {name}
+          </h1>
+          {headline ? (
+            <p className="mt-4 text-[1.125rem] text-ink/70">{headline}</p>
           ) : null}
+          <p className="mt-6 max-w-lg text-base leading-[1.7] text-ink/75 sm:text-[1.125rem]">
+            {published
+              ? "Copie o link, cole na bio do Instagram e receba o cliente nesta página."
+              : "Sua página está pronta. Publique quando quiser colocar o link na bio."}
+          </p>
+          <p className="mt-3 text-[13px] text-ink/55">
+            {published
+              ? publishedLabel(profile.publishedAt)
+              : "Visível só para você, por enquanto."}
+          </p>
+
           {publicPath ? (
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              onClick={() => void copyLink()}
-            >
-              <Copy className="h-4 w-4" />
-              {copied ? "Copiado" : "Copiar link"}
-            </Button>
-          ) : null}
+            <div className="mt-8 flex max-w-xl items-center overflow-hidden rounded-full border border-ink/10 bg-white p-1.5 pl-5 shadow-[0_18px_40px_-24px_rgba(20,17,14,0.45)]">
+              <button
+                type="button"
+                onClick={() => void copyLink()}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left text-[14px] sm:text-[15px]"
+              >
+                <span className="truncate font-medium text-ink">
+                  perfilpro.app{publicPath}
+                </span>
+                {copied ? (
+                  <Check className="h-4 w-4 shrink-0 text-emerald-700" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 shrink-0 text-muted" />
+                )}
+              </button>
+              <Button asChild size="md" className="shrink-0">
+                <Link href="/app/editor">
+                  <Pencil className="h-4 w-4" />
+                  Editar
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="mt-8">
+              <Button asChild size="lg">
+                <Link href="/app/editor">
+                  <Pencil className="h-4 w-4" />
+                  Editar página
+                </Link>
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-4">
+            {published && publicPath ? (
+              <Link
+                href={publicPath}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 text-[14px] font-medium text-ink/80 underline-offset-4 hover:text-ink hover:underline"
+              >
+                Abrir no ar
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={publishing}
+                onClick={() => void publish()}
+                className="text-[14px] font-medium text-ink/80 underline-offset-4 hover:text-ink hover:underline disabled:opacity-50"
+              >
+                {publishing ? "Publicando..." : "Publicar agora"}
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="mt-8 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-line bg-[#fffcf8] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-              Status
-            </p>
-            <p className="mt-2 text-[16px] font-semibold text-ink">
-              {profile.status === "PUBLISHED" ? "Publicada" : "Rascunho"}
-            </p>
-          </div>
-          <div className="rounded-2xl border border-line bg-[#fffcf8] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-              Link
-            </p>
-            <p className="mt-2 truncate text-[16px] font-semibold text-ink">
-              {publicPath ? publicPath : "Defina no onboarding"}
-            </p>
+        <div className="relative mx-auto w-full max-w-[320px] justify-self-center sm:max-w-[360px] lg:max-w-[380px]">
+          <div className="relative overflow-hidden rounded-[2.2rem] bg-[#f7f0e4] px-6 pb-7 pt-8 shadow-[0_40px_80px_-36px_rgba(20,17,14,0.45)] sm:rounded-[2.6rem] sm:px-8">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-lime/50 blur-2xl" />
+            <div className="animate-float relative">
+              {previewState === "ready" && preview ? (
+                <PhoneFrame>
+                  <ProfilePreview page={preview} />
+                </PhoneFrame>
+              ) : previewState === "error" ? (
+                <div className="flex h-[520px] flex-col items-center justify-center px-4 text-center">
+                  <p className="text-[14px] text-muted">
+                    Não foi possível abrir a prévia.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-4 text-[13px] font-medium text-ink underline underline-offset-4"
+                    onClick={() => {
+                      void refresh();
+                      void loadPreview();
+                    }}
+                  >
+                    Tentar de novo
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-[520px] items-center justify-center text-sm text-muted">
+                  Abrindo sua página...
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="justify-self-center lg:justify-self-end">
-        {previewState === "ready" && preview ? (
-          <PhoneFrame>
-            <ProfilePreview page={preview} />
-          </PhoneFrame>
-        ) : previewState === "error" ? (
-          <div className="flex h-[480px] w-[260px] flex-col items-center justify-center gap-3 rounded-[2.2rem] border border-line bg-white px-6 text-center">
-            <p className="text-[14px] text-muted">
-              Não foi possível carregar o preview.
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                void refresh();
-                void loadPreview();
-              }}
-            >
-              Tentar de novo
-            </Button>
-          </div>
-        ) : (
-          <div className="flex h-[480px] w-[260px] items-center justify-center rounded-[2.2rem] border border-line bg-white text-sm text-muted">
-            Carregando preview...
-          </div>
-        )}
-      </div>
-    </div>
+      </Container>
+    </section>
   );
 }

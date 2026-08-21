@@ -86,6 +86,8 @@ export type ProfileBlock = {
 
 export type ProfileTheme = {
   primaryColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
   buttonStyle?: string;
   font?: string;
   background?: string;
@@ -208,6 +210,8 @@ export const BLOCK_META: Record<
 
 export const DEFAULT_THEME: ProfileTheme = {
   primaryColor: "#2b211c",
+  backgroundColor: "#faf6f2",
+  textColor: "#2b211c",
   buttonStyle: "pill",
   font: "sans",
   background: "#faf6f2",

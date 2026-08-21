@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import {
   publicApi,
   servicesApi,
 } from "@/lib/api-client";
+import { readClaimedUsername } from "@/lib/claimed-username";
 import { normalizeUsername } from "@/lib/reserved-usernames";
 import {
   isTempUsername,
@@ -46,6 +47,12 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
   const [servicePrice, setServicePrice] = useState("100");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (profile.username && !profile.username.startsWith("user-")) return;
+    const claimed = readClaimedUsername();
+    if (claimed) setUsername(claimed);
+  }, [profile.username]);
 
   const progress = useMemo(() => (step / STEPS.length) * 100, [step]);
 

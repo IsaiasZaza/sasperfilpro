@@ -37,6 +37,7 @@ export function ForgotPasswordForm() {
     <AuthShell
       title="Recuperar senha"
       subtitle="Enviaremos um link para redefinir sua senha, se o e-mail existir."
+      action={{ href: "/login", label: "Entrar" }}
       footer={
         <Link
           href="/login"
@@ -68,10 +69,11 @@ export function ForgotPasswordForm() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="voce@email.com"
+              className="h-12 rounded-xl border-line/80 bg-[#f7f4ef] shadow-none focus:bg-white"
             />
           </div>
           {error ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
+          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
               {error}
             </p>
           ) : null}

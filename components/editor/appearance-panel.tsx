@@ -2,45 +2,37 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
-  DEFAULT_THEME,
-  type Profile,
-  type ProfileTheme,
-} from "@/lib/types/profile";
+  resolvePaintTheme,
+  themeToApi,
+  type ApiTheme,
+} from "@/lib/theme";
+import type { Profile } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
 export const THEME_PRESETS: {
   id: string;
   label: string;
-  theme: ProfileTheme;
+  theme: ApiTheme;
 }[] = [
   {
     id: "creme",
     label: "Creme",
     theme: {
-      ...DEFAULT_THEME,
-      background: "#faf6f2",
-      text: "#2b211c",
-      muted: "#8a6f66",
-      accent: "#2b211c",
+      backgroundColor: "#faf6f2",
+      textColor: "#2b211c",
       primaryColor: "#2b211c",
-      card: "#ffffff",
-      line: "#eadfd8",
       buttonStyle: "pill",
+      font: "sans",
     },
   },
   {
     id: "noite",
     label: "Noite",
     theme: {
-      background: "#111111",
-      text: "#f5f5f5",
-      muted: "#a1a1aa",
-      accent: "#ffffff",
+      backgroundColor: "#111111",
+      textColor: "#f5f5f5",
       primaryColor: "#ffffff",
-      card: "#1c1c1c",
-      line: "#2e2e2e",
       buttonStyle: "pill",
       font: "sans",
     },
@@ -49,13 +41,9 @@ export const THEME_PRESETS: {
     id: "salvia",
     label: "Sálvia",
     theme: {
-      background: "#eef2ea",
-      text: "#1f2a1c",
-      muted: "#6b7a66",
-      accent: "#3d5a40",
+      backgroundColor: "#eef2ea",
+      textColor: "#1f2a1c",
       primaryColor: "#3d5a40",
-      card: "#ffffff",
-      line: "#d5ddd0",
       buttonStyle: "rounded",
       font: "sans",
     },
@@ -64,13 +52,9 @@ export const THEME_PRESETS: {
     id: "areia",
     label: "Areia",
     theme: {
-      background: "#f4efe6",
-      text: "#3b2f27",
-      muted: "#8c7b6b",
-      accent: "#9a7048",
+      backgroundColor: "#f4efe6",
+      textColor: "#3b2f27",
       primaryColor: "#9a7048",
-      card: "#fffcf8",
-      line: "#e4d9c8",
       buttonStyle: "pill",
       font: "sans",
     },
@@ -79,13 +63,9 @@ export const THEME_PRESETS: {
     id: "azul",
     label: "Marinho",
     theme: {
-      background: "#f0f4f8",
-      text: "#0f2744",
-      muted: "#6b7280",
-      accent: "#1e3a5f",
+      backgroundColor: "#f0f4f8",
+      textColor: "#0f2744",
       primaryColor: "#1e3a5f",
-      card: "#ffffff",
-      line: "#d7e0ea",
       buttonStyle: "rounded",
       font: "sans",
     },
@@ -94,13 +74,9 @@ export const THEME_PRESETS: {
     id: "rosa",
     label: "Blush",
     theme: {
-      background: "#faf2f4",
-      text: "#3b1f28",
-      muted: "#9a6f7a",
-      accent: "#b76e79",
+      backgroundColor: "#faf2f4",
+      textColor: "#3b1f28",
       primaryColor: "#b76e79",
-      card: "#ffffff",
-      line: "#eddce1",
       buttonStyle: "pill",
       font: "sans",
     },
@@ -144,7 +120,7 @@ export function AppearancePanel({
 }: {
   profile: Profile;
   onChange: (patch: {
-    theme?: ProfileTheme;
+    theme?: ApiTheme;
     displayName?: string;
     headline?: string;
     bio?: string;
@@ -153,19 +129,18 @@ export function AppearancePanel({
     username?: string;
   }) => void;
 }) {
-  const theme: ProfileTheme = {
-    ...DEFAULT_THEME,
-    ...(profile.theme || {}),
-  };
+  const painted = resolvePaintTheme(profile.theme);
 
-  function patchTheme(partial: Partial<ProfileTheme>) {
-    onChange({
-      theme: {
-        ...theme,
-        ...partial,
-        primaryColor: partial.accent ?? partial.primaryColor ?? theme.accent,
-      },
+  function patchTheme(partial: Partial<ApiTheme>) {
+    const next = themeToApi({
+      backgroundColor: painted.background,
+      textColor: painted.text,
+      primaryColor: painted.primaryColor,
+      buttonStyle: painted.buttonStyle,
+      font: painted.font,
+      ...partial,
     });
+    if (next) onChange({ theme: next });
   }
 
   return (
@@ -177,9 +152,10 @@ export function AppearancePanel({
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {THEME_PRESETS.map((preset) => {
+            const presetPaint = resolvePaintTheme(preset.theme);
             const active =
-              (theme.background || "") === (preset.theme.background || "") &&
-              (theme.accent || "") === (preset.theme.accent || "");
+              painted.background === presetPaint.background &&
+              painted.primaryColor === presetPaint.primaryColor;
             return (
               <button
                 key={preset.id}
@@ -194,11 +170,11 @@ export function AppearancePanel({
               >
                 <span
                   className="mb-2 flex h-10 overflow-hidden rounded-lg border border-black/5"
-                  style={{ background: preset.theme.background }}
+                  style={{ background: presetPaint.background }}
                 >
                   <span
                     className="m-auto h-4 w-16 rounded-full"
-                    style={{ background: preset.theme.accent }}
+                    style={{ background: presetPaint.primaryColor }}
                   />
                 </span>
                 <span className="text-[12px] font-semibold text-ink">
@@ -214,33 +190,18 @@ export function AppearancePanel({
         <h3 className="font-serif text-lg text-ink">Cores da página</h3>
         <ColorField
           label="Fundo da tela"
-          value={(theme.background as string) || "#faf6f2"}
-          onChange={(background) => patchTheme({ background })}
+          value={painted.background}
+          onChange={(backgroundColor) => patchTheme({ backgroundColor })}
         />
         <ColorField
           label="Cor de destaque (botões)"
-          value={(theme.accent as string) || "#2b211c"}
-          onChange={(accent) => patchTheme({ accent, primaryColor: accent })}
+          value={painted.primaryColor}
+          onChange={(primaryColor) => patchTheme({ primaryColor })}
         />
         <ColorField
           label="Texto principal"
-          value={(theme.text as string) || "#2b211c"}
-          onChange={(text) => patchTheme({ text })}
-        />
-        <ColorField
-          label="Texto secundário"
-          value={(theme.muted as string) || "#8a6f66"}
-          onChange={(muted) => patchTheme({ muted })}
-        />
-        <ColorField
-          label="Cards / blocos"
-          value={(theme.card as string) || "#ffffff"}
-          onChange={(card) => patchTheme({ card })}
-        />
-        <ColorField
-          label="Bordas"
-          value={(theme.line as string) || "#eadfd8"}
-          onChange={(line) => patchTheme({ line })}
+          value={painted.text}
+          onChange={(textColor) => patchTheme({ textColor })}
         />
       </section>
 
@@ -260,7 +221,7 @@ export function AppearancePanel({
               onClick={() => patchTheme({ buttonStyle: value })}
               className={cn(
                 "border px-2 py-3 text-[12px] font-semibold",
-                theme.buttonStyle === value
+                painted.buttonStyle === value
                   ? "border-ink bg-ink text-white"
                   : "border-line bg-white text-ink",
                 value === "pill" && "rounded-full",
@@ -274,12 +235,38 @@ export function AppearancePanel({
         </div>
       </section>
 
-      <section className="space-y-4 border-t border-line pt-6">
-        <h3 className="font-serif text-lg text-ink">Dados da página</h3>
-        <p className="text-[13px] text-muted">
-          Esses campos aparecem na página pública e no cabeçalho.
-        </p>
-        {profile.canChangeUsername !== false ? (
+      <section>
+        <h3 className="font-serif text-lg text-ink">Fonte</h3>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {(
+            [
+              ["sans", "Sans"],
+              ["serif", "Serif"],
+              ["mono", "Mono"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => patchTheme({ font: value })}
+              className={cn(
+                "rounded-xl border px-2 py-3 text-[12px] font-semibold",
+                painted.font === value
+                  ? "border-ink bg-ink text-white"
+                  : "border-line bg-white text-ink",
+                value === "serif" && "font-serif",
+                value === "mono" && "font-mono",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {profile.canChangeUsername !== false ? (
+        <section className="space-y-4 border-t border-line pt-6">
+          <h3 className="font-serif text-lg text-ink">Endereço da página</h3>
           <div>
             <Label>Username</Label>
             <div className="flex items-center gap-2">
@@ -292,49 +279,8 @@ export function AppearancePanel({
               />
             </div>
           </div>
-        ) : null}
-        <div>
-          <Label>Nome exibido</Label>
-          <Input
-            value={profile.displayName || ""}
-            onChange={(event) => onChange({ displayName: event.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Headline</Label>
-          <Input
-            value={profile.headline || ""}
-            onChange={(event) => onChange({ headline: event.target.value })}
-          />
-        </div>
-        <div>
-          <Label>Bio</Label>
-          <Textarea
-            value={profile.bio || ""}
-            onChange={(event) => onChange({ bio: event.target.value })}
-            placeholder="Uma frase sobre o seu trabalho"
-          />
-        </div>
-        <div>
-          <Label>Localização</Label>
-          <Input
-            value={profile.location || ""}
-            onChange={(event) => onChange({ location: event.target.value })}
-            placeholder="Brasília - DF"
-          />
-        </div>
-        <div>
-          <Label>URL do avatar</Label>
-          <Input
-            value={profile.avatarUrl || ""}
-            onChange={(event) => onChange({ avatarUrl: event.target.value })}
-            placeholder="https://..."
-          />
-          <p className="mt-1.5 text-[12px] text-muted-soft">
-            Cole o link de uma imagem. Upload nativo pode vir depois.
-          </p>
-        </div>
-      </section>
+        </section>
+      ) : null}
     </div>
   );
 }

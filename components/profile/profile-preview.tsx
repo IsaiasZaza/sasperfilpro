@@ -2,14 +2,14 @@
 
 import { MapPin, MessageCircle, Star } from "lucide-react";
 import { StatusBar } from "@/components/mockups/phone-frame";
+import { resolvePaintTheme } from "@/lib/theme";
 import {
-  DEFAULT_THEME,
+  BLOCK_META,
   type CtaButtonContent,
   type HeroContent,
   type LinkButtonContent,
   type LocationContent,
   type ProfileBlock,
-  type ProfileTheme,
   type PublicPage,
   type ServiceItem,
   type ServicesContent,
@@ -47,36 +47,6 @@ function whatsappHref(phone: string, message?: string) {
     : `https://wa.me/?text=${text}`;
 }
 
-function resolveTheme(theme: ProfileTheme | null | undefined): Required<
-  Pick<
-    ProfileTheme,
-    "background" | "text" | "muted" | "accent" | "card" | "line"
-  >
-> & { buttonRadius: string } {
-  const buttonStyle = (theme?.buttonStyle as string) || "pill";
-  return {
-    background:
-      (theme?.background as string) ||
-      DEFAULT_THEME.background ||
-      "#faf6f2",
-    text: (theme?.text as string) || DEFAULT_THEME.text || "#2b211c",
-    muted: (theme?.muted as string) || DEFAULT_THEME.muted || "#8a6f66",
-    accent:
-      (theme?.accent as string) ||
-      (theme?.primaryColor as string) ||
-      DEFAULT_THEME.accent ||
-      "#2b211c",
-    card: (theme?.card as string) || DEFAULT_THEME.card || "#ffffff",
-    line: (theme?.line as string) || DEFAULT_THEME.line || "#eadfd8",
-    buttonRadius:
-      buttonStyle === "square"
-        ? "0.5rem"
-        : buttonStyle === "rounded"
-          ? "0.75rem"
-          : "9999px",
-  };
-}
-
 function initials(name: string) {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "PP";
@@ -90,7 +60,7 @@ function BlockView({
   page,
 }: {
   block: ProfileBlock;
-  theme: ReturnType<typeof resolveTheme>;
+  theme: ReturnType<typeof resolvePaintTheme>;
   page: PublicPage;
 }) {
   if (!block.isVisible) return null;
@@ -102,18 +72,22 @@ function BlockView({
         content.name || page.displayName || page.username || "Seu nome";
       const headline = content.headline || page.headline || "";
       const avatarUrl = content.avatarUrl || page.avatarUrl;
+      const locationText = content.location || page.location || "";
+      const hasLocationBlock = (page.blocks || []).some(
+        (item) => item.type === "LOCATION" && item.isVisible,
+      );
       return (
-        <div className="flex flex-col items-center text-center">
+        <div className="flex flex-col items-center px-5 pb-5 pt-8 text-center">
           {avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={avatarUrl}
               alt={name}
-              className="h-16 w-16 rounded-full object-cover shadow-sm"
+              className="h-[88px] w-[88px] rounded-full object-cover"
             />
           ) : (
             <div
-              className="flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold text-white shadow-sm"
+              className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white shadow-sm"
               style={{
                 background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
               }}
@@ -121,29 +95,29 @@ function BlockView({
               {initials(name)}
             </div>
           )}
-          <h3 className="mt-3 text-[15px] font-semibold tracking-tight">
+          <h3 className="mt-4 font-serif text-[1.35rem] leading-tight tracking-tight">
             {name}
           </h3>
           {headline ? (
-            <p className="mt-0.5 text-[11px]" style={{ color: theme.muted }}>
+            <p className="mt-1 text-[13px] font-medium" style={{ color: theme.muted }}>
               {headline}
             </p>
           ) : null}
           {content.bio || page.bio ? (
             <p
-              className="mt-2 max-w-[220px] text-[10px] leading-relaxed"
+              className="mt-2.5 max-w-[230px] text-[12px] leading-relaxed"
               style={{ color: theme.muted }}
             >
               {content.bio || page.bio}
             </p>
           ) : null}
-          {content.location ? (
+          {locationText && !hasLocationBlock ? (
             <p
-              className="mt-1.5 flex items-center justify-center gap-1 text-[10px]"
+              className="mt-2 flex items-center justify-center gap-1 text-[12px]"
               style={{ color: theme.muted }}
             >
-              <MapPin className="h-3 w-3" />
-              {content.location}
+              <MapPin className="h-3.5 w-3.5" />
+              {locationText}
             </p>
           ) : null}
         </div>
@@ -164,14 +138,14 @@ function BlockView({
           href={content.mapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-1.5 block text-[10px] underline-offset-2 hover:underline"
+          className="mt-1.5 block text-[13px] underline-offset-2 hover:underline"
           style={{ color: theme.muted }}
         >
           {inner}
         </a>
       ) : (
         <p
-          className="mt-1.5 text-[10px]"
+          className="mt-1.5 text-[13px]"
           style={{ color: theme.muted }}
         >
           {inner}
@@ -207,7 +181,7 @@ function BlockView({
           href={content.url || "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-9 w-full items-center justify-center text-[11px] font-medium"
+          className="flex h-10 w-full items-center justify-center text-[13px] font-medium"
           style={look}
         >
           {content.label || "Botão"}
@@ -221,7 +195,7 @@ function BlockView({
           href={content.url || "#"}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-9 w-full items-center justify-center text-[11px] font-medium"
+          className="flex h-10 w-full items-center justify-center text-[13px] font-medium"
           style={{
             background: theme.card,
             color: theme.text,
@@ -241,7 +215,7 @@ function BlockView({
           href={whatsappHref(content.phone || "", content.message)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex h-9 w-full items-center justify-center gap-1.5 text-[11px] font-medium text-[#128c4b]"
+          className="flex h-10 w-full items-center justify-center gap-1.5 text-[13px] font-medium text-[#128c4b]"
           style={{
             background: "rgba(37, 211, 102, 0.12)",
             borderRadius: theme.buttonRadius,
@@ -262,7 +236,7 @@ function BlockView({
               href={item.url || "#"}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex h-9 items-center justify-center gap-1.5 text-[11px] font-medium"
+              className="flex h-10 items-center justify-center gap-1.5 text-[13px] font-medium"
               style={{
                 background: `${theme.accent}0d`,
                 color: theme.text,
@@ -285,7 +259,7 @@ function BlockView({
       return (
         <div>
           <p
-            className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]"
+            className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: theme.muted }}
           >
             {content.heading || "Serviços"}
@@ -301,17 +275,17 @@ function BlockView({
                 }}
               >
                 <span className="min-w-0">
-                  <span className="block text-[11px]">{item.name}</span>
+                  <span className="block text-[13px] font-medium">{item.name}</span>
                   {item.description ? (
                     <span
-                      className="mt-0.5 block text-[9px] leading-snug"
+                      className="mt-0.5 block text-[11px] leading-snug"
                       style={{ color: theme.muted }}
                     >
                       {item.description}
                     </span>
                   ) : null}
                 </span>
-                <span className="shrink-0 text-[11px] font-semibold">
+                <span className="shrink-0 text-[13px] font-semibold">
                   {item.priceFormatted ||
                     (item.priceCents / 100).toLocaleString("pt-BR", {
                       style: "currency",
@@ -333,7 +307,7 @@ function BlockView({
       return (
         <div>
           <p
-            className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em]"
+            className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
             style={{ color: theme.muted }}
           >
             {content.heading || "Depoimentos"}
@@ -356,12 +330,12 @@ function BlockView({
                   ))}
                 </div>
                 <p
-                  className="text-[10px] leading-relaxed"
+                  className="text-[13px] leading-relaxed"
                   style={{ color: theme.muted }}
                 >
                   “{item.text}”
                 </p>
-                <p className="mt-1 text-[9px]" style={{ color: theme.muted }}>
+                <p className="mt-1 text-[12px]" style={{ color: theme.muted }}>
                   {item.authorName}
                 </p>
               </div>
@@ -381,16 +355,14 @@ export function ProfilePreview({
   showStatusBar = true,
   selectedId,
   onSelectBlock,
-  onSelectBackground,
 }: {
   page: PublicPage;
   className?: string;
   showStatusBar?: boolean;
   selectedId?: string | null;
   onSelectBlock?: (id: string) => void;
-  onSelectBackground?: () => void;
 }) {
-  const theme = resolveTheme(page.theme);
+  const theme = resolvePaintTheme(page.theme);
   const editable = Boolean(onSelectBlock);
   const blocks = [...(page.blocks || [])]
     .filter((block) => editable || block.isVisible)
@@ -404,60 +376,53 @@ export function ProfilePreview({
 
   return (
     <div
-      className={cn("h-full overflow-y-auto no-scrollbar", className)}
+      className={cn(
+        "h-full overflow-y-auto no-scrollbar",
+        theme.font === "serif" && "font-serif",
+        theme.font === "mono" && "font-mono",
+        theme.font === "sans" && "font-sans",
+        className,
+      )}
       style={{ background: theme.background, color: theme.text }}
-      onClick={
-        onSelectBackground
-          ? (event) => {
-              if (event.target === event.currentTarget) onSelectBackground();
-            }
-          : undefined
-      }
     >
       {showStatusBar ? <StatusBar /> : null}
-      <div
-        className="px-4 pb-8 pt-5"
-        onClick={
-          onSelectBackground
-            ? (event) => {
-                if (event.target === event.currentTarget) onSelectBackground();
-              }
-            : undefined
-        }
-      >
+      <div className="px-4 pb-8 pt-8">
         {hero ? (
           <SelectableBlock
             id={hero.id}
+            label={BLOCK_META[hero.type].label}
             selected={selectedId === hero.id}
             hidden={!hero.isVisible}
             onSelect={onSelectBlock}
+            padded
           >
             <BlockView block={hero} theme={theme} page={page} />
           </SelectableBlock>
         ) : (
-          <div className="flex flex-col items-center text-center">
+          <div className="flex flex-col items-center px-5 pt-4 text-center">
             <div
-              className="flex h-16 w-16 items-center justify-center rounded-full text-lg font-semibold text-white"
+              className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white"
               style={{
                 background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
               }}
             >
               {initials(page.displayName || page.username || "PP")}
             </div>
-            <h3 className="mt-3 text-[15px] font-semibold">
+            <h3 className="mt-4 font-serif text-[1.35rem] leading-tight">
               {page.displayName || page.username}
             </h3>
             {page.headline ? (
-              <p className="mt-0.5 text-[11px]" style={{ color: theme.muted }}>
+              <p className="mt-1 text-[13px] font-medium" style={{ color: theme.muted }}>
                 {page.headline}
               </p>
             ) : null}
           </div>
         )}
         {location ? (
-          <div className="mt-1.5">
+          <div className="mt-2">
             <SelectableBlock
               id={location.id}
+              label={BLOCK_META[location.type].label}
               selected={selectedId === location.id}
               hidden={!location.isVisible}
               onSelect={onSelectBlock}
@@ -467,18 +432,19 @@ export function ProfilePreview({
           </div>
         ) : page.location ? (
           <p
-            className="mt-1.5 flex items-center justify-center gap-1 text-[10px]"
+            className="mt-2 flex items-center justify-center gap-1 text-[13px]"
             style={{ color: theme.muted }}
           >
-            <MapPin className="h-3 w-3" />
+            <MapPin className="h-3.5 w-3.5" />
             {page.location}
           </p>
         ) : null}
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 space-y-2.5">
           {rest.map((block) => (
             <SelectableBlock
               key={block.id}
               id={block.id}
+              label={BLOCK_META[block.type].label}
               selected={selectedId === block.id}
               hidden={!block.isVisible}
               onSelect={onSelectBlock}
@@ -489,7 +455,7 @@ export function ProfilePreview({
         </div>
         {blocks.length === 0 ? (
           <p
-            className="mt-10 text-center text-[12px]"
+            className="mt-10 text-center text-[13px]"
             style={{ color: theme.muted }}
           >
             Adicione blocos para montar sua página.
@@ -502,31 +468,36 @@ export function ProfilePreview({
 
 function SelectableBlock({
   id,
+  label,
   selected,
   hidden,
   onSelect,
+  padded,
   children,
 }: {
   id: string;
+  label: string;
   selected: boolean;
   hidden: boolean;
   onSelect?: (id: string) => void;
+  padded?: boolean;
   children: React.ReactNode;
 }) {
   if (!onSelect) return children;
   return (
     <div
       className={cn(
-        "relative rounded-2xl transition",
-        selected && "ring-2 ring-ink/80 ring-offset-2 ring-offset-transparent",
+        "relative rounded-[1.35rem] transition",
+        padded && "px-1 py-1",
+        selected && "shadow-[inset_0_0_0_2px_rgba(20,17,14,0.85)]",
         hidden && "opacity-45",
       )}
     >
       <div className="pointer-events-none">{children}</div>
       <button
         type="button"
-        className="absolute inset-0 z-10 min-h-[28px] rounded-2xl"
-        aria-label="Editar esta estrutura"
+        className="absolute inset-0 z-10 min-h-7 rounded-2xl"
+        aria-label={`Editar ${label}`}
         onClick={(event) => {
           event.preventDefault();
           event.stopPropagation();
