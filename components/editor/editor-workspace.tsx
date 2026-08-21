@@ -76,7 +76,7 @@ import { cn } from "@/lib/utils";
 type MobileTab = "blocks" | "edit" | "preview";
 type EditorPanel = "block" | "appearance";
 
-const SAVE_WAIT_MS = 5000;
+const SAVE_WAIT_MS = 1200;
 
 type SaveState = "saved" | "pending" | "saving" | "error";
 
@@ -337,9 +337,8 @@ export function EditorWorkspace() {
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const saveTimer = useRef<number | null>(null);
-  const servicesTimer = useRef<number | null>(null);
-  const testimonialsTimer = useRef<number | null>(null);
-  const profileTimer = useRef<number | null>(null);
+  const saveInFlight = useRef<Promise<void> | null>(null);
+  const saveAgain = useRef(false);
   const lastSavedBlock = useRef<Record<string, string>>({});
   const lastSavedServices = useRef("");
   const lastSavedTestimonials = useRef("");
@@ -349,6 +348,8 @@ export function EditorWorkspace() {
   const blocksRef = useRef<ProfileBlock[]>([]);
   const servicesRef = useRef<ServiceItem[]>([]);
   const testimonialsRef = useRef<TestimonialItem[]>([]);
+  const loadingRef = useRef(true);
+  const loadErrorRef = useRef<string | null>(null);
 
   const orderedBlocks = useMemo(() => sortBlocks(blocks), [blocks]);
   const selected = orderedBlocks.find((b) => b.id === selectedId) ?? null;
@@ -441,10 +442,36 @@ export function EditorWorkspace() {
   }, [testimonials]);
 
   useEffect(() => {
+    loadingRef.current = loading;
+    loadErrorRef.current = loadError;
+  }, [loading, loadError]);
+
+  useEffect(() => {
     if (!message) return;
     const timer = window.setTimeout(() => setMessage(null), 2800);
     return () => window.clearTimeout(timer);
   }, [message]);
+
+  const hasUnsavedChanges = useCallback(() => {
+    if (loadingRef.current || loadErrorRef.current) return false;
+    const dirtyBlocks = blocksRef.current.some(
+      (block) => lastSavedBlock.current[block.id] !== snapshotBlock(block),
+    );
+    if (dirtyBlocks) return true;
+    if (JSON.stringify(servicesRef.current) !== lastSavedServices.current) {
+      return true;
+    }
+    if (
+      JSON.stringify(testimonialsRef.current) !== lastSavedTestimonials.current
+    ) {
+      return true;
+    }
+    const pending = profileRef.current;
+    if (pending && profileSnapshot(pending) !== lastSavedProfile.current) {
+      return true;
+    }
+    return false;
+  }, []);
 
   const persistDirtyBlocks = useCallback(async () => {
     const dirty = blocksRef.current.filter(
@@ -603,92 +630,98 @@ export function EditorWorkspace() {
   }, [setAuthProfile]);
 
   const flushPendingSaves = useCallback(async () => {
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
-    if (testimonialsTimer.current)
-      window.clearTimeout(testimonialsTimer.current);
-    if (profileTimer.current) window.clearTimeout(profileTimer.current);
-    saveTimer.current = null;
-    servicesTimer.current = null;
-    testimonialsTimer.current = null;
-    profileTimer.current = null;
-
-    setSaveState("saving");
-    try {
-      await persistDirtyBlocks();
-      await persistDirtyServices();
-      await persistDirtyTestimonials();
-      await persistDirtyProfile();
-      setSaveState("saved");
-    } catch (err) {
-      setSaveState("error");
-      setMessage(
-        err instanceof ApiError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Não salvou. Tente de novo.",
-      );
-      throw err;
+    if (saveTimer.current) {
+      window.clearTimeout(saveTimer.current);
+      saveTimer.current = null;
     }
+
+    if (saveInFlight.current) {
+      saveAgain.current = true;
+      await saveInFlight.current;
+      if (!hasUnsavedChanges()) return;
+    }
+
+    const run = async () => {
+      setSaveState("saving");
+      try {
+        let passes = 0;
+        do {
+          saveAgain.current = false;
+          await persistDirtyBlocks();
+          await persistDirtyServices();
+          await persistDirtyTestimonials();
+          await persistDirtyProfile();
+          passes += 1;
+        } while (
+          passes < 3 &&
+          (saveAgain.current || hasUnsavedChanges())
+        );
+        if (hasUnsavedChanges()) {
+          setSaveState("pending");
+          if (saveTimer.current) window.clearTimeout(saveTimer.current);
+          saveTimer.current = window.setTimeout(() => {
+            saveTimer.current = null;
+            void flushPendingSaves().catch(() => undefined);
+          }, SAVE_WAIT_MS);
+          return;
+        }
+        setSaveState("saved");
+      } catch (err) {
+        setSaveState("error");
+        setMessage(
+          err instanceof ApiError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : "Não salvou. Tente de novo.",
+        );
+        throw err;
+      } finally {
+        saveInFlight.current = null;
+      }
+    };
+
+    const promise = run();
+    saveInFlight.current = promise;
+    await promise;
   }, [
+    hasUnsavedChanges,
     persistDirtyBlocks,
     persistDirtyProfile,
     persistDirtyServices,
     persistDirtyTestimonials,
   ]);
 
-  function scheduleSave(timer: { current: number | null }, run: () => Promise<void>) {
-    if (timer.current) window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      setSaveState("saving");
-      void (async () => {
-        try {
-          await run();
-          setSaveState("saved");
-        } catch (err) {
-          setSaveState("error");
-          setMessage(
-            err instanceof ApiError
-              ? err.message
-              : err instanceof Error
-                ? err.message
-                : "Não salvou. Tente de novo.",
-          );
-        }
-      })();
+  const scheduleAutosave = useCallback(() => {
+    if (loadingRef.current || loadErrorRef.current) return;
+    if (!hasUnsavedChanges()) return;
+    setSaveState((current) => (current === "saving" ? current : "pending"));
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(() => {
+      saveTimer.current = null;
+      void flushPendingSaves().catch(() => undefined);
     }, SAVE_WAIT_MS);
-  }
+  }, [flushPendingSaves, hasUnsavedChanges]);
 
   useEffect(() => {
-    const dirty = blocks.some(
-      (block) => lastSavedBlock.current[block.id] !== snapshotBlock(block),
-    );
-    if (!dirty) return;
-    scheduleSave(saveTimer, persistDirtyBlocks);
-    return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    };
-  }, [blocks, persistDirtyBlocks]);
+    scheduleAutosave();
+  }, [blocks, services, testimonials, profile, scheduleAutosave]);
 
   useEffect(() => {
-    if (loading || loadError) return;
-    if (JSON.stringify(services) === lastSavedServices.current) return;
-    scheduleSave(servicesTimer, persistDirtyServices);
-    return () => {
-      if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
+    const flushIfNeeded = () => {
+      if (!hasUnsavedChanges() && saveState !== "saving") return;
+      void flushPendingSaves().catch(() => undefined);
     };
-  }, [services, loading, loadError, persistDirtyServices]);
-
-  useEffect(() => {
-    if (loading || loadError) return;
-    if (JSON.stringify(testimonials) === lastSavedTestimonials.current) return;
-    scheduleSave(testimonialsTimer, persistDirtyTestimonials);
-    return () => {
-      if (testimonialsTimer.current)
-        window.clearTimeout(testimonialsTimer.current);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushIfNeeded();
     };
-  }, [testimonials, loading, loadError, persistDirtyTestimonials]);
+    window.addEventListener("pagehide", flushIfNeeded);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flushIfNeeded);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [flushPendingSaves, hasUnsavedChanges, saveState]);
 
   const isDirty =
     !loading &&
@@ -704,18 +737,15 @@ export function EditorWorkspace() {
   const saveUi: SaveState =
     saveState === "saving" || saveState === "error"
       ? saveState
-      : isDirty
+      : isDirty || saveState === "pending"
         ? "pending"
         : "saved";
 
   useEffect(() => {
-    if (loading || loadError || !profile) return;
-    if (profileSnapshot(profile) === lastSavedProfile.current) return;
-    scheduleSave(profileTimer, persistDirtyProfile);
     return () => {
-      if (profileTimer.current) window.clearTimeout(profileTimer.current);
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
     };
-  }, [profile, loading, loadError, persistDirtyProfile]);
+  }, []);
 
   useEffect(() => {
     if (!isDirty && saveState !== "saving") return;
@@ -994,7 +1024,7 @@ export function EditorWorkspace() {
               )}
             >
               {saveUi === "pending" ? (
-                "Alterações..."
+                "Aguardando..."
               ) : saveUi === "saving" ? (
                 "Salvando..."
               ) : saveUi === "error" ? (
