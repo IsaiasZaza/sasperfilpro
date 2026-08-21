@@ -61,11 +61,21 @@ export function BlockInspector({
   switch (block.type) {
     case "HERO": {
       const content = block.content as HeroContent;
-      const avatarUrl = content.avatarUrl || profile?.avatarUrl || "";
-      const name = content.name || profile?.displayName || "";
-      const headline = content.headline || profile?.headline || "";
-      const bio = content.bio || profile?.bio || "";
-      const location = content.location || profile?.location || "";
+      const avatarUrl =
+        content.avatarUrl !== undefined
+          ? content.avatarUrl
+          : profile?.avatarUrl || "";
+      const name =
+        content.name !== undefined ? content.name : profile?.displayName || "";
+      const headline =
+        content.headline !== undefined
+          ? content.headline
+          : profile?.headline || "";
+      const bio = content.bio !== undefined ? content.bio : profile?.bio || "";
+      const location =
+        content.location !== undefined
+          ? content.location
+          : profile?.location || "";
       const look = lookFrom(content);
       const photo = avatarPixels(look.avatarSize);
       const photoRadius = avatarRadius(look.avatarShape);

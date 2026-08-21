@@ -76,6 +76,14 @@ import { cn } from "@/lib/utils";
 type MobileTab = "blocks" | "edit" | "preview";
 type EditorPanel = "block" | "appearance";
 
+const SAVE_WAIT_MS = 5000;
+
+function emptyToNull(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 function profileSnapshot(profile: Profile) {
   return JSON.stringify({
     username: profile.username,
@@ -404,7 +412,6 @@ export function EditorWorkspace() {
     if (lastSavedBlock.current[selected.id] === payload) return;
 
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    setSaveState("saving");
     const blockId = selected.id;
     const blockType = selected.type;
     const content = selected.content;
@@ -412,6 +419,7 @@ export function EditorWorkspace() {
     const title = selected.title;
 
     saveTimer.current = window.setTimeout(() => {
+      setSaveState("saving");
       void (async () => {
         try {
           let previousContent: Record<string, unknown> | undefined;
@@ -443,13 +451,27 @@ export function EditorWorkspace() {
             };
             const current = profileRef.current;
             const updatedProfile = await profileApi.update({
-              displayName: hero.name || current?.displayName || undefined,
-              headline: hero.headline || current?.headline || undefined,
-              bio: hero.bio || current?.bio || undefined,
-              location: hero.location || current?.location || undefined,
+              displayName:
+                hero.name !== undefined
+                  ? emptyToNull(hero.name)
+                  : emptyToNull(current?.displayName),
+              headline:
+                hero.headline !== undefined
+                  ? emptyToNull(hero.headline)
+                  : emptyToNull(current?.headline),
+              bio:
+                hero.bio !== undefined
+                  ? emptyToNull(hero.bio)
+                  : emptyToNull(current?.bio),
+              location:
+                hero.location !== undefined
+                  ? emptyToNull(hero.location)
+                  : emptyToNull(current?.location),
               avatarUrl:
-                normalizeHttpUrl(hero.avatarUrl || current?.avatarUrl || "") ||
-                undefined,
+                normalizeHttpUrl(hero.avatarUrl || "") ||
+                (hero.avatarUrl !== undefined
+                  ? null
+                  : normalizeHttpUrl(current?.avatarUrl || "") || null),
               theme: themeToApi(current?.theme),
             });
             const { profile: merged, lost } = withPersistedTheme(
@@ -470,7 +492,7 @@ export function EditorWorkspace() {
           setSaveState("error");
         }
       })();
-    }, 500);
+    }, SAVE_WAIT_MS);
 
     return () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
@@ -484,8 +506,8 @@ export function EditorWorkspace() {
     if (snapshot === lastSavedServices.current) return;
 
     if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
-    setSaveState("saving");
     servicesTimer.current = window.setTimeout(() => {
+      setSaveState("saving");
       void (async () => {
         try {
           const resolved: ServiceItem[] = [];
@@ -515,7 +537,7 @@ export function EditorWorkspace() {
           setSaveState("error");
         }
       })();
-    }, 600);
+    }, SAVE_WAIT_MS);
     return () => {
       if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
     };
@@ -527,8 +549,8 @@ export function EditorWorkspace() {
     if (snapshot === lastSavedTestimonials.current) return;
 
     if (testimonialsTimer.current) window.clearTimeout(testimonialsTimer.current);
-    setSaveState("saving");
     testimonialsTimer.current = window.setTimeout(() => {
+      setSaveState("saving");
       void (async () => {
         try {
           const resolved: TestimonialItem[] = [];
@@ -558,7 +580,7 @@ export function EditorWorkspace() {
           setSaveState("error");
         }
       })();
-    }, 600);
+    }, SAVE_WAIT_MS);
     return () => {
       if (testimonialsTimer.current)
         window.clearTimeout(testimonialsTimer.current);
@@ -572,19 +594,19 @@ export function EditorWorkspace() {
     if (snapshot === lastSavedProfile.current) return;
 
     if (profileTimer.current) window.clearTimeout(profileTimer.current);
-    setSaveState("saving");
     const gen = ++profileSaveGen.current;
     const pending = profile;
     profileTimer.current = window.setTimeout(() => {
+      setSaveState("saving");
       void (async () => {
         try {
           const updated = await profileApi.update({
             username: pending.username || undefined,
-            displayName: pending.displayName || undefined,
-            headline: pending.headline || undefined,
-            bio: pending.bio || undefined,
-            location: pending.location || undefined,
-            avatarUrl: pending.avatarUrl || undefined,
+            displayName: emptyToNull(pending.displayName),
+            headline: emptyToNull(pending.headline),
+            bio: emptyToNull(pending.bio),
+            location: emptyToNull(pending.location),
+            avatarUrl: emptyToNull(pending.avatarUrl),
             theme: themeToApi(pending.theme),
           });
           if (gen !== profileSaveGen.current) return;
@@ -611,7 +633,7 @@ export function EditorWorkspace() {
           );
         }
       })();
-    }, 550);
+    }, SAVE_WAIT_MS);
     return () => {
       if (profileTimer.current) window.clearTimeout(profileTimer.current);
     };

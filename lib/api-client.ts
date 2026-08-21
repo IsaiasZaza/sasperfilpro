@@ -73,11 +73,11 @@ export const profileApi = {
   },
   update(input: {
     username?: string;
-    displayName?: string;
-    headline?: string;
-    bio?: string;
-    avatarUrl?: string;
-    location?: string;
+    displayName?: string | null;
+    headline?: string | null;
+    bio?: string | null;
+    avatarUrl?: string | null;
+    location?: string | null;
     theme?: ApiTheme;
   }) {
     return api<Profile>("/me/profile", { method: "PUT", body: input });

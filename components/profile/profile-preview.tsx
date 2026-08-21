@@ -92,10 +92,17 @@ function BlockView({
     case "HERO": {
       const content = block.content as HeroContent;
       const name =
-        content.name || page.displayName || page.username || "Seu nome";
-      const headline = content.headline || page.headline || "";
-      const avatarUrl = content.avatarUrl || page.avatarUrl;
-      const locationText = content.location || page.location || "";
+        (content.name !== undefined ? content.name : page.displayName) ||
+        page.username ||
+        "Seu nome";
+      const headline =
+        content.headline !== undefined ? content.headline : page.headline || "";
+      const avatarUrl =
+        content.avatarUrl !== undefined ? content.avatarUrl : page.avatarUrl;
+      const locationText =
+        content.location !== undefined ? content.location : page.location || "";
+      const bioText =
+        content.bio !== undefined ? content.bio : page.bio || "";
       const hasLocationBlock = (page.blocks || []).some(
         (item) => item.type === "LOCATION" && item.isVisible,
       );
@@ -168,12 +175,12 @@ function BlockView({
               {headline}
             </p>
           ) : null}
-          {content.bio || page.bio ? (
+          {bioText ? (
             <p
               className="mt-2.5 max-w-[280px] break-words leading-relaxed"
               style={{ color: theme.muted, fontSize: sizes.body }}
             >
-              {content.bio || page.bio}
+              {bioText}
             </p>
           ) : null}
           {locationText && !hasLocationBlock ? (
