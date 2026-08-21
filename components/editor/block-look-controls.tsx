@@ -3,7 +3,14 @@
 import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { BlockAlign, BlockLook, ButtonWidth } from "@/lib/types/profile";
+import type {
+  AvatarShape,
+  AvatarSize,
+  BlockAlign,
+  BlockLook,
+  ButtonWidth,
+  FontSize,
+} from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
 export function BlockLookControls({
@@ -14,6 +21,8 @@ export function BlockLookControls({
   showAlign = true,
   showWidth = false,
   showPulse = false,
+  showFontSize = true,
+  showAvatar = false,
 }: {
   look: BlockLook;
   onChange: (next: BlockLook) => void;
@@ -22,6 +31,8 @@ export function BlockLookControls({
   showAlign?: boolean;
   showWidth?: boolean;
   showPulse?: boolean;
+  showFontSize?: boolean;
+  showAvatar?: boolean;
 }) {
   const patch = (partial: Partial<BlockLook>) =>
     onChange({ ...look, ...partial });
@@ -62,9 +73,22 @@ export function BlockLookControls({
           </div>
         </div>
       ) : null}
+      {showFontSize ? (
+        <ChoiceRow
+          label="Tamanho da letra"
+          value={look.fontSize || "md"}
+          onChange={(fontSize) => patch({ fontSize })}
+          options={[
+            { value: "sm", label: "P" },
+            { value: "md", label: "M" },
+            { value: "lg", label: "G" },
+            { value: "xl", label: "GG" },
+          ]}
+        />
+      ) : null}
       {showAlign ? (
         <ChoiceRow
-          label="Posição"
+          label={showAvatar ? "Posição (foto e textos)" : "Posição"}
           value={look.align || "center"}
           onChange={(align) => patch({ align })}
           options={[
@@ -73,6 +97,31 @@ export function BlockLookControls({
             { value: "right", label: "Direita", icon: AlignRight },
           ]}
         />
+      ) : null}
+      {showAvatar ? (
+        <>
+          <ChoiceRow
+            label="Tamanho da foto"
+            value={look.avatarSize || "md"}
+            onChange={(avatarSize) => patch({ avatarSize })}
+            options={[
+              { value: "sm", label: "P" },
+              { value: "md", label: "M" },
+              { value: "lg", label: "G" },
+              { value: "xl", label: "GG" },
+            ]}
+          />
+          <ChoiceRow
+            label="Formato da foto"
+            value={look.avatarShape || "circle"}
+            onChange={(avatarShape) => patch({ avatarShape })}
+            options={[
+              { value: "circle", label: "Redonda" },
+              { value: "rounded", label: "Arredondada" },
+              { value: "square", label: "Quadrada" },
+            ]}
+          />
+        </>
       ) : null}
       {showWidth ? (
         <ChoiceRow
@@ -117,7 +166,11 @@ function ChoiceRow<T extends string>({
       <div
         className={cn(
           "grid gap-1.5",
-          options.length === 3 ? "grid-cols-3" : "grid-cols-2",
+          options.length === 4
+            ? "grid-cols-4"
+            : options.length === 3
+              ? "grid-cols-3"
+              : "grid-cols-2",
         )}
       >
         {options.map((option) => {
@@ -155,7 +208,16 @@ export function mergeLook<T extends object>(
     align: look.align,
     width: look.width,
     pulse: look.pulse,
+    fontSize: look.fontSize,
+    avatarSize: look.avatarSize,
+    avatarShape: look.avatarShape,
   };
 }
 
-export type { BlockAlign, ButtonWidth };
+export type {
+  AvatarShape,
+  AvatarSize,
+  BlockAlign,
+  ButtonWidth,
+  FontSize,
+};

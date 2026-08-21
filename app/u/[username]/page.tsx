@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Logo, LogoMark } from "@/components/brand/logo";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
 import { loadPublicPage } from "@/lib/public-page";
@@ -35,9 +36,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   if (!page) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
-        <Link href="/" className="font-serif text-[1.55rem] text-ink">
-          PerfilPro
-        </Link>
+        <Logo href="/" size="lg" />
         <h1 className="mt-10 font-serif text-[2rem] text-ink">
           Página não encontrada
         </h1>
@@ -45,7 +44,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
           Este perfil não existe ou ainda não foi publicado.
         </p>
         <Button asChild className="mt-8" size="lg">
-          <Link href="/cadastro">Criar minha página</Link>
+          <Link href="/#planos">Criar minha página</Link>
         </Button>
       </div>
     );
@@ -71,14 +70,17 @@ export default async function PublicProfilePage({ params }: PageProps) {
           className="min-h-screen"
         />
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-5">
-        <Link
-          href="/"
-          className="pointer-events-auto rounded-full px-3 py-1 text-[11px] font-medium text-muted/80 hover:text-ink"
-        >
-          Feito com PerfilPro
-        </Link>
-      </div>
+      {page.showBranding !== false ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-5">
+          <Link
+            href="/"
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-[11px] font-medium text-muted hover:text-ink"
+          >
+            <LogoMark className="h-4 w-4" />
+            Feito com PerfilPro
+          </Link>
+        </div>
+      ) : null}
     </div>
   );
 }

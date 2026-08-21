@@ -28,6 +28,10 @@ const faqs = [
     a: "Pode. Cores, foto, textos e a ordem dos blocos ficam no editor, quando você quiser.",
   },
   {
+    q: "Tem período grátis?",
+    a: "Sim. Os 7 primeiros dias são grátis nos planos Pro e Premium. Você cadastra o cartão no checkout e só é cobrado depois do teste. Pode cancelar quando quiser.",
+  },
+  {
     q: "Quanto tempo leva?",
     a: "Minutos. Escolhe o link, monta os blocos, publica e cola na bio.",
   },

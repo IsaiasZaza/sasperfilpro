@@ -8,28 +8,57 @@ import {
   useMemo,
   useState,
 } from "react";
-import { ApiError } from "@/lib/api";
+import {
+  ApiError,
+  isSubscriptionRequired,
+  setSubscriptionRequiredHandler,
+} from "@/lib/api";
 import { authApi, profileApi } from "@/lib/api-client";
+import { EMPTY_SUBSCRIPTION } from "@/lib/types/billing";
+import type { Subscription } from "@/lib/types/billing";
 import type { AuthUser, Profile } from "@/lib/types/profile";
 
 type AuthContextValue = {
   ready: boolean;
   user: AuthUser | null;
   profile: Profile | null;
+  subscription: Subscription;
   sessionError: string | null;
   refresh: () => Promise<void>;
-  setSession: (user: AuthUser, profile?: Profile | null) => void;
+  setSession: (
+    user: AuthUser,
+    profile?: Profile | null,
+    subscription?: Subscription | null,
+  ) => void;
   setProfile: (profile: Profile | null) => void;
+  setSubscription: (subscription: Subscription) => void;
   clearSession: () => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+function dropToPlansIfInApp() {
+  if (typeof window === "undefined") return;
+  const path = window.location.pathname;
+    if (path.startsWith("/app") || path.startsWith("/onboarding") || path.startsWith("/assinatura")) {
+    window.location.replace("/planos?reason=expired");
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [subscription, setSubscription] =
+    useState<Subscription>(EMPTY_SUBSCRIPTION);
   const [sessionError, setSessionError] = useState<string | null>(null);
+
+  const clearLocalSession = useCallback(() => {
+    setUser(null);
+    setProfile(null);
+    setSubscription(EMPTY_SUBSCRIPTION);
+    setSessionError(null);
+  }, []);
 
   const refresh = useCallback(async () => {
     try {
@@ -41,7 +70,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailVerifiedAt: me.emailVerifiedAt,
         createdAt: me.createdAt,
       });
+      setSubscription(me.subscription ?? EMPTY_SUBSCRIPTION);
       setSessionError(null);
+
+      if (me.subscription && !me.subscription.grantsAccess) {
+        clearLocalSession();
+        dropToPlansIfInApp();
+        return;
+      }
 
       try {
         const full = await profileApi.get();
@@ -50,12 +86,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(me.profile ?? null);
       }
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setUser(null);
-        setProfile(null);
-        setSessionError(null);
+      if (
+        (error instanceof ApiError && error.status === 401) ||
+        isSubscriptionRequired(error)
+      ) {
+        clearLocalSession();
+        if (isSubscriptionRequired(error)) dropToPlansIfInApp();
       } else {
-        // Não desloga em erro de rede / 5xx — mantém sessão se já houver.
         setSessionError(
           error instanceof ApiError
             ? error.message
@@ -65,7 +102,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [clearLocalSession]);
+
+  useEffect(() => {
+    setSubscriptionRequiredHandler(() => {
+      clearLocalSession();
+      dropToPlansIfInApp();
+    });
+    return () => setSubscriptionRequiredHandler(null);
+  }, [clearLocalSession]);
 
   useEffect(() => {
     void refresh();
@@ -76,21 +121,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ready,
       user,
       profile,
+      subscription,
       sessionError,
       refresh,
-      setSession: (nextUser, nextProfile) => {
+      setSession: (nextUser, nextProfile, nextSubscription) => {
         setUser(nextUser);
         setSessionError(null);
         if (nextProfile !== undefined) setProfile(nextProfile);
+        if (nextSubscription) setSubscription(nextSubscription);
       },
       setProfile,
-      clearSession: () => {
-        setUser(null);
-        setProfile(null);
-        setSessionError(null);
-      },
+      setSubscription,
+      clearSession: clearLocalSession,
     }),
-    [ready, user, profile, sessionError, refresh],
+    [ready, user, profile, subscription, sessionError, refresh, clearLocalSession],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

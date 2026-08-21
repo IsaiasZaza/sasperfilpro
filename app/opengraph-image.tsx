@@ -15,19 +15,37 @@ export default function OpenGraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           background: "#D4E05C",
-          padding: "72px",
+          padding: "64px 72px",
           color: "#14110E",
         }}
       >
-        <div
-          style={{
-            fontSize: 28,
-            letterSpacing: 4,
-            textTransform: "uppercase",
-            color: "#14110E",
-          }}
-        >
-          PerfilPro
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              background: "#14110E",
+              color: "#D4E05C",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 32,
+              fontFamily: "Georgia, serif",
+              fontWeight: 700,
+            }}
+          >
+            P
+          </div>
+          <div
+            style={{
+              fontSize: 32,
+              fontFamily: "Georgia, serif",
+              letterSpacing: -1,
+            }}
+          >
+            PerfilPro
+          </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
@@ -35,6 +53,7 @@ export default function OpenGraphImage() {
               fontSize: 68,
               lineHeight: 1.05,
               maxWidth: 920,
+              fontFamily: "Georgia, serif",
             }}
           >
             Tudo o que você é. Em um só link.

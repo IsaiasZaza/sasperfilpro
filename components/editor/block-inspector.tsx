@@ -130,6 +130,7 @@ export function BlockInspector({
           <BlockLookControls
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
+            showAvatar
           />
         </div>
       );
@@ -248,6 +249,7 @@ export function BlockInspector({
     }
     case "LINK_BUTTON": {
       const content = block.content as LinkButtonContent;
+      const icon = content.icon || "auto";
       return (
         <div className="space-y-5">
           <Section title="Conteúdo">
@@ -261,7 +263,7 @@ export function BlockInspector({
                 placeholder="Portfólio"
               />
             </Field>
-            <Field hint="Cole o link completo, com https://">
+            <Field hint="Cole o link completo, com https://. O ícone Auto lê a rede pelo endereço.">
               <Label>URL</Label>
               <Input
                 value={content.url ?? ""}
@@ -271,12 +273,63 @@ export function BlockInspector({
                 placeholder="https://instagram.com/seuuser"
               />
             </Field>
-            <Field hint="Opcional. Ex.: ✨ ou o nome da rede.">
-              <Label>Ícone / prefixo</Label>
+            <Field hint="Se vazio, aparece o domínio do link. Ex.: instagram.com">
+              <Label>Subtítulo</Label>
               <Input
-                value={content.icon ?? ""}
+                value={content.subtitle ?? ""}
                 onChange={(event) =>
-                  setContent({ ...content, icon: event.target.value })
+                  setContent({ ...content, subtitle: event.target.value })
+                }
+                placeholder="instagram.com"
+              />
+            </Field>
+          </Section>
+          <Section title="Ícone">
+            <div className="flex flex-wrap gap-1.5">
+              {LINK_ICON_OPTIONS.map((option) => {
+                const selected = icon === option.id;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() =>
+                      setContent({
+                        ...content,
+                        icon: option.id === "auto" ? "auto" : option.id,
+                      })
+                    }
+                    className={cn(
+                      "inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                      selected
+                        ? "border-ink bg-ink text-white"
+                        : "border-line bg-card text-ink",
+                    )}
+                  >
+                    {option.id !== "auto" && option.id !== "emoji" ? (
+                      <SocialIcon
+                        network={option.id as SocialNetwork}
+                        className="h-3 w-3"
+                      />
+                    ) : null}
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+            <Field hint="Opcional. Se preencher, substitui o ícone da rede.">
+              <Label>Emoji</Label>
+              <Input
+                value={
+                  icon !== "auto" &&
+                  !LINK_ICON_OPTIONS.some((item) => item.id === icon)
+                    ? icon
+                    : ""
+                }
+                onChange={(event) =>
+                  setContent({
+                    ...content,
+                    icon: event.target.value.trim() || "auto",
+                  })
                 }
                 placeholder="✨"
               />
@@ -794,6 +847,11 @@ export function BlockInspector({
 function networkLabel(network: SocialNetwork) {
   return SOCIAL_NETWORKS.find((item) => item.id === network)?.label ?? network;
 }
+
+const LINK_ICON_OPTIONS: { id: string; label: string }[] = [
+  { id: "auto", label: "Auto" },
+  ...SOCIAL_NETWORKS,
+];
 
 function Section({
   title,

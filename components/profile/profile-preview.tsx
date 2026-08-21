@@ -1,20 +1,31 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { ArrowUpRight, MapPin, Star } from "lucide-react";
 import { StatusBar } from "@/components/mockups/phone-frame";
 import {
+  LinkBrandGlyph,
   SocialIcon,
   SOCIAL_BRAND,
   WhatsAppIcon,
 } from "@/components/profile/brand-icons";
 import {
   alignStack,
+  avatarPixels,
+  avatarRadius,
   buttonShellClass,
+  fontScale,
   justifyAlign,
   lookFrom,
   pulseStyle,
+  socialIconPixels,
 } from "@/lib/block-look";
+import {
+  brandFill,
+  guessLinkBrand,
+  linkHostname,
+  resolveLinkBrand,
+} from "@/lib/link-brand";
 import { resolvePaintTheme } from "@/lib/theme";
 import {
   BLOCK_META,
@@ -87,56 +98,75 @@ function BlockView({
         (item) => item.type === "LOCATION" && item.isVisible,
       );
       const color = look.textColor || theme.text;
-      return (
+      const sizes = fontScale(look.fontSize);
+      const photo = avatarPixels(look.avatarSize);
+      const radius = avatarRadius(look.avatarShape);
+      const side = look.align === "left" || look.align === "right";
+      const avatar = avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarUrl}
+          alt={name}
+          className="shrink-0 object-cover"
+          style={{
+            width: photo,
+            height: photo,
+            borderRadius: radius,
+          }}
+        />
+      ) : (
+        <div
+          className="flex shrink-0 items-center justify-center font-semibold text-white"
+          style={{
+            width: photo,
+            height: photo,
+            borderRadius: radius,
+            fontSize: Math.max(14, photo * 0.28),
+            background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
+          }}
+        >
+          {initials(name)}
+        </div>
+      );
+      const texts = (
         <div
           className={cn(
-            "flex flex-col px-5 pb-5 pt-8",
-            alignStack(look.align),
+            "min-w-0",
+            side ? "flex-1" : "w-full",
+            !side && alignStack(look.align),
+            side && look.align === "right" && "text-right",
+            side && look.align === "left" && "text-left",
           )}
         >
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={name}
-              className="h-[88px] w-[88px] rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white"
-              style={{
-                background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
-              }}
-            >
-              {initials(name)}
-            </div>
-          )}
           <h1
-            className="mt-4 font-serif text-[1.75rem] leading-tight tracking-tight"
-            style={{ color }}
+            className={cn(
+              "font-serif leading-tight tracking-tight",
+              side ? "mt-0" : "mt-4",
+            )}
+            style={{ color, fontSize: sizes.title }}
           >
             {name}
           </h1>
           {page.username ? (
             <p
-              className="mt-1 text-[13px] font-medium"
-              style={{ color: theme.muted }}
+              className="mt-1 font-medium"
+              style={{ color: theme.muted, fontSize: sizes.meta }}
             >
               @{page.username}
             </p>
           ) : null}
           {headline ? (
             <p
-              className="mt-2 text-[15px] font-medium"
-              style={{ color }}
+              className="mt-2 font-medium"
+              style={{ color, fontSize: sizes.headline }}
             >
               {headline}
             </p>
           ) : null}
           {content.bio || page.bio ? (
             <p
-              className="mt-2.5 max-w-[280px] text-[14px] leading-relaxed"
-              style={{ color: theme.muted }}
+              className="mt-2.5 max-w-[280px] leading-relaxed"
+              style={{ color: theme.muted, fontSize: sizes.body }}
             >
               {content.bio || page.bio}
             </p>
@@ -144,15 +174,35 @@ function BlockView({
           {locationText && !hasLocationBlock ? (
             <p
               className={cn(
-                "mt-2 flex items-center gap-1 text-[13px]",
-                justifyAlign(look.align),
+                "mt-2 flex items-center gap-1",
+                side
+                  ? look.align === "right"
+                    ? "justify-end"
+                    : "justify-start"
+                  : justifyAlign(look.align),
               )}
-              style={{ color: theme.muted }}
+              style={{ color: theme.muted, fontSize: sizes.meta }}
             >
-              <MapPin className="h-3.5 w-3.5" />
+              <MapPin className="h-3.5 w-3.5 shrink-0" />
               {locationText}
             </p>
           ) : null}
+        </div>
+      );
+      return (
+        <div
+          className={cn(
+            "px-3 pb-4 pt-3",
+            side
+              ? cn(
+                  "flex items-start gap-3",
+                  look.align === "right" && "flex-row-reverse",
+                )
+              : cn("flex flex-col", alignStack(look.align)),
+          )}
+        >
+          {avatar}
+          {texts}
         </div>
       );
     }
@@ -162,10 +212,15 @@ function BlockView({
       if (!text.trim()) return null;
       const href = content.mapsUrl || content.url;
       const color = look.textColor || theme.text;
+      const sizes = fontScale(look.fontSize);
+      const align = look.align || "center";
+      const full = look.width !== "fit";
       const card = (
         <div
           className={cn(
             "flex items-center gap-3 rounded-2xl px-3.5 py-3.5",
+            align === "right" && "flex-row-reverse",
+            align === "center" && !full && "justify-center",
             look.pulse && "block-pulse",
           )}
           style={{
@@ -181,13 +236,30 @@ function BlockView({
           >
             <MapPin className="h-5 w-5" />
           </span>
-          <span className="min-w-0 flex-1 text-left">
-            <span className="block text-[14px] font-semibold leading-snug">
+          <span
+            className={cn(
+              "min-w-0",
+              full && "flex-1",
+              align === "right"
+                ? "text-right"
+                : align === "center"
+                  ? "text-center"
+                  : "text-left",
+            )}
+          >
+            <span
+              className="block font-semibold leading-snug"
+              style={{ fontSize: sizes.body }}
+            >
               {text}
             </span>
             <span
-              className="mt-0.5 flex items-center gap-0.5 text-[12px] font-medium"
-              style={{ color: theme.muted }}
+              className={cn(
+                "mt-0.5 flex items-center gap-0.5 font-medium",
+                align === "right" && "justify-end flex-row-reverse",
+                align === "center" && "justify-center",
+              )}
+              style={{ color: theme.muted, fontSize: sizes.meta }}
             >
               {content.label || "Ver no mapa"}
               {href ? <ArrowUpRight className="h-3.5 w-3.5" /> : null}
@@ -196,20 +268,18 @@ function BlockView({
         </div>
       );
       return (
-        <div className={cn("flex", justifyAlign(look.align))}>
+        <div className={cn("flex w-full", justifyAlign(align))}>
           {href ? (
             <a
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className={look.width === "fit" ? "w-auto max-w-full" : "w-full"}
+              className={full ? "w-full" : "w-auto max-w-full"}
             >
               {card}
             </a>
           ) : (
-            <div className={look.width === "fit" ? "w-auto max-w-full" : "w-full"}>
-              {card}
-            </div>
+            <div className={full ? "w-full" : "w-auto max-w-full"}>{card}</div>
           )}
         </div>
       );
@@ -218,6 +288,7 @@ function BlockView({
       const content = block.content as CtaButtonContent;
       const style = content.style || "primary";
       const radius = theme.buttonRadius;
+      const sizes = fontScale(look.fontSize);
       const lookStyle =
         style === "outline"
           ? {
@@ -244,9 +315,10 @@ function BlockView({
             href={content.url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(look, "text-[15px]")}
+            className={buttonShellClass(look)}
             style={{
               ...lookStyle,
+              fontSize: sizes.button,
               ...pulseStyle(
                 style === "primary" ? theme.accent : theme.text,
               ),
@@ -260,23 +332,67 @@ function BlockView({
     case "LINK_BUTTON": {
       const content = block.content as LinkButtonContent;
       const color = look.textColor || theme.text;
+      const brand = resolveLinkBrand(content.icon, content.url);
+      const fill = brandFill(
+        brand === "emoji" ? guessLinkBrand(content.url) : brand,
+        theme.accent,
+      );
+      const host = linkHostname(content.url);
+      const subtitle = (content.subtitle || "").trim() || host;
+      const sizes = fontScale(look.fontSize);
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
             href={content.url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(look, "min-h-11 text-[14px] font-medium")}
+            className={cn(
+              "flex min-h-14 items-center gap-3 px-2.5 py-2",
+              look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
+              look.pulse && "block-pulse",
+            )}
             style={{
               background: theme.card,
               color,
               border: `1px solid ${theme.line}`,
               borderRadius: theme.buttonRadius,
-              ...pulseStyle(theme.text),
+              boxShadow: "0 1px 2px rgba(20,17,14,0.05)",
+              ...pulseStyle(fill.background),
             }}
           >
-            {content.icon ? <span>{content.icon}</span> : null}
-            {content.label || "Link"}
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: brand === "emoji" ? `${theme.accent}14` : fill.background,
+                color: brand === "emoji" ? theme.accent : fill.color,
+              }}
+            >
+              <LinkBrandGlyph
+                brand={brand}
+                emoji={content.icon}
+                className="h-[18px] w-[18px]"
+              />
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span
+                className="block truncate font-semibold leading-tight"
+                style={{ fontSize: sizes.body }}
+              >
+                {content.label || "Link"}
+              </span>
+              {subtitle ? (
+                <span
+                  className="mt-0.5 block truncate font-medium"
+                  style={{ color: theme.muted, fontSize: sizes.meta }}
+                >
+                  {subtitle}
+                </span>
+              ) : null}
+            </span>
+            <ArrowUpRight
+              className="h-4 w-4 shrink-0 opacity-45"
+              aria-hidden="true"
+            />
           </a>
         </div>
       );
@@ -284,17 +400,19 @@ function BlockView({
     case "WHATSAPP": {
       const content = block.content as WhatsAppContent;
       const color = look.textColor || "#fff";
+      const sizes = fontScale(look.fontSize);
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
             href={whatsappHref(content.phone || "", content.message)}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(look, "text-[15px]")}
+            className={buttonShellClass(look)}
             style={{
               background: "#128c4b",
               color,
               borderRadius: theme.buttonRadius,
+              fontSize: sizes.button,
               ...pulseStyle("#128c4b"),
             }}
           >
@@ -309,6 +427,8 @@ function BlockView({
       const items = content.items || [];
       if (items.length === 0) return null;
       const layout = content.layout || "icons";
+      const sizes = fontScale(look.fontSize);
+      const iconBox = socialIconPixels(look.fontSize);
       if (layout === "buttons") {
         return (
           <div className="space-y-2">
@@ -326,14 +446,12 @@ function BlockView({
                     href={item.url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={buttonShellClass(
-                      look,
-                      "min-h-11 text-[13px] font-medium",
-                    )}
+                    className={buttonShellClass(look, "min-h-11 font-medium")}
                     style={{
                       background: brand.background,
                       color: look.textColor || brand.color,
                       borderRadius: theme.buttonRadius,
+                      fontSize: sizes.body,
                       ...pulseStyle(brand.background),
                     }}
                   >
@@ -361,16 +479,23 @@ function BlockView({
                 rel="noopener noreferrer"
                 aria-label={item.label || networkFallback(item.network)}
                 className={cn(
-                  "flex h-12 w-12 items-center justify-center rounded-full",
+                  "flex items-center justify-center rounded-full",
                   look.pulse && "block-pulse",
                 )}
                 style={{
+                  width: iconBox,
+                  height: iconBox,
                   background: brand.background,
                   color: look.textColor || brand.color,
                   ...pulseStyle(brand.background),
                 }}
               >
-                <SocialIcon network={item.network} className="h-5 w-5" />
+                <SocialIcon
+                  network={item.network}
+                  className={
+                    iconBox >= 56 ? "h-6 w-6" : iconBox <= 40 ? "h-4 w-4" : "h-5 w-5"
+                  }
+                />
               </a>
             );
           })}
@@ -383,11 +508,12 @@ function BlockView({
       if (items.length === 0) return null;
       const whatsapp = pageWhatsApp(page);
       const headingColor = look.textColor || theme.muted;
+      const sizes = fontScale(look.fontSize);
       return (
         <div className={cn("flex flex-col", alignStack(look.align))}>
           <p
-            className="mb-2 w-full text-[11px] font-semibold uppercase tracking-[0.16em]"
-            style={{ color: headingColor }}
+            className="mb-2 w-full font-semibold uppercase tracking-[0.16em]"
+            style={{ color: headingColor, fontSize: sizes.label }}
           >
             {content.heading || "Serviços"}
           </p>
@@ -403,25 +529,28 @@ function BlockView({
                 <>
                   <span className="min-w-0 text-left">
                     <span
-                      className="block text-[14px] font-medium"
-                      style={{ color: look.textColor || theme.text }}
+                      className="block font-medium"
+                      style={{
+                        color: look.textColor || theme.text,
+                        fontSize: sizes.body,
+                      }}
                     >
                       {item.name}
                     </span>
                     {item.description ? (
                       <span
-                        className="mt-0.5 block text-[12px] leading-snug"
-                        style={{ color: theme.muted }}
+                        className="mt-0.5 block leading-snug"
+                        style={{ color: theme.muted, fontSize: sizes.meta }}
                       >
                         {item.description}
                       </span>
                     ) : null}
                   </span>
-                  <span className="flex shrink-0 items-center gap-1.5 text-[14px] font-semibold">
+                  <span
+                    className="shrink-0 font-semibold"
+                    style={{ fontSize: sizes.body }}
+                  >
                     {price}
-                    {whatsapp?.phone ? (
-                      <WhatsAppIcon className="h-3.5 w-3.5 text-[#128c4b]" />
-                    ) : null}
                   </span>
                 </>
               );
@@ -469,11 +598,12 @@ function BlockView({
       );
       if (items.length === 0) return null;
       const headingColor = look.textColor || theme.muted;
+      const sizes = fontScale(look.fontSize);
       return (
         <div className={cn("flex flex-col", alignStack(look.align))}>
           <p
-            className="mb-2 w-full text-[11px] font-semibold uppercase tracking-[0.16em]"
-            style={{ color: headingColor }}
+            className="mb-2 w-full font-semibold uppercase tracking-[0.16em]"
+            style={{ color: headingColor, fontSize: sizes.label }}
           >
             {content.heading || "Depoimentos"}
           </p>
@@ -495,14 +625,17 @@ function BlockView({
                   ))}
                 </div>
                 <p
-                  className="text-[14px] leading-relaxed"
-                  style={{ color: look.textColor || theme.text }}
+                  className="leading-relaxed"
+                  style={{
+                    color: look.textColor || theme.text,
+                    fontSize: sizes.body,
+                  }}
                 >
                   “{item.text}”
                 </p>
                 <p
-                  className="mt-2 text-[13px] font-semibold"
-                  style={{ color: theme.text }}
+                  className="mt-2 font-semibold"
+                  style={{ color: theme.text, fontSize: sizes.meta }}
                 >
                   {item.authorName}
                 </p>
@@ -564,10 +697,16 @@ export function ProfilePreview({
         theme.font === "sans" && "font-sans",
         className,
       )}
-      style={{ background: theme.background, color: theme.text }}
+      style={
+        {
+          background: theme.background,
+          color: theme.text,
+          ["--preview-canvas"]: theme.background,
+        } as CSSProperties
+      }
     >
-      {showStatusBar ? <StatusBar /> : null}
-      <div className="px-4 pb-24 pt-8">
+      {showStatusBar ? <StatusBar color={theme.text} /> : null}
+      <div className="px-3.5 pb-16 pt-1">
         {hero ? (
           <SelectableBlock
             id={hero.id}
@@ -580,7 +719,7 @@ export function ProfilePreview({
             <BlockView block={hero} theme={theme} page={page} />
           </SelectableBlock>
         ) : (
-          <div className="flex flex-col items-center px-5 pt-4 text-center">
+          <div className="flex flex-col items-center px-3 pt-3 text-center">
             <div
               className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white"
               style={{
@@ -623,7 +762,7 @@ export function ProfilePreview({
             {page.location}
           </p>
         ) : null}
-        <div className="mt-4 space-y-2.5">
+        <div className="mt-3 space-y-2.5">
           {rest.map((block) => (
             <SelectableBlock
               key={block.id}
@@ -673,7 +812,8 @@ function SelectableBlock({
       className={cn(
         "relative rounded-[1.35rem] transition",
         padded && "px-1 py-1",
-        selected && "shadow-[inset_0_0_0_2px_rgba(20,17,14,0.85)]",
+        selected &&
+          "ring-2 ring-lime ring-offset-2 ring-offset-[var(--preview-canvas,#fff)]",
         hidden && "opacity-45",
       )}
     >

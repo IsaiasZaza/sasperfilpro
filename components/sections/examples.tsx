@@ -73,7 +73,7 @@ export function Examples() {
         <Reveal>
           <div className="mt-12 flex justify-center">
             <Button asChild size="xl">
-              <Link href="/cadastro">Criar uma página igual</Link>
+              <Link href="/#planos">Criar uma página igual</Link>
             </Button>
           </div>
         </Reveal>

@@ -5,7 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { authApi } from "@/lib/api-client";
+import { SubscriptionBanners } from "@/components/billing/subscription-banners";
+import { Logo } from "@/components/brand/logo";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { authApi, billingApi } from "@/lib/api-client";
+import { hasWorkspaceAccess, canStaySignedIn } from "@/lib/billing";
+import type { Plan } from "@/lib/types/billing";
 import { needsOnboarding } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
@@ -19,10 +24,17 @@ function initials(name: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { ready, user, profile, clearSession } = useAuth();
+  const { ready, user, profile, subscription, clearSession } = useAuth();
   const isEditor = pathname.startsWith("/app/editor");
   const isOnboarding = pathname.startsWith("/onboarding");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [plans, setPlans] = useState<Plan[]>([]);
+
+  const workspace = hasWorkspaceAccess(subscription);
+  const signedInOk = canStaySignedIn(subscription);
+  const isDashboard = pathname === "/app";
+  const isAssinatura =
+    pathname === "/assinatura" || pathname.startsWith("/assinatura/");
 
   useEffect(() => {
     if (!ready) return;
@@ -30,19 +42,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       router.replace("/login");
       return;
     }
-    if (needsOnboarding(profile) && !isOnboarding) {
+    if (!signedInOk) {
+      router.replace("/planos?reason=expired");
+      return;
+    }
+    if (!workspace && !isAssinatura) {
+      router.replace("/assinatura");
+      return;
+    }
+    if (workspace && needsOnboarding(profile) && !isOnboarding) {
       router.replace("/onboarding");
     }
-  }, [ready, user, profile, pathname, router, isOnboarding]);
+  }, [
+    ready,
+    user,
+    profile,
+    workspace,
+    signedInOk,
+    isAssinatura,
+    pathname,
+    router,
+    isOnboarding,
+  ]);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  if (!ready || !user || (needsOnboarding(profile) && !isOnboarding)) {
+  useEffect(() => {
+    if (!user || !workspace) return;
+    void billingApi
+      .plans()
+      .then((catalog) => setPlans(catalog.plans))
+      .catch(() => undefined);
+  }, [user, workspace]);
+
+  if (
+    !ready ||
+    !user ||
+    !signedInOk ||
+    (!workspace && !isAssinatura) ||
+    (workspace && needsOnboarding(profile) && !isOnboarding)
+  ) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee] text-muted">
-        Carregando...
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f3ee]">
+        <PageSkeleton />
       </div>
     );
   }
@@ -57,7 +101,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push("/login");
   }
 
-  const isDashboard = pathname === "/app";
+  const navItems = [
+    ...(workspace
+      ? [
+          { href: "/app", label: "Página", active: pathname === "/app" },
+          {
+            href: "/app/editor",
+            label: "Editor",
+            active: pathname.startsWith("/app/editor"),
+          },
+        ]
+      : []),
+    { href: "/assinatura", label: "Assinatura", active: isAssinatura },
+  ];
 
   return (
     <div className={cn("min-h-screen", isDashboard ? "bg-lime" : "bg-[#f6f3ee]")}>
@@ -72,36 +128,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-6 lg:px-8">
             <div className="flex items-center gap-6">
-              <Link
-                href={isOnboarding ? "/onboarding" : "/app"}
-                className="font-serif text-[1.3rem] leading-none text-ink"
-              >
-                PerfilPro
-              </Link>
+              <Logo
+                href={isOnboarding ? "/onboarding" : workspace ? "/app" : "/assinatura"}
+                size="sm"
+                mark={isDashboard ? "contrast" : "brand"}
+              />
               {!isOnboarding ? (
                 <nav className="hidden items-center gap-5 sm:flex">
-                  <Link
-                    href="/app"
-                    className={cn(
-                      "text-[13px] font-medium",
-                      pathname === "/app"
-                        ? "text-ink"
-                        : "text-muted hover:text-ink",
-                    )}
-                  >
-                    Página
-                  </Link>
-                  <Link
-                    href="/app/editor"
-                    className={cn(
-                      "text-[13px] font-medium",
-                      pathname.startsWith("/app/editor")
-                        ? "text-ink"
-                        : "text-muted hover:text-ink",
-                    )}
-                  >
-                    Editor
-                  </Link>
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "text-[13px] font-medium",
+                        item.active ? "text-ink" : "text-muted hover:text-ink",
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                 </nav>
               ) : null}
             </div>
@@ -142,20 +187,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               )}
             >
               <div className="mx-auto flex max-w-6xl flex-col px-5 py-2">
-                <Link
-                  href="/app"
-                  className="rounded-lg px-2 py-3 text-[14px] font-medium text-ink"
-                >
-                  Página
-                </Link>
-                <Link
-                  href="/app/editor"
-                  className="rounded-lg px-2 py-3 text-[14px] font-medium text-ink"
-                >
-                  Editor
-                </Link>
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="rounded-lg px-2 py-3 text-[14px] font-medium text-ink"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             </div>
+          ) : null}
+          {!isAssinatura ? (
+            <SubscriptionBanners subscription={subscription} plans={plans} />
           ) : null}
         </header>
       ) : null}

@@ -6,6 +6,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function LoginPage() {
-  return <LoginForm />;
+type PageProps = {
+  searchParams: Promise<{
+    checkout?: string;
+    session_id?: string;
+    email?: string;
+    next?: string;
+  }>;
+};
+
+export default async function LoginPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  return (
+    <LoginForm
+      initialCheckout={params.checkout}
+      initialSessionId={params.session_id}
+      initialEmail={params.email}
+      nextPath={params.next}
+    />
+  );
 }

@@ -1,29 +1,29 @@
-import { Link2, Palette, Share2 } from "lucide-react";
+import { CreditCard, Link2, Share2 } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 
-const steps = [
-  {
-    number: "01",
-    icon: Link2,
-    title: "Reserve seu link",
-    text: "Escolha o username. Esse vai ser o endereço que você cola na bio.",
-  },
-  {
-    number: "02",
-    icon: Palette,
-    title: "Monte a página",
-    text: "Arraste blocos, escolha cores e coloque serviços, WhatsApp e depoimentos.",
-  },
-  {
-    number: "03",
-    icon: Share2,
-    title: "Publique na bio",
-    text: "Copie o link, cole no Instagram, TikTok ou WhatsApp. Pronto para receber cliente.",
-  },
-];
+export function HowItWorks({ trialDays = 7 }: { trialDays?: number }) {
+  const steps = [
+    {
+      number: "01",
+      icon: Link2,
+      title: "Reserve o link",
+      text: "Escolha o /u/ que vai na bio. Se estiver livre, você leva para o cadastro.",
+    },
+    {
+      number: "02",
+      icon: CreditCard,
+      title: "Escolha o plano e cadastre o cartão",
+      text: `Pro ou Premium, ${trialDays} dias grátis. O cartão entra na Stripe agora; a cobrança só depois do teste.`,
+    },
+    {
+      number: "03",
+      icon: Share2,
+      title: "Publique na bio",
+      text: "Copie o link, cole no Instagram, TikTok ou WhatsApp. Pronto para receber cliente.",
+    },
+  ];
 
-export function HowItWorks() {
   return (
     <section id="como-funciona" className="scroll-mt-20 bg-background py-16 sm:py-24">
       <Container>

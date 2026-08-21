@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 
 function AuthPreview() {
   return (
@@ -35,37 +36,33 @@ export function AuthShell({
   children,
   footer,
   action,
+  wide = false,
+  aside,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
   action?: { href: string; label: string };
+  wide?: boolean;
+  aside?: React.ReactNode;
 }) {
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <aside className="relative hidden flex-col bg-lime lg:flex">
         <div className="px-10 pt-8">
-          <Link
-            href="/"
-            className="font-serif text-[1.55rem] leading-none text-ink"
-          >
-            PerfilPro
-          </Link>
+          <Logo href="/" mark="contrast" size="lg" />
         </div>
         <div className="flex flex-1 items-center justify-center px-10 py-16">
-          <AuthPreview />
+          {aside ?? <AuthPreview />}
         </div>
       </aside>
 
       <div className="flex min-h-screen flex-col bg-[#fffcf8]">
         <header className="flex items-center justify-between px-5 py-5 sm:px-8">
-          <Link
-            href="/"
-            className="font-serif text-[1.4rem] leading-none text-ink lg:invisible"
-          >
-            PerfilPro
-          </Link>
+          <span className="lg:invisible">
+            <Logo href="/" />
+          </span>
           {action ? (
             <Link
               href={action.href}
@@ -79,7 +76,7 @@ export function AuthShell({
         </header>
 
         <div className="flex flex-1 items-center justify-center px-5 py-10">
-          <div className="w-full max-w-[380px]">
+          <div className={wide ? "w-full max-w-[440px]" : "w-full max-w-[380px]"}>
             <h1 className="font-serif text-[2rem] leading-[1.1] tracking-tight text-ink">
               {title}
             </h1>

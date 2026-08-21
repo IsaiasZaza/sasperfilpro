@@ -80,6 +80,8 @@ export function prepareBlockContent(
       asString(prev.label, "Conheça meu trabalho"),
     );
     next.url = urlOrFallback(next.url, prev.url, DEFAULT_URL.LINK_BUTTON);
+    next.icon = asString(next.icon, asString(prev.icon, "auto"));
+    next.subtitle = asString(next.subtitle, asString(prev.subtitle));
   }
 
   if (type === "LOCATION") {

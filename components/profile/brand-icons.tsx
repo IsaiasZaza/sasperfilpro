@@ -145,3 +145,36 @@ export function SocialIcon({
   const Icon = ICONS[network] || SiteIcon;
   return <Icon className={className} />;
 }
+
+export function LinkBrandGlyph({
+  brand,
+  emoji,
+  className,
+}: {
+  brand: SocialNetwork | "whatsapp" | "link" | "emoji";
+  emoji?: string;
+  className?: string;
+}) {
+  if (brand === "emoji") {
+    return <span className="text-[18px] leading-none">{emoji}</span>;
+  }
+  if (brand === "whatsapp") return <WhatsAppIcon className={className} />;
+  if (brand === "link") {
+    return (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={className}
+        aria-hidden="true"
+      >
+        <path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93" />
+        <path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 1 0 7.07 7.07L14 18.07" />
+      </svg>
+    );
+  }
+  return <SocialIcon network={brand} className={className} />;
+}

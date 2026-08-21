@@ -8,6 +8,7 @@ import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { profileApi } from "@/lib/api-client";
 import type { PublicPage } from "@/lib/types/profile";
 
@@ -46,9 +47,7 @@ export function DashboardHome() {
   }, [profile?.username, profile?.status]);
 
   if (!user || !profile) {
-    return (
-      <div className="px-5 py-16 text-center text-ink/60">Carregando...</div>
-    );
+    return <PageSkeleton />;
   }
 
   const publicPath = profile.username ? `/u/${profile.username}` : null;

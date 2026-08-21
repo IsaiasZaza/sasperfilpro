@@ -1,7 +1,14 @@
 import { api } from "@/lib/api";
 import type { ApiTheme } from "@/lib/theme";
 import type {
-  AuthPayload,
+  LoginResponse,
+  Plan,
+  PlanId,
+  PlansCatalog,
+  RegisterResponse,
+  Subscription,
+} from "@/lib/types/billing";
+import type {
   AuthUser,
   MePayload,
   Profile,
@@ -20,14 +27,15 @@ export const authApi = {
     email: string;
     password: string;
     confirmPassword: string;
+    plan: PlanId;
   }) {
-    return api<AuthPayload>("/auth/register", {
+    return api<RegisterResponse>("/auth/register", {
       method: "POST",
       body: input,
     });
   },
   login(input: { email: string; password: string }) {
-    return api<AuthPayload>("/auth/login", {
+    return api<LoginResponse>("/auth/login", {
       method: "POST",
       body: input,
     });
@@ -55,7 +63,7 @@ export const authApi = {
     });
   },
   refresh() {
-    return api<AuthPayload>("/auth/refresh", { method: "POST" });
+    return api<LoginResponse>("/auth/refresh", { method: "POST" });
   },
 };
 
@@ -214,6 +222,44 @@ export const publicApi = {
     return api<UsernameCheck>(
       `/usernames/check?username=${encodeURIComponent(username)}`,
     );
+  },
+};
+
+export const billingApi = {
+  plans() {
+    return api<PlansCatalog>("/billing/plans", { cache: "no-store" });
+  },
+  checkout(input: { email: string; password: string; plan: PlanId }) {
+    return api<{ checkoutUrl: string | null }>("/billing/checkout", {
+      method: "POST",
+      body: input,
+    });
+  },
+  confirmSession(sessionId: string) {
+    return api<{ subscription?: Subscription }>("/billing/confirm-session", {
+      method: "POST",
+      body: { sessionId },
+    });
+  },
+  subscription() {
+    return api<{ plans: Plan[]; subscription: Subscription }>(
+      "/billing/subscription",
+    );
+  },
+  changePlan(plan: PlanId) {
+    return api<unknown>("/billing/change-plan", {
+      method: "POST",
+      body: { plan },
+    });
+  },
+  cancel() {
+    return api<unknown>("/billing/cancel", { method: "POST" });
+  },
+  resume() {
+    return api<unknown>("/billing/resume", { method: "POST" });
+  },
+  portal() {
+    return api<{ portalUrl: string }>("/billing/portal", { method: "POST" });
   },
 };
 

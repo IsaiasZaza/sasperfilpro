@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/ui/container";
 import { NAV_LINKS } from "@/lib/nav";
 
@@ -7,9 +8,7 @@ export function Footer() {
     <footer className="bg-ink text-white">
       <Container className="flex flex-col gap-8 py-12 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Link href="/" className="font-serif text-[1.5rem] text-lime">
-            PerfilPro
-          </Link>
+          <Logo href="/" size="lg" tone="inverse" />
           <p className="mt-3 max-w-xs text-[15px] leading-[1.7] text-white/60">
             Um link na bio para apresentar seu trabalho e receber clientes no
             WhatsApp.
@@ -25,7 +24,7 @@ export function Footer() {
             Entrar
           </Link>
           <Link href="/cadastro" className="hover:text-lime">
-            Criar página
+            Criar conta
           </Link>
         </nav>
       </Container>

@@ -32,6 +32,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { Logo } from "@/components/brand/logo";
 import { AppearancePanel } from "@/components/editor/appearance-panel";
 import { BlockInspector } from "@/components/editor/block-inspector";
 import {
@@ -122,6 +123,7 @@ function defaultContent(
       return {
         label: "Conheça meu trabalho",
         url: "https://instagram.com/",
+        icon: "auto",
       };
     case "WHATSAPP":
       return {
@@ -761,12 +763,7 @@ export function EditorWorkspace() {
       <header className="border-b border-line bg-white">
         <div className="flex h-14 items-center justify-between gap-3 px-3 sm:h-16 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <Link
-              href="/app"
-              className="shrink-0 font-serif text-[1.3rem] leading-none text-ink"
-            >
-              PerfilPro
-            </Link>
+            <Logo href="/app" size="sm" />
             <span
               className={cn(
                 "hidden rounded-full px-2.5 py-1 text-[11px] font-semibold sm:inline",

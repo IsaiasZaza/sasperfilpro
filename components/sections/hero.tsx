@@ -15,14 +15,15 @@ export function Hero() {
       <Container className="relative grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8">
         <div className="max-w-xl">
           <p className="animate-fade-up mb-4 inline-flex items-center rounded-full border border-ink/10 bg-white/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink">
-            O link da sua bio, do seu jeito
+            7 dias grátis · Pro e Premium
           </p>
           <h1 className="animate-fade-up font-serif text-[2.6rem] leading-[0.98] text-ink sm:text-[3.6rem] lg:text-[4.15rem] [animation-delay:80ms]">
             Tudo o que você é. Em um só link.
           </h1>
           <p className="animate-fade-up mt-6 max-w-lg text-base leading-[1.7] text-ink/75 sm:text-[1.125rem] [animation-delay:140ms]">
             Monte sua página, mostre serviços e depoimentos, e leve o cliente
-            direto para o WhatsApp. Um link para colar na bio.
+            direto para o WhatsApp. Escolha o plano, cadastre o cartão na Stripe
+            e comece o teste grátis.
           </p>
           <div className="animate-fade-up mt-8 [animation-delay:220ms]">
             <ClaimUsername />

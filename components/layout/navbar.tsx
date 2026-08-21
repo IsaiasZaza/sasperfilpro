@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { NAV_LINKS } from "@/lib/nav";
@@ -36,12 +37,10 @@ export function Navbar() {
       )}
     >
       <Container className="flex h-16 items-center justify-between">
-        <Link href="/" className="font-serif text-[1.4rem] leading-none text-ink">
-          PerfilPro
-        </Link>
+        <Logo href="/" mark={scrolled || open ? "brand" : "contrast"} />
 
         <div className="flex items-center gap-3">
-          <nav className="hidden items-center gap-7 xl:flex">
+          <nav className="hidden items-center gap-7 lg:flex">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
@@ -53,18 +52,18 @@ export function Navbar() {
             ))}
           </nav>
 
-          <div className="hidden items-center gap-2 md:flex">
-            <Button asChild variant="ghost" size="sm">
+          <div className="flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex">
               <Link href="/login">Entrar</Link>
             </Button>
             <Button asChild size="sm">
-              <Link href="/cadastro">Criar grátis</Link>
+              <Link href="/cadastro">Criar conta</Link>
             </Button>
           </div>
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/60 xl:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/60 lg:hidden"
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
             onClick={() => setOpen((value) => !value)}
@@ -75,7 +74,7 @@ export function Navbar() {
       </Container>
 
       {open ? (
-        <div className="border-t border-line bg-[#f6f3ee] xl:hidden">
+        <div className="border-t border-line bg-[#f6f3ee] lg:hidden">
           <Container className="flex flex-col gap-1 py-4">
             {NAV_LINKS.map((link) => (
               <a
@@ -87,15 +86,10 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 md:hidden">
               <Button asChild variant="secondary" size="lg" className="w-full">
                 <Link href="/login" onClick={() => setOpen(false)}>
                   Entrar
-                </Link>
-              </Button>
-              <Button asChild size="lg" className="w-full">
-                <Link href="/cadastro" onClick={() => setOpen(false)}>
-                  Criar grátis
                 </Link>
               </Button>
             </div>

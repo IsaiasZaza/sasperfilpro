@@ -1,3 +1,5 @@
+import type { Subscription } from "@/lib/types/billing";
+
 export type ProfileStatus = "DRAFT" | "PUBLISHED";
 
 export type BlockType =
@@ -24,12 +26,18 @@ export type CtaStyle = "primary" | "secondary" | "outline";
 export type BlockAlign = "left" | "center" | "right";
 export type ButtonWidth = "full" | "fit";
 export type SocialLayout = "icons" | "buttons";
+export type FontSize = "sm" | "md" | "lg" | "xl";
+export type AvatarSize = "sm" | "md" | "lg" | "xl";
+export type AvatarShape = "circle" | "rounded" | "square";
 
 export type BlockLook = {
   textColor?: string;
   align?: BlockAlign;
   width?: ButtonWidth;
   pulse?: boolean;
+  fontSize?: FontSize;
+  avatarSize?: AvatarSize;
+  avatarShape?: AvatarShape;
 };
 
 export type HeroContent = BlockLook & {
@@ -50,6 +58,7 @@ export type LinkButtonContent = BlockLook & {
   label: string;
   url?: string;
   icon?: string;
+  subtitle?: string;
 };
 
 export type WhatsAppContent = BlockLook & {
@@ -155,11 +164,12 @@ export type AuthUser = {
 
 export type AuthPayload = {
   user: AuthUser;
-  accessToken: string;
+  accessToken?: string;
 };
 
 export type MePayload = AuthUser & {
   profile?: Profile | null;
+  subscription?: Subscription;
 };
 
 export type PublicPage = {
@@ -175,6 +185,8 @@ export type PublicPage = {
   blocks: ProfileBlock[];
   services: ServiceItem[];
   testimonials: TestimonialItem[];
+  plan?: "PRO" | "PREMIUM" | null;
+  showBranding?: boolean;
 };
 
 export type UsernameCheck = {
