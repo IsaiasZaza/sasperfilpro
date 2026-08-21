@@ -182,36 +182,22 @@ export function lookShadow(shadow?: BlockShadow, fallback?: string) {
   return fallback;
 }
 
-/** A API atual descarta campos de look no `content`; guardamos no `title`. */
+/** Look fica no `content`. Title só texto humano (legado `__pp_look__:` ainda é lido). */
 const LOOK_TITLE_PREFIX = "__pp_look__:";
+const TITLE_MAX = 80;
 
 export function packLookTitle(
   title: string | null | undefined,
-  look: BlockLook,
+  _look?: BlockLook,
 ): string | null {
-  const base =
-    typeof title === "string" && !title.startsWith(LOOK_TITLE_PREFIX)
-      ? title.trim()
-      : "";
-  const packed: Record<string, unknown> = {};
-  if (look.textColor) packed.textColor = look.textColor;
-  if (look.backgroundColor) packed.backgroundColor = look.backgroundColor;
-  if (look.borderColor) packed.borderColor = look.borderColor;
-  if (look.align) packed.align = look.align;
-  if (look.width) packed.width = look.width;
-  if (look.pulse) packed.pulse = true;
-  if (look.fontSize) packed.fontSize = look.fontSize;
-  if (look.avatarSize) packed.avatarSize = look.avatarSize;
-  if (look.avatarShape) packed.avatarShape = look.avatarShape;
-  if (look.radius) packed.radius = look.radius;
-  if (look.padding) packed.padding = look.padding;
-  if (look.shadow) packed.shadow = look.shadow;
-
-  if (Object.keys(packed).length === 0) {
-    return base.length > 0 ? base : null;
-  }
-  const encoded = `${LOOK_TITLE_PREFIX}${JSON.stringify(packed)}`;
-  return base ? `${base}\n${encoded}` : encoded;
+  if (typeof title !== "string") return null;
+  const base = title
+    .split("\n")
+    .filter((line) => !line.startsWith(LOOK_TITLE_PREFIX))
+    .join("\n")
+    .trim();
+  if (!base) return null;
+  return base.slice(0, TITLE_MAX);
 }
 
 export function unpackLookTitle(title: string | null | undefined): {
