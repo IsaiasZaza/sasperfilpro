@@ -5,18 +5,18 @@ import { SectionHeading } from "@/components/ui/section-heading";
 const steps = [
   {
     number: "01",
-    title: "Você envia suas informações",
-    text: "Nome, foto, serviços, redes sociais e WhatsApp. Só o essencial do seu negócio.",
+    title: "Crie sua conta",
+    text: "Cadastre-se em segundos e escolha o link da sua página.",
   },
   {
     number: "02",
-    title: "Eu crio sua página",
-    text: "Personalizo visual, tom e estrutura de acordo com o seu negócio.",
+    title: "Monte com blocos",
+    text: "Adicione WhatsApp, serviços e depoimentos no editor visual — como no WordPress.",
   },
   {
     number: "03",
-    title: "Você coloca na bio do Instagram",
-    text: "Pronto. Seu cliente encontra tudo em um único lugar, a um clique do WhatsApp.",
+    title: "Publique na bio",
+    text: "Copie o link e cole no Instagram. Seu cliente encontra tudo em um lugar.",
   },
 ];
 
@@ -28,7 +28,7 @@ export function HowItWorks() {
           <SectionHeading
             eyebrow="Como funciona"
             title="Três passos. Sem complicação."
-            subtitle="Você não precisa de site, domínio ou saber programar. Eu cuido de tudo."
+            subtitle="Você não precisa de site, domínio ou saber programar. O editor guia cada passo."
           />
         </Reveal>
         <div className="mt-12 grid gap-5 lg:grid-cols-3">

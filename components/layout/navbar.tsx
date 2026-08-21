@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { WhatsAppButton } from "@/components/cta/whatsapp-button";
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { NAV_LINKS } from "@/lib/nav";
 import { cn } from "@/lib/utils";
@@ -35,9 +36,9 @@ export function Navbar() {
       )}
     >
       <Container className="flex h-16 items-center justify-between">
-        <a href="#inicio" className="font-serif text-[1.4rem] leading-none text-ink">
+        <Link href="/" className="font-serif text-[1.4rem] leading-none text-ink">
           PerfilPro
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-7 lg:flex">
           {NAV_LINKS.map((link) => (
@@ -51,8 +52,13 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden lg:block">
-          <WhatsAppButton size="sm">Falar no WhatsApp</WhatsAppButton>
+        <div className="hidden items-center gap-2 lg:flex">
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/login">Entrar</Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/cadastro">Criar minha página</Link>
+          </Button>
         </div>
 
         <button
@@ -79,10 +85,17 @@ export function Navbar() {
                 {link.label}
               </a>
             ))}
-            <div className="pt-2">
-              <WhatsAppButton className="w-full" size="lg">
-                Quero minha página no WhatsApp
-              </WhatsAppButton>
+            <div className="mt-2 grid gap-2">
+              <Button asChild variant="secondary" size="lg" className="w-full">
+                <Link href="/login" onClick={() => setOpen(false)}>
+                  Entrar
+                </Link>
+              </Button>
+              <Button asChild size="lg" className="w-full">
+                <Link href="/cadastro" onClick={() => setOpen(false)}>
+                  Criar minha página
+                </Link>
+              </Button>
             </div>
           </Container>
         </div>

@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
-import { Footer } from "@/components/layout/footer";
-import { Navbar } from "@/components/layout/navbar";
-import { WhatsAppFloat } from "@/components/layout/whatsapp-float";
+import { AuthProvider } from "@/components/auth/auth-provider";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -52,17 +50,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html
       lang="pt-BR"
       className={`${sans.variable} ${serif.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-hidden bg-background font-sans text-foreground">
-        <Navbar />
-        {children}
-        <Footer />
-        <WhatsAppFloat />
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

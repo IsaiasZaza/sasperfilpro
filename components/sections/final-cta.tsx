@@ -1,4 +1,5 @@
-import { WhatsAppButton } from "@/components/cta/whatsapp-button";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 
@@ -12,11 +13,13 @@ export function FinalCta() {
               Pronto para profissionalizar sua bio?
             </h2>
             <p className="mt-5 text-base leading-[1.7] text-muted">
-              Pare de mandar seus clientes para uma lista de links. Eu te entrego
-              um lugar para eles conhecerem seu trabalho.
+              Pare de mandar seus clientes para uma lista de links. Monte uma
+              página profissional e publique no seu ritmo.
             </p>
             <div className="mt-8">
-              <WhatsAppButton size="xl">Quero minha página agora</WhatsAppButton>
+              <Button asChild size="xl">
+                <Link href="/cadastro">Criar minha página agora</Link>
+              </Button>
             </div>
           </div>
         </Reveal>

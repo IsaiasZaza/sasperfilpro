@@ -1,4 +1,5 @@
-import { WhatsAppButton } from "@/components/cta/whatsapp-button";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 
@@ -14,14 +15,13 @@ export function CtaBanner() {
                 Seu próximo cliente pode estar a um clique da sua bio.
               </h2>
               <p className="mt-5 text-base leading-[1.7] text-white/70">
-                Me chama no WhatsApp. Eu crio uma página profissional para
-                apresentar seu trabalho e facilitar o contato com quem quer
-                contratar você.
+                Crie uma página profissional, publique e cole o link no
+                Instagram. Serviços, WhatsApp e depoimentos em um só lugar.
               </p>
               <div className="mt-8">
-                <WhatsAppButton variant="secondary" size="xl">
-                  Chamar no WhatsApp agora
-                </WhatsAppButton>
+                <Button asChild variant="secondary" size="xl">
+                  <Link href="/cadastro">Criar minha página agora</Link>
+                </Button>
               </div>
             </div>
           </div>
