@@ -30,7 +30,11 @@ export async function generateMetadata({
 
   const name = page.displayName || page.username || username;
   const headline = page.headline?.trim();
-  const title = headline ? `${name} · ${headline}` : name;
+  const titleBase = headline ? `${name} · ${headline}` : name;
+  const title =
+    !headline && name === SITE_NAME
+      ? { absolute: SITE_NAME }
+      : titleBase;
   const description =
     page.bio?.trim() ||
     headline ||
@@ -42,7 +46,7 @@ export async function generateMetadata({
     alternates: { canonical: path },
     robots: { index: true, follow: true },
     openGraph: {
-      title,
+      title: typeof title === "string" ? title : SITE_NAME,
       description,
       type: "profile",
       url: path,
@@ -52,7 +56,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: page.avatarUrl ? "summary" : "summary_large_image",
-      title,
+      title: typeof title === "string" ? title : SITE_NAME,
       description,
     },
   };

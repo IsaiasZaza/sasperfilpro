@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { CATALOG_FALLBACK } from "@/lib/billing";
 import type { Plan, PlanId } from "@/lib/types/billing";
@@ -16,10 +17,36 @@ export function PlanChoice({
   onChange: (plan: PlanId) => void;
   compact?: boolean;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const items = plans.length > 0 ? plans : CATALOG_FALLBACK;
 
+  if (!mounted) {
+    return (
+      <div
+        className={cn("grid gap-2", compact ? "" : "sm:grid-cols-2")}
+        aria-hidden
+      >
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            className="h-[5.5rem] animate-pulse rounded-2xl border border-line bg-white/80"
+          />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className={cn("grid gap-2", compact ? "" : "sm:grid-cols-2")}>
+    <div
+      className={cn("grid gap-2", compact ? "" : "sm:grid-cols-2")}
+      role="radiogroup"
+      aria-label="Plano"
+    >
       {items.map((plan) => {
         const selected = plan.id === value;
         const recommended = plan.id === "PREMIUM";
@@ -27,6 +54,8 @@ export function PlanChoice({
           <button
             key={plan.id}
             type="button"
+            role="radio"
+            aria-checked={selected}
             onClick={() => onChange(plan.id)}
             className={cn(
               "relative rounded-2xl border px-4 py-3 text-left transition",

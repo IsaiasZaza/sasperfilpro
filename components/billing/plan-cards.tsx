@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { STRIPE_TRIAL_COPY } from "@/lib/billing";
+import { STRIPE_TRIAL_COPY, normalizeKnownPtCopy } from "@/lib/billing";
 import type { Plan } from "@/lib/types/billing";
 import { cn } from "@/lib/utils";
 
@@ -80,7 +80,7 @@ export function PlanCards({
                       recommended ? "text-lime" : "text-ink",
                     )}
                   />
-                  {feature}
+                  {normalizeKnownPtCopy(feature)}
                 </li>
               ))}
             </ul>

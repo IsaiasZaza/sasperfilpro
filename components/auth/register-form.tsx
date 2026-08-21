@@ -204,6 +204,18 @@ export function RegisterForm({
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
             className={AUTH_INPUT_CLASS}
+            title="Informe um e-mail válido"
+            onInvalid={(event) => {
+              const input = event.currentTarget;
+              if (input.validity.valueMissing) {
+                input.setCustomValidity("Informe seu e-mail.");
+              } else if (input.validity.typeMismatch) {
+                input.setCustomValidity("Informe um e-mail válido.");
+              } else {
+                input.setCustomValidity("");
+              }
+            }}
+            onInput={(event) => event.currentTarget.setCustomValidity("")}
           />
           {fieldErrors.email ? (
             <p className="mt-1 text-[12px] text-red-700">{fieldErrors.email}</p>

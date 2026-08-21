@@ -825,7 +825,7 @@ export function ProfilePreview({
               <BlockView block={location} theme={theme} page={page} />
             </SelectableBlock>
           </div>
-        ) : page.location ? (
+        ) : !hero && page.location ? (
           <p
             className="mt-2 flex items-center justify-center gap-1 text-[13px]"
             style={{ color: theme.muted }}

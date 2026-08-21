@@ -199,7 +199,14 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
       try {
         await profileApi.publish();
       } catch {
-        // ainda libera o editor
+        try {
+          sessionStorage.setItem(
+            "perfilpro:publish-warn",
+            "Perfil salvo, mas a página ainda não foi publicada. Publique no editor quando quiser.",
+          );
+        } catch {
+          // ignore
+        }
       }
 
       await goToEditor();

@@ -42,34 +42,22 @@ export function ProfileMaria({ extended = false }: { extended?: boolean }) {
           </p>
         </div>
 
-        <div className="mt-4 space-y-2">
-          <button
-            type="button"
-            className="flex h-9 w-full items-center justify-center rounded-full bg-[#2b211c] text-[11px] font-medium text-white"
-          >
+        <div className="mt-4 space-y-2" aria-hidden="true">
+          <div className="flex h-9 w-full items-center justify-center rounded-full bg-[#2b211c] text-[11px] font-medium text-white">
             Agendar horário
-          </button>
-          <button
-            type="button"
-            className="flex h-9 w-full items-center justify-center rounded-full border border-[#eadfd8] bg-white text-[11px] font-medium"
-          >
+          </div>
+          <div className="flex h-9 w-full items-center justify-center rounded-full border border-[#eadfd8] bg-white text-[11px] font-medium">
             Conheça meu trabalho
-          </button>
+          </div>
           <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#25d366]/10 text-[11px] font-medium text-[#128c4b]"
-            >
+            <div className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#25d366]/10 text-[11px] font-medium text-[#128c4b]">
               <MessageCircle className="h-3 w-3" />
               WhatsApp
-            </button>
-            <button
-              type="button"
-              className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#2b211c]/5 text-[11px] font-medium"
-            >
+            </div>
+            <div className="flex h-9 items-center justify-center gap-1.5 rounded-full bg-[#2b211c]/5 text-[11px] font-medium">
               <InstagramIcon className="h-3 w-3" />
               Instagram
-            </button>
+            </div>
           </div>
         </div>
 
@@ -149,20 +137,14 @@ export function ProfileJoao() {
           )}
         </div>
 
-        <div className="mt-4 space-y-2">
-          <button
-            type="button"
-            className="flex h-9 w-full items-center justify-center rounded-full bg-white text-[11px] font-medium text-black"
-          >
+        <div className="mt-4 space-y-2" aria-hidden="true">
+          <div className="flex h-9 w-full items-center justify-center rounded-full bg-white text-[11px] font-medium text-black">
             Ver portfólio
-          </button>
-          <button
-            type="button"
-            className="flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25d366] text-[11px] font-medium text-white"
-          >
+          </div>
+          <div className="flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#25d366] text-[11px] font-medium text-white">
             <MessageCircle className="h-3 w-3" />
             Pedir orçamento
-          </button>
+          </div>
         </div>
 
         <div className="mt-5">
@@ -211,13 +193,13 @@ export function ProfileCarlos() {
           </p>
         </div>
 
-        <button
-          type="button"
+        <div
+          aria-hidden="true"
           className="mt-4 flex h-9 w-full items-center justify-center gap-1.5 rounded-full bg-[#1e3a5f] text-[11px] font-medium text-white"
         >
           <MessageCircle className="h-3 w-3" />
           Falar no WhatsApp
-        </button>
+        </div>
 
         <div className="mt-5">
           <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a8f98]">

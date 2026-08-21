@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { X } from "lucide-react";
 import { PlanCards } from "@/components/billing/plan-cards";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { Toast } from "@/components/ui/toast";
 import { STRIPE_TRIAL_COPY } from "@/lib/billing";
 import type { Plan } from "@/lib/types/billing";
+
+function bannerMessage(checkout?: string, reason?: string) {
+  if (reason === "expired") {
+    return "Sua assinatura não está ativa. Escolha um plano para continuar.";
+  }
+  if (checkout === "canceled") {
+    return "Checkout cancelado. Cadastre o cartão na Stripe para liberar a conta.";
+  }
+  return null;
+}
 
 export function PlanosView({
   trialDays,
@@ -22,25 +32,27 @@ export function PlanosView({
   reason?: string;
   loadError?: boolean;
 }) {
-  const [toast, setToast] = useState("");
-
-  useEffect(() => {
-    if (checkout === "canceled") {
-      setToast("Checkout cancelado. Cadastre o cartão na Stripe para liberar a conta.");
-    }
-    if (reason === "expired") {
-      setToast("Sua assinatura não está ativa. Escolha um plano para continuar.");
-    }
-  }, [checkout, reason]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 4200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  const initial = bannerMessage(checkout, reason);
+  const [banner, setBanner] = useState<string | null>(initial);
 
   return (
     <main className="bg-background">
+      {banner ? (
+        <div className="border-b border-ink/10 bg-ink text-white">
+          <Container className="flex items-start justify-between gap-3 py-3 sm:items-center">
+            <p className="text-[13px] leading-relaxed sm:text-[14px]">{banner}</p>
+            <button
+              type="button"
+              aria-label="Fechar aviso"
+              className="shrink-0 rounded-full p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
+              onClick={() => setBanner(null)}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </Container>
+        </div>
+      ) : null}
+
       <section className="relative overflow-hidden bg-lime pb-16 pt-10 sm:pb-20 sm:pt-14">
         <div className="pointer-events-none absolute -left-20 top-6 h-64 w-64 rounded-full bg-white/35 blur-3xl" />
         <Container className="relative text-center">
@@ -84,7 +96,6 @@ export function PlanosView({
           </p>
         </Container>
       </section>
-      <Toast message={toast} show={Boolean(toast)} />
     </main>
   );
 }

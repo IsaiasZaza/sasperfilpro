@@ -457,6 +457,17 @@ export function EditorWorkspace() {
     return () => window.clearTimeout(timer);
   }, [message]);
 
+  useEffect(() => {
+    try {
+      const warn = sessionStorage.getItem("perfilpro:publish-warn");
+      if (!warn) return;
+      sessionStorage.removeItem("perfilpro:publish-warn");
+      setMessage(warn);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const hasUnsavedChanges = useCallback(() => {
     if (loadingRef.current || loadErrorRef.current) return false;
     const dirtyBlocks = blocksRef.current.some(

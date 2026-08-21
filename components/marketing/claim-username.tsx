@@ -11,6 +11,21 @@ import { cn } from "@/lib/utils";
 
 type Status = "idle" | "checking" | "available" | "taken" | "invalid";
 
+function friendlyUsernameMessage(message?: string) {
+  if (!message) return "Esse link já está em uso.";
+  const normalized = message
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+  if (normalized.includes("ja esta em uso") || normalized.includes("taken")) {
+    return "Esse link já está em uso.";
+  }
+  if (normalized.includes("minimo 3") || normalized.includes("invalid")) {
+    return "Use 3 a 30 caracteres, só letras, números e hífen.";
+  }
+  return message;
+}
+
 export function ClaimUsername({
   size = "lg",
   buttonLabel = "Pegar meu link",
@@ -49,12 +64,12 @@ export function ClaimUsername({
           setHint(
             result.available
               ? "Esse link está livre."
-              : result.message || "Esse link já está em uso.",
+              : friendlyUsernameMessage(result.message),
           );
         })
         .catch(() => {
-          setStatus("idle");
-          setHint("");
+          setStatus("invalid");
+          setHint("Não foi possível verificar agora. Tente de novo.");
         });
     }, 420);
 
@@ -63,8 +78,10 @@ export function ClaimUsername({
 
   function claim(event: React.FormEvent) {
     event.preventDefault();
+    if (status === "checking" || status === "taken" || status === "invalid") {
+      return;
+    }
     const username = normalizeUsername(value);
-    if (username && status === "taken") return;
     if (username) saveClaimedUsername(username);
     const href = username
       ? `/cadastro?u=${encodeURIComponent(username)}`
@@ -72,7 +89,7 @@ export function ClaimUsername({
     router.push(href);
   }
 
-  const ready = status !== "taken" && status !== "invalid";
+  const ready = status === "idle" || status === "available";
 
   return (
     <form onSubmit={claim} className={cn("w-full max-w-xl", className)}>

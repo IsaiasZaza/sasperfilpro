@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
 import {
   SOCIAL_NETWORKS,
@@ -35,6 +36,7 @@ import type {
 } from "@/lib/types/profile";
 import { formatPriceFromCents, parsePriceToCents } from "@/lib/types/profile";
 import { formatBrazilPhone, withBrazilDdi } from "@/lib/phone";
+import { isCompleteHttpUrl, normalizeHttpUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 export function BlockInspector({
@@ -72,33 +74,17 @@ export function BlockInspector({
       return (
         <div className="space-y-5">
           <Section title="Foto">
-            {avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={avatarUrl}
-                alt=""
-                className="mb-3 object-cover"
-                style={{
-                  width: photo,
-                  height: photo,
-                  borderRadius: photoRadius,
-                  maxWidth: "100%",
-                }}
-              />
-            ) : null}
-            <Field hint="Cole o link de uma imagem (https://...).">
-              <Label>URL da foto</Label>
-              <Input
-                value={avatarUrl}
-                onChange={(event) =>
-                  setContent({
-                    ...content,
-                    avatarUrl: event.target.value,
-                  })
-                }
-                placeholder="https://..."
-              />
-            </Field>
+            <AvatarUrlField
+              value={avatarUrl}
+              photo={photo}
+              photoRadius={photoRadius}
+              onChange={(next) =>
+                setContent({
+                  ...content,
+                  avatarUrl: next,
+                })
+              }
+            />
             <BlockLookControls
               look={lookFrom(content)}
               onChange={(nextLook) =>
@@ -971,5 +957,68 @@ function IconButton({
     >
       {children}
     </button>
+  );
+}
+
+function AvatarUrlField({
+  value,
+  photo,
+  photoRadius,
+  onChange,
+}: {
+  value: string;
+  photo: number;
+  photoRadius: string | number;
+  onChange: (next: string) => void;
+}) {
+  const [broken, setBroken] = useState(false);
+  const trimmed = value.trim();
+  const normalized = trimmed ? normalizeHttpUrl(trimmed) : null;
+  const formatInvalid = Boolean(trimmed) && !normalized;
+  const previewSrc = normalized || (isCompleteHttpUrl(trimmed) ? trimmed : "");
+
+  useEffect(() => {
+    setBroken(false);
+  }, [previewSrc]);
+
+  return (
+    <div className="space-y-2">
+      {previewSrc && !broken ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={previewSrc}
+          alt="Prévia da foto"
+          className="mb-1 object-cover"
+          style={{
+            width: photo,
+            height: photo,
+            borderRadius: photoRadius,
+            maxWidth: "100%",
+          }}
+          onError={() => setBroken(true)}
+        />
+      ) : null}
+      {broken ? (
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">
+          Não foi possível carregar essa imagem. Confira se o link abre a foto
+          direto (termine em .jpg, .png ou similar).
+        </p>
+      ) : null}
+      {formatInvalid ? (
+        <p className="rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">
+          Use um link completo começando com https://
+        </p>
+      ) : null}
+      <Field hint="Copie o link direto da imagem (https://…), não o da página do Instagram ou Google.">
+        <Label>URL da foto</Label>
+        <Input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder="https://exemplo.com/foto.jpg"
+          inputMode="url"
+          autoComplete="off"
+        />
+      </Field>
+    </div>
   );
 }

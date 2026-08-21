@@ -51,6 +51,28 @@ export const CATALOG_FALLBACK: Plan[] = [
 export const STRIPE_TRIAL_COPY =
   "Cartão agora na Stripe. Cobrança só depois do teste.";
 
+/** Normaliza strings conhecidas da API sem acento (não traduz genérico). */
+export function normalizeKnownPtCopy(text: string): string {
+  const map: Record<string, string> = {
+    "pagina publica profissional": "Página pública profissional",
+    "blocos, servicos e depoimentos": "Blocos, serviços e depoimentos",
+    "temas e cores": "Temas e cores",
+    "tudo do plano pro": "Tudo do plano Pro",
+    "sem marca perfilpro na pagina": "Sem marca PerfilPro na página",
+    "suporte prioritario": "Suporte prioritário",
+    "pagina, blocos, servicos, depoimentos e temas.":
+      "Página, blocos, serviços, depoimentos e temas.",
+    "tudo do pro, sem marca perfilpro e com suporte prioritario.":
+      "Tudo do Pro, sem marca PerfilPro e com suporte prioritário.",
+  };
+  const key = text
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim();
+  return map[key] ?? text;
+}
+
 export function parsePlanId(value: string | null | undefined): PlanId {
   return value === "PREMIUM" ? "PREMIUM" : "PRO";
 }

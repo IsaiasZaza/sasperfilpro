@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -119,6 +119,26 @@ export function SubscriptionManager() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancelTitleId = useId();
+  const cancelPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!confirmCancel) return;
+    const previous = document.activeElement as HTMLElement | null;
+    cancelPanelRef.current?.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && pending === null) {
+        setConfirmCancel(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previous?.focus?.();
+    };
+  }, [confirmCancel, pending]);
 
   async function load() {
     const data = await billingApi.subscription();
@@ -322,9 +342,27 @@ export function SubscriptionManager() {
       </section>
 
       {confirmCancel ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-5">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-[0_24px_60px_-24px_rgba(20,17,14,0.45)]">
-            <p className="font-serif text-[1.45rem] text-ink">Cancelar plano?</p>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-5"
+          onClick={() => {
+            if (pending === null) setConfirmCancel(false);
+          }}
+        >
+          <div
+            ref={cancelPanelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={cancelTitleId}
+            tabIndex={-1}
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-[0_24px_60px_-24px_rgba(20,17,14,0.45)] outline-none"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p
+              id={cancelTitleId}
+              className="font-serif text-[1.45rem] text-ink"
+            >
+              Cancelar plano?
+            </p>
             <p className="mt-2 text-[15px] leading-relaxed text-muted">
               O editor fecha agora. A página pública segue no ar
               {periodEnd || trialEnd
@@ -343,11 +381,15 @@ export function SubscriptionManager() {
               <Button
                 disabled={pending !== null}
                 onClick={() => {
-                  setConfirmCancel(false);
-                  void run("cancel", () => billingApi.cancel());
+                  void (async () => {
+                    await run("cancel", () => billingApi.cancel());
+                    setConfirmCancel(false);
+                  })();
                 }}
               >
-                Confirmar cancelamento
+                {pending === "cancel"
+                  ? "Cancelando..."
+                  : "Confirmar cancelamento"}
               </Button>
             </div>
           </div>
