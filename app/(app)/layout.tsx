@@ -1,5 +1,6 @@
-import { AppShell } from "@/components/app/app-shell";
 import type { Metadata } from "next";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { AppShell } from "@/components/app/app-shell";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -10,5 +11,9 @@ export default function AppGroupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <AppShell>{children}</AppShell>;
+  return (
+    <AuthProvider>
+      <AppShell>{children}</AppShell>
+    </AuthProvider>
+  );
 }

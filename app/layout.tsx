@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
-import { AuthProvider } from "@/components/auth/auth-provider";
 import {
   getGoogleSiteVerification,
   getSiteUrl,
@@ -27,9 +26,14 @@ const site = getSiteUrl();
 const googleVerification = getGoogleSiteVerification();
 
 export const viewport: Viewport = {
-  themeColor: "#D4E05C",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#D4E05C" },
+    { media: "(prefers-color-scheme: dark)", color: "#D4E05C" },
+  ],
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 5,
 };
 
 export const metadata: Metadata = {
@@ -53,6 +57,11 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME, url: site }],
   creator: SITE_NAME,
   publisher: SITE_NAME,
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
@@ -77,6 +86,14 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
+  appleWebApp: {
+    capable: true,
+    title: SITE_NAME,
+    statusBarStyle: "default",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   verification: googleVerification
     ? { google: googleVerification }
     : undefined,
@@ -94,7 +111,7 @@ export default function RootLayout({
       className={`${sans.variable} ${serif.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-hidden bg-background font-sans text-foreground">
-        <AuthProvider>{children}</AuthProvider>
+        {children}
       </body>
     </html>
   );
