@@ -96,7 +96,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
   return (
     <div
       className={`relative min-h-screen ${fontClass}`}
-      style={{ background: painted.background }}
+      style={{
+        background: painted.wash,
+        ["--theme-accent" as string]: painted.accent,
+      }}
     >
       <JsonLd
         data={{

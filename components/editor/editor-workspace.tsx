@@ -59,6 +59,7 @@ import {
 import {
   mergeThemeResponse,
   themeFromApi,
+  themeSnapshot,
   themeToApi,
 } from "@/lib/theme";
 import { normalizeHttpUrl, prepareBlockContent } from "@/lib/url";
@@ -129,7 +130,7 @@ function profileSnapshot(profile: Profile) {
     bio: profile.bio,
     location: profile.location,
     avatarUrl: profile.avatarUrl,
-    theme: themeToApi(profile.theme) ?? {},
+    theme: themeSnapshot(profile.theme),
   });
 }
 
@@ -139,6 +140,20 @@ function withPersistedTheme(
 ): { profile: Profile; lost: boolean } {
   const merged = mergeThemeResponse(updated.theme, local?.theme);
   return { profile: { ...updated, theme: merged.theme }, lost: merged.lost };
+}
+
+function applySavedProfile(
+  profileRef: { current: Profile | null },
+  lastSavedProfile: { current: string },
+  setProfile: (profile: Profile) => void,
+  setAuthProfile: (profile: Profile) => void,
+  merged: Profile,
+) {
+  // Atualiza o ref na hora — o useEffect atrasa e o autosave entra em loop.
+  profileRef.current = merged;
+  lastSavedProfile.current = profileSnapshot(merged);
+  setProfile(merged);
+  setAuthProfile(merged);
 }
 
 function sortBlocks(blocks: ProfileBlock[]) {
@@ -528,9 +543,13 @@ export function EditorWorkspace() {
             updatedProfile,
             current,
           );
-          lastSavedProfile.current = profileSnapshot(merged);
-          setProfile(merged);
-          setAuthProfile(merged);
+          applySavedProfile(
+            profileRef,
+            lastSavedProfile,
+            setProfile,
+            setAuthProfile,
+            merged,
+          );
           if (lost) {
             throw new Error("Não foi possível gravar o tema. Tente de novo.");
           }
@@ -592,9 +611,13 @@ export function EditorWorkspace() {
         updatedProfile,
         current,
       );
-      lastSavedProfile.current = profileSnapshot(merged);
-      setProfile(merged);
-      setAuthProfile(merged);
+      applySavedProfile(
+        profileRef,
+        lastSavedProfile,
+        setProfile,
+        setAuthProfile,
+        merged,
+      );
       if (lost) {
         throw new Error("Não foi possível gravar o tema. Tente de novo.");
       }
@@ -683,9 +706,13 @@ export function EditorWorkspace() {
     });
     if (gen !== profileSaveGen.current) return;
     const { profile: merged, lost } = withPersistedTheme(updated, pending);
-    lastSavedProfile.current = profileSnapshot(merged);
-    setProfile(merged);
-    setAuthProfile(merged);
+    applySavedProfile(
+      profileRef,
+      lastSavedProfile,
+      setProfile,
+      setAuthProfile,
+      merged,
+    );
     if (lost) {
       throw new Error("Não foi possível gravar o tema. Tente de novo.");
     }
@@ -719,6 +746,14 @@ export function EditorWorkspace() {
           (saveAgain.current || hasUnsavedChanges())
         );
         if (hasUnsavedChanges()) {
+          // Evita loop infinito de "Salvando..." quando o dirty não estabiliza.
+          if (passes >= 3) {
+            setSaveState("error");
+            setMessage(
+              "Não estabilizou o salvamento do tema. Confira se o backend aceita o campo atmosphere.",
+            );
+            return;
+          }
           setSaveState("pending");
           if (saveTimer.current) window.clearTimeout(saveTimer.current);
           saveTimer.current = window.setTimeout(() => {
@@ -985,9 +1020,13 @@ export function EditorWorkspace() {
         published,
         profileRef.current,
       );
-      lastSavedProfile.current = profileSnapshot(merged);
-      setProfile(merged);
-      setAuthProfile(merged);
+      applySavedProfile(
+        profileRef,
+        lastSavedProfile,
+        setProfile,
+        setAuthProfile,
+        merged,
+      );
       await refresh();
       setMessage(
         wasPublished
@@ -1005,9 +1044,13 @@ export function EditorWorkspace() {
     try {
       const draft = await profileApi.unpublish();
       const { profile: merged } = withPersistedTheme(draft, profileRef.current);
-      lastSavedProfile.current = profileSnapshot(merged);
-      setProfile(merged);
-      setAuthProfile(merged);
+      applySavedProfile(
+        profileRef,
+        lastSavedProfile,
+        setProfile,
+        setAuthProfile,
+        merged,
+      );
       await refresh();
       setMessage("Página despublicada.");
     } catch (err) {

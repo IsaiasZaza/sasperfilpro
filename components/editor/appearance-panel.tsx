@@ -1,86 +1,31 @@
 "use client";
 
+import { ThemeAtmosphere } from "@/components/profile/theme-atmosphere";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  THEME_PRESETS,
   resolvePaintTheme,
   themeToApi,
   type ApiTheme,
+  type AtmosphereId,
 } from "@/lib/theme";
 import type { Profile } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
-export const THEME_PRESETS: {
-  id: string;
+const ATMOSPHERE_OPTIONS: {
+  id: AtmosphereId;
   label: string;
-  theme: ApiTheme;
+  hint: string;
 }[] = [
-  {
-    id: "creme",
-    label: "Creme",
-    theme: {
-      backgroundColor: "#faf6f2",
-      textColor: "#2b211c",
-      primaryColor: "#2b211c",
-      buttonStyle: "pill",
-      font: "sans",
-    },
-  },
-  {
-    id: "noite",
-    label: "Noite",
-    theme: {
-      backgroundColor: "#111111",
-      textColor: "#f5f5f5",
-      primaryColor: "#ffffff",
-      buttonStyle: "pill",
-      font: "sans",
-    },
-  },
-  {
-    id: "salvia",
-    label: "Sálvia",
-    theme: {
-      backgroundColor: "#eef2ea",
-      textColor: "#1f2a1c",
-      primaryColor: "#3d5a40",
-      buttonStyle: "rounded",
-      font: "sans",
-    },
-  },
-  {
-    id: "areia",
-    label: "Areia",
-    theme: {
-      backgroundColor: "#f4efe6",
-      textColor: "#3b2f27",
-      primaryColor: "#9a7048",
-      buttonStyle: "pill",
-      font: "sans",
-    },
-  },
-  {
-    id: "azul",
-    label: "Marinho",
-    theme: {
-      backgroundColor: "#f0f4f8",
-      textColor: "#0f2744",
-      primaryColor: "#1e3a5f",
-      buttonStyle: "rounded",
-      font: "sans",
-    },
-  },
-  {
-    id: "rosa",
-    label: "Blush",
-    theme: {
-      backgroundColor: "#faf2f4",
-      textColor: "#3b1f28",
-      primaryColor: "#b76e79",
-      buttonStyle: "pill",
-      font: "sans",
-    },
-  },
+  { id: "none", label: "Limpo", hint: "Sem efeito" },
+  { id: "claw", label: "Claw", hint: "Neon monstro" },
+  { id: "comic", label: "Hero", hint: "Comic punch" },
+  { id: "arc", label: "Arc", hint: "Brilho reator" },
+  { id: "symbiote", label: "Symbiote", hint: "Roxo vivo" },
+  { id: "storm", label: "Storm", hint: "Choque" },
+  { id: "inferno", label: "Inferno", hint: "Fogo" },
+  { id: "cosmic", label: "Cosmic", hint: "Galáxia" },
 ];
 
 function ColorField({
@@ -138,6 +83,7 @@ export function AppearancePanel({
       primaryColor: painted.primaryColor,
       buttonStyle: painted.buttonStyle,
       font: painted.font,
+      atmosphere: painted.atmosphere,
       ...partial,
     });
     if (next) onChange({ theme: next });
@@ -148,19 +94,23 @@ export function AppearancePanel({
       <section>
         <h3 className="font-serif text-lg text-ink">Temas prontos</h3>
         <p className="mt-1 text-[13px] text-muted">
-          Escolha um estilo e ajuste as cores depois.
+          Do clássico ao estilo monstro e comic — com fundos vivos.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
           {THEME_PRESETS.map((preset) => {
             const presetPaint = resolvePaintTheme(preset.theme);
             const active =
               painted.background === presetPaint.background &&
-              painted.primaryColor === presetPaint.primaryColor;
+              painted.primaryColor === presetPaint.primaryColor &&
+              painted.atmosphere === presetPaint.atmosphere;
             return (
               <button
                 key={preset.id}
                 type="button"
-                onClick={() => onChange({ theme: { ...preset.theme } })}
+                onClick={() => {
+                  const next = themeToApi(preset.theme);
+                  if (next) onChange({ theme: next });
+                }}
                 className={cn(
                   "rounded-xl border p-2.5 text-left transition",
                   active
@@ -169,20 +119,69 @@ export function AppearancePanel({
                 )}
               >
                 <span
-                  className="mb-2 flex h-10 overflow-hidden rounded-lg border border-black/5"
-                  style={{ background: presetPaint.background }}
+                  className="theme-preset-swatch relative mb-2 flex h-12 overflow-hidden rounded-lg border border-black/5"
+                  style={{ background: presetPaint.wash }}
                 >
+                  <ThemeAtmosphere
+                    atmosphere={presetPaint.atmosphere}
+                    accent={presetPaint.accent}
+                  />
                   <span
-                    className="m-auto h-4 w-16 rounded-full"
-                    style={{ background: presetPaint.primaryColor }}
+                    className="relative z-[1] m-auto h-4 w-16 rounded-full shadow-sm"
+                    style={{
+                      background: presetPaint.primaryColor,
+                      boxShadow:
+                        presetPaint.atmosphere !== "none"
+                          ? `0 0 14px ${presetPaint.primaryColor}99`
+                          : undefined,
+                    }}
                   />
                 </span>
-                <span className="text-[12px] font-semibold text-ink">
+                <span className="block text-[12px] font-semibold text-ink">
                   {preset.label}
+                </span>
+                <span className="mt-0.5 block text-[10px] text-muted">
+                  {preset.tagline}
                 </span>
               </button>
             );
           })}
+        </div>
+      </section>
+
+      <section>
+        <h3 className="font-serif text-lg text-ink">Atmosfera</h3>
+        <p className="mt-1 text-[13px] text-muted">
+          Efeito animado por cima das cores.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {ATMOSPHERE_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => patchTheme({ atmosphere: option.id })}
+              className={cn(
+                "rounded-xl border px-2 py-2.5 text-left transition",
+                painted.atmosphere === option.id
+                  ? "border-ink bg-ink text-white"
+                  : "border-line bg-white text-ink hover:border-ink/15",
+              )}
+            >
+              <span className="block text-[12px] font-semibold">
+                {option.label}
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 block text-[10px]",
+                  painted.atmosphere === option.id
+                    ? "text-white/70"
+                    : "text-muted",
+                )}
+              >
+                {option.hint}
+              </span>
+            </button>
+          ))}
         </div>
       </section>
 

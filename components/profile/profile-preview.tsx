@@ -28,6 +28,7 @@ import {
   linkHostname,
   resolveLinkBrand,
 } from "@/lib/link-brand";
+import { ThemeAtmosphere } from "@/components/profile/theme-atmosphere";
 import { resolvePaintTheme } from "@/lib/theme";
 import {
   BLOCK_META,
@@ -764,7 +765,7 @@ export function ProfilePreview({
   return (
     <div
       className={cn(
-        "h-full overflow-y-auto no-scrollbar",
+        "relative h-full overflow-y-auto no-scrollbar",
         theme.font === "serif" && "font-serif",
         theme.font === "mono" && "font-mono",
         theme.font === "sans" && "font-sans",
@@ -772,14 +773,16 @@ export function ProfilePreview({
       )}
       style={
         {
-          background: theme.background,
+          background: theme.wash,
           color: theme.text,
           ["--preview-canvas"]: theme.background,
+          ["--theme-accent"]: theme.accent,
         } as CSSProperties
       }
     >
-      {showStatusBar ? <StatusBar color={theme.text} /> : null}
-      <div className="px-3.5 pb-16 pt-1">
+      <ThemeAtmosphere atmosphere={theme.atmosphere} accent={theme.accent} />
+      <div className="relative z-[1] px-3.5 pb-16 pt-1">
+        {showStatusBar ? <StatusBar color={theme.text} /> : null}
         {hero ? (
           <SelectableBlock
             id={hero.id}
