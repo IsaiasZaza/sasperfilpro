@@ -45,10 +45,11 @@ import {
   type TestimonialItem,
   type WhatsAppContent,
 } from "@/lib/types/profile";
+import { withBrazilDdi } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 function whatsappHref(phone: string, message?: string) {
-  const digits = phone.replace(/\D/g, "");
+  const digits = withBrazilDdi(phone);
   const text = encodeURIComponent(message || "");
   return digits
     ? `https://wa.me/${digits}?text=${text}`

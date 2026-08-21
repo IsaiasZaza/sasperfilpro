@@ -34,6 +34,7 @@ import type {
   WhatsAppContent,
 } from "@/lib/types/profile";
 import { formatPriceFromCents, parsePriceToCents } from "@/lib/types/profile";
+import { formatBrazilPhone, withBrazilDdi } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
 export function BlockInspector({
@@ -136,7 +137,7 @@ export function BlockInspector({
               />
             </Field>
             <Field>
-              <Label>Headline</Label>
+              <Label>Frase de destaque</Label>
               <Input
                 value={headline}
                 onChange={(event) =>
@@ -187,7 +188,6 @@ export function BlockInspector({
                 onChange={(event) =>
                   setContent({ ...content, address: event.target.value })
                 }
-                minLength={3}
                 placeholder="Asa Norte, Brasília - DF"
               />
             </Field>
@@ -252,7 +252,7 @@ export function BlockInspector({
               />
             </Field>
           </Section>
-          <Section title="Aparência deste botão">
+          <Section title="Estilo do botão">
             <div className="grid grid-cols-3 gap-2">
               {(
                 [
@@ -282,6 +282,7 @@ export function BlockInspector({
             onChange={(look) => setContent(mergeLook(content, look))}
             fallbackTextColor="#ffffff"
             fallbackBackground="#14110e"
+            backgroundLabel="Cor do botão"
             showWidth
             showPulse
           />
@@ -304,7 +305,7 @@ export function BlockInspector({
                 placeholder="Portfólio"
               />
             </Field>
-            <Field hint="Cole o link completo, com https://. O ícone Auto lê a rede pelo endereço.">
+            <Field hint="Cole o link completo, com https://. O ícone Automático lê a rede pelo endereço.">
               <Label>URL</Label>
               <Input
                 value={content.url ?? ""}
@@ -381,6 +382,7 @@ export function BlockInspector({
             onChange={(look) => setContent(mergeLook(content, look))}
             showWidth
             showPulse
+            backgroundLabel="Cor do botão"
           />
         </div>
       );
@@ -400,20 +402,30 @@ export function BlockInspector({
                 placeholder="Falar no WhatsApp"
               />
             </Field>
-            <Field hint="Só números, com DDI. Ex.: 5561999999999">
+            <Field hint="DDD + número. O 55 do Brasil entra sozinho.">
               <Label>Telefone</Label>
               <Input
-                value={content.phone ?? ""}
-                inputMode="numeric"
+                value={formatBrazilPhone(content.phone ?? "")}
+                inputMode="tel"
+                autoComplete="tel"
                 onChange={(event) =>
                   setContent({
                     ...content,
-                    phone: event.target.value.replace(/\D/g, ""),
+                    phone: withBrazilDdi(event.target.value),
                   })
                 }
-                placeholder="5561999999999"
+                placeholder="+55 (61) 99999-9999"
               />
             </Field>
+            {withBrazilDdi(content.phone ?? "").length >= 12 ? (
+              <p className="text-[12px] text-muted">
+                Abre wa.me/{withBrazilDdi(content.phone ?? "")}
+              </p>
+            ) : content.phone ? (
+              <p className="text-[12px] text-muted">
+                Falta o DDD. Ex.: 61 99999-9999
+              </p>
+            ) : null}
             <Field hint="Abre o WhatsApp já com este texto.">
               <Label>Mensagem automática</Label>
               <Textarea
@@ -430,6 +442,7 @@ export function BlockInspector({
             onChange={(look) => setContent(mergeLook(content, look))}
             fallbackTextColor="#ffffff"
             fallbackBackground="#128c4b"
+            backgroundLabel="Cor do botão"
             showWidth
             showPulse
           />
@@ -598,10 +611,6 @@ export function BlockInspector({
               />
             </Field>
           </Section>
-          <BlockLookControls
-            look={lookFrom(content)}
-            onChange={(look) => setContent(mergeLook(content, look))}
-          />
           <Section title="Itens">
             {services.length === 0 ? (
               <p className="text-[13px] text-muted">
@@ -737,6 +746,10 @@ export function BlockInspector({
               Adicionar serviço
             </Button>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+          />
         </div>
       );
     }
@@ -755,10 +768,6 @@ export function BlockInspector({
               />
             </Field>
           </Section>
-          <BlockLookControls
-            look={lookFrom(content)}
-            onChange={(look) => setContent(mergeLook(content, look))}
-          />
           <Section title="Depoimentos">
             {testimonials.length === 0 ? (
               <p className="text-[13px] text-muted">
@@ -891,6 +900,10 @@ export function BlockInspector({
               Adicionar depoimento
             </Button>
           </Section>
+          <BlockLookControls
+            look={lookFrom(content)}
+            onChange={(look) => setContent(mergeLook(content, look))}
+          />
         </div>
       );
     }
@@ -904,7 +917,7 @@ function networkLabel(network: SocialNetwork) {
 }
 
 const LINK_ICON_OPTIONS: { id: string; label: string }[] = [
-  { id: "auto", label: "Auto" },
+  { id: "auto", label: "Automático" },
   ...SOCIAL_NETWORKS,
 ];
 

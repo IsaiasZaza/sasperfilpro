@@ -13,6 +13,7 @@ import {
   publicApi,
   servicesApi,
 } from "@/lib/api-client";
+import { formatBrazilPhone, withBrazilDdi } from "@/lib/phone";
 import { readClaimedUsername } from "@/lib/claimed-username";
 import { normalizeUsername } from "@/lib/reserved-usernames";
 import {
@@ -23,8 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const STEPS = [
-  { id: 1, title: "Username", text: "Escolha o link da sua página" },
-  { id: 2, title: "Perfil", text: "Nome, headline e cidade" },
+  { id: 1, title: "Link", text: "Escolha o endereço da sua página" },
+  { id: 2, title: "Perfil", text: "Nome, frase de destaque e cidade" },
   { id: 3, title: "WhatsApp", text: "Como o cliente fala com você" },
   { id: 4, title: "Serviços", text: "O que você oferece" },
 ] as const;
@@ -64,7 +65,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
     const check = await publicApi.checkUsername(normalized);
     if (!check.available && normalized !== profile.username) {
       throw new ApiError(
-        check.message || "Username indisponível.",
+        check.message || "Nome de usuário indisponível.",
         "USERNAME_TAKEN",
         409,
       );
@@ -143,9 +144,9 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
       }
 
       if (step === 3) {
-        const digits = phone.replace(/\D/g, "");
-        if (digits.length < 10) {
-          setError("Informe o WhatsApp com DDI (ex.: 5561999999999).");
+        const digits = withBrazilDdi(phone);
+        if (digits.length < 12) {
+          setError("Informe o WhatsApp com DDD. Ex.: 61 99999-9999");
           return;
         }
         const blocks = await blocksApi.list();
@@ -217,7 +218,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
     try {
       // Garante username definitivo antes de sair (senão o AppShell te devolve).
       if (isTempUsername(username) && !username.trim()) {
-        setError("Escolha um username antes de abrir o editor.");
+        setError("Escolha um nome de usuário antes de abrir o editor.");
         setStep(1);
         return;
       }
@@ -292,7 +293,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
               />
             </div>
             <div>
-              <Label>Headline</Label>
+              <Label>Frase de destaque</Label>
               <Input
                 value={headline}
                 onChange={(event) => setHeadline(event.target.value)}
@@ -313,12 +314,17 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         {step === 3 ? (
           <div className="space-y-4">
             <div>
-              <Label>WhatsApp (com DDI)</Label>
+              <Label>WhatsApp</Label>
               <Input
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="5561999999999"
+                value={formatBrazilPhone(phone)}
+                inputMode="tel"
+                autoComplete="tel"
+                onChange={(event) => setPhone(withBrazilDdi(event.target.value))}
+                placeholder="+55 (61) 99999-9999"
               />
+              <p className="mt-1.5 text-[12px] text-muted">
+                DDD + número. O 55 do Brasil entra sozinho.
+              </p>
             </div>
             <div>
               <Label>Mensagem automática</Label>

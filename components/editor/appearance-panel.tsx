@@ -240,9 +240,9 @@ export function AppearancePanel({
         <div className="mt-3 grid grid-cols-3 gap-2">
           {(
             [
-              ["sans", "Sans"],
-              ["serif", "Serif"],
-              ["mono", "Mono"],
+              ["sans", "Simples"],
+              ["serif", "Clássica"],
+              ["mono", "Fixa"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -268,7 +268,7 @@ export function AppearancePanel({
         <section className="space-y-4 border-t border-line pt-6">
           <h3 className="font-serif text-lg text-ink">Endereço da página</h3>
           <div>
-            <Label>Username</Label>
+            <Label>Nome de usuário</Label>
             <div className="flex items-center gap-2">
               <span className="text-[13px] text-muted">/u/</span>
               <Input
@@ -278,6 +278,9 @@ export function AppearancePanel({
                 }
               />
             </div>
+            <p className="mt-1.5 text-[12px] text-muted">
+              É o endereço da sua página. Letras minúsculas, números e hífen.
+            </p>
           </div>
         </section>
       ) : null}

@@ -78,10 +78,20 @@ type EditorPanel = "block" | "appearance";
 
 const SAVE_WAIT_MS = 5000;
 
+type SaveState = "saved" | "pending" | "saving" | "error";
+
 function emptyToNull(value: string | null | undefined): string | null {
   if (value == null) return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function snapshotBlock(block: ProfileBlock) {
+  return JSON.stringify({
+    content: block.content,
+    isVisible: block.isVisible,
+    title: block.title,
+  });
 }
 
 function profileSnapshot(profile: Profile) {
@@ -295,14 +305,14 @@ export function EditorWorkspace() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveState, setSaveState] = useState<"saved" | "saving" | "error">(
-    "saved",
-  );
+  const [saveState, setSaveState] = useState<SaveState>("saved");
   const [message, setMessage] = useState<string | null>(null);
   const [inserterOpen, setInserterOpen] = useState(false);
   const [mobileTab, setMobileTab] = useState<MobileTab>("blocks");
   const [editorPanel, setEditorPanel] = useState<EditorPanel>("block");
   const [copied, setCopied] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const saveTimer = useRef<number | null>(null);
   const servicesTimer = useRef<number | null>(null);
@@ -314,6 +324,9 @@ export function EditorWorkspace() {
   const lastSavedProfile = useRef("");
   const profileRef = useRef<Profile | null>(null);
   const profileSaveGen = useRef(0);
+  const blocksRef = useRef<ProfileBlock[]>([]);
+  const servicesRef = useRef<ServiceItem[]>([]);
+  const testimonialsRef = useRef<TestimonialItem[]>([]);
 
   const orderedBlocks = useMemo(() => sortBlocks(blocks), [blocks]);
   const selected = orderedBlocks.find((b) => b.id === selectedId) ?? null;
@@ -367,11 +380,7 @@ export function EditorWorkspace() {
       setSelectedId(ordered[0]?.id ?? null);
       lastSavedBlock.current = {};
       for (const block of ordered) {
-        lastSavedBlock.current[block.id] = JSON.stringify({
-          content: block.content,
-          isVisible: block.isVisible,
-          title: block.title,
-        });
+        lastSavedBlock.current[block.id] = snapshotBlock(block);
       }
       lastSavedServices.current = JSON.stringify(s);
       lastSavedTestimonials.current = JSON.stringify(t);
@@ -396,248 +405,301 @@ export function EditorWorkspace() {
   }, [profile]);
 
   useEffect(() => {
+    blocksRef.current = blocks;
+  }, [blocks]);
+
+  useEffect(() => {
+    servicesRef.current = services;
+  }, [services]);
+
+  useEffect(() => {
+    testimonialsRef.current = testimonials;
+  }, [testimonials]);
+
+  useEffect(() => {
     if (!message) return;
     const timer = window.setTimeout(() => setMessage(null), 2800);
     return () => window.clearTimeout(timer);
   }, [message]);
 
-  // Autosave bloco selecionado (sem loop)
-  useEffect(() => {
-    if (!selected) return;
-    const payload = JSON.stringify({
-      content: selected.content,
-      isVisible: selected.isVisible,
-      title: selected.title,
-    });
-    if (lastSavedBlock.current[selected.id] === payload) return;
+  const persistDirtyBlocks = useCallback(async () => {
+    const dirty = blocksRef.current.filter(
+      (block) => lastSavedBlock.current[block.id] !== snapshotBlock(block),
+    );
+    for (const block of dirty) {
+      const payload = snapshotBlock(block);
+      let previousContent: Record<string, unknown> | undefined;
+      try {
+        previousContent = JSON.parse(
+          lastSavedBlock.current[block.id] || "{}",
+        ).content;
+      } catch {
+        previousContent = undefined;
+      }
+      await blocksApi.update(block.id, {
+        content: prepareBlockContent(
+          block.type,
+          block.content as Record<string, unknown>,
+          previousContent,
+        ),
+        isVisible: block.isVisible,
+        title: block.title,
+      });
+      lastSavedBlock.current[block.id] = payload;
 
-    if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    const blockId = selected.id;
-    const blockType = selected.type;
-    const content = selected.content;
-    const isVisible = selected.isVisible;
-    const title = selected.title;
+      if (block.type !== "HERO") continue;
+      const hero = block.content as {
+        name?: string;
+        headline?: string;
+        bio?: string;
+        location?: string;
+        avatarUrl?: string;
+      };
+      const current = profileRef.current;
+      const updatedProfile = await profileApi.update({
+        displayName:
+          hero.name !== undefined
+            ? emptyToNull(hero.name)
+            : emptyToNull(current?.displayName),
+        headline:
+          hero.headline !== undefined
+            ? emptyToNull(hero.headline)
+            : emptyToNull(current?.headline),
+        bio:
+          hero.bio !== undefined
+            ? emptyToNull(hero.bio)
+            : emptyToNull(current?.bio),
+        location:
+          hero.location !== undefined
+            ? emptyToNull(hero.location)
+            : emptyToNull(current?.location),
+        avatarUrl:
+          normalizeHttpUrl(hero.avatarUrl || "") ||
+          (hero.avatarUrl !== undefined
+            ? null
+            : normalizeHttpUrl(current?.avatarUrl || "") || null),
+        theme: themeToApi(current?.theme),
+      });
+      const { profile: merged, lost } = withPersistedTheme(
+        updatedProfile,
+        current,
+      );
+      lastSavedProfile.current = profileSnapshot(merged);
+      setProfile(merged);
+      setAuthProfile(merged);
+      if (lost) {
+        throw new Error("Não foi possível gravar o tema. Tente de novo.");
+      }
+    }
+  }, [setAuthProfile]);
 
-    saveTimer.current = window.setTimeout(() => {
-      setSaveState("saving");
-      void (async () => {
-        try {
-          let previousContent: Record<string, unknown> | undefined;
-          try {
-            previousContent = JSON.parse(
-              lastSavedBlock.current[blockId] || "{}",
-            ).content;
-          } catch {
-            previousContent = undefined;
-          }
-          await blocksApi.update(blockId, {
-            content: prepareBlockContent(
-              blockType,
-              content as Record<string, unknown>,
-              previousContent,
-            ),
-            isVisible,
-            title,
-          });
-          lastSavedBlock.current[blockId] = payload;
+  const persistDirtyServices = useCallback(async () => {
+    const list = servicesRef.current;
+    if (JSON.stringify(list) === lastSavedServices.current) return;
+    const resolved: ServiceItem[] = [];
+    for (const local of list) {
+      if (local.id.startsWith("tmp_")) {
+        resolved.push(
+          await servicesApi.create({
+            name: local.name,
+            description: local.description,
+            priceCents: local.priceCents,
+            isVisible: local.isVisible,
+          }),
+        );
+      } else {
+        resolved.push(
+          await servicesApi.update(local.id, {
+            name: local.name,
+            description: local.description,
+            priceCents: local.priceCents,
+            isVisible: local.isVisible,
+          }),
+        );
+      }
+    }
+    lastSavedServices.current = JSON.stringify(resolved);
+    setServices(resolved);
+  }, []);
 
-          if (blockType === "HERO") {
-            const hero = content as {
-              name?: string;
-              headline?: string;
-              bio?: string;
-              location?: string;
-              avatarUrl?: string;
-            };
-            const current = profileRef.current;
-            const updatedProfile = await profileApi.update({
-              displayName:
-                hero.name !== undefined
-                  ? emptyToNull(hero.name)
-                  : emptyToNull(current?.displayName),
-              headline:
-                hero.headline !== undefined
-                  ? emptyToNull(hero.headline)
-                  : emptyToNull(current?.headline),
-              bio:
-                hero.bio !== undefined
-                  ? emptyToNull(hero.bio)
-                  : emptyToNull(current?.bio),
-              location:
-                hero.location !== undefined
-                  ? emptyToNull(hero.location)
-                  : emptyToNull(current?.location),
-              avatarUrl:
-                normalizeHttpUrl(hero.avatarUrl || "") ||
-                (hero.avatarUrl !== undefined
-                  ? null
-                  : normalizeHttpUrl(current?.avatarUrl || "") || null),
-              theme: themeToApi(current?.theme),
-            });
-            const { profile: merged, lost } = withPersistedTheme(
-              updatedProfile,
-              current,
-            );
-            lastSavedProfile.current = profileSnapshot(merged);
-            setProfile(merged);
-            setAuthProfile(merged);
-            if (lost) {
-              setSaveState("error");
-              setMessage("Não foi possível gravar o tema. Tente de novo.");
-              return;
-            }
-          }
-          setSaveState("saved");
-        } catch {
-          setSaveState("error");
-        }
-      })();
-    }, SAVE_WAIT_MS);
+  const persistDirtyTestimonials = useCallback(async () => {
+    const list = testimonialsRef.current;
+    if (JSON.stringify(list) === lastSavedTestimonials.current) return;
+    const resolved: TestimonialItem[] = [];
+    for (const local of list) {
+      if (local.id.startsWith("tmp_")) {
+        resolved.push(
+          await testimonialsApi.create({
+            authorName: local.authorName,
+            text: local.text,
+            rating: local.rating,
+            isVisible: local.isVisible,
+          }),
+        );
+      } else {
+        resolved.push(
+          await testimonialsApi.update(local.id, {
+            authorName: local.authorName,
+            text: local.text,
+            rating: local.rating,
+            isVisible: local.isVisible,
+          }),
+        );
+      }
+    }
+    lastSavedTestimonials.current = JSON.stringify(resolved);
+    setTestimonials(resolved);
+  }, []);
 
-    return () => {
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    };
-  }, [selected, setAuthProfile]);
-
-  // Autosave serviços
-  useEffect(() => {
-    if (loading || loadError) return;
-    const snapshot = JSON.stringify(services);
-    if (snapshot === lastSavedServices.current) return;
-
-    if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
-    servicesTimer.current = window.setTimeout(() => {
-      setSaveState("saving");
-      void (async () => {
-        try {
-          const resolved: ServiceItem[] = [];
-          for (const local of services) {
-            if (local.id.startsWith("tmp_")) {
-              const created = await servicesApi.create({
-                name: local.name,
-                description: local.description,
-                priceCents: local.priceCents,
-                isVisible: local.isVisible,
-              });
-              resolved.push(created);
-            } else {
-              const updated = await servicesApi.update(local.id, {
-                name: local.name,
-                description: local.description,
-                priceCents: local.priceCents,
-                isVisible: local.isVisible,
-              });
-              resolved.push(updated);
-            }
-          }
-          lastSavedServices.current = JSON.stringify(resolved);
-          setServices(resolved);
-          setSaveState("saved");
-        } catch {
-          setSaveState("error");
-        }
-      })();
-    }, SAVE_WAIT_MS);
-    return () => {
-      if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
-    };
-  }, [services, loading, loadError]);
-
-  useEffect(() => {
-    if (loading || loadError) return;
-    const snapshot = JSON.stringify(testimonials);
-    if (snapshot === lastSavedTestimonials.current) return;
-
-    if (testimonialsTimer.current) window.clearTimeout(testimonialsTimer.current);
-    testimonialsTimer.current = window.setTimeout(() => {
-      setSaveState("saving");
-      void (async () => {
-        try {
-          const resolved: TestimonialItem[] = [];
-          for (const local of testimonials) {
-            if (local.id.startsWith("tmp_")) {
-              const created = await testimonialsApi.create({
-                authorName: local.authorName,
-                text: local.text,
-                rating: local.rating,
-                isVisible: local.isVisible,
-              });
-              resolved.push(created);
-            } else {
-              const updated = await testimonialsApi.update(local.id, {
-                authorName: local.authorName,
-                text: local.text,
-                rating: local.rating,
-                isVisible: local.isVisible,
-              });
-              resolved.push(updated);
-            }
-          }
-          lastSavedTestimonials.current = JSON.stringify(resolved);
-          setTestimonials(resolved);
-          setSaveState("saved");
-        } catch {
-          setSaveState("error");
-        }
-      })();
-    }, SAVE_WAIT_MS);
-    return () => {
-      if (testimonialsTimer.current)
-        window.clearTimeout(testimonialsTimer.current);
-    };
-  }, [testimonials, loading, loadError]);
-
-  // Autosave aparência / dados da página
-  useEffect(() => {
-    if (loading || loadError || !profile) return;
-    const snapshot = profileSnapshot(profile);
+  const persistDirtyProfile = useCallback(async () => {
+    const pending = profileRef.current;
+    if (!pending) return;
+    const snapshot = profileSnapshot(pending);
     if (snapshot === lastSavedProfile.current) return;
-
-    if (profileTimer.current) window.clearTimeout(profileTimer.current);
     const gen = ++profileSaveGen.current;
-    const pending = profile;
-    profileTimer.current = window.setTimeout(() => {
+    const updated = await profileApi.update({
+      username: pending.username || undefined,
+      displayName: emptyToNull(pending.displayName),
+      headline: emptyToNull(pending.headline),
+      bio: emptyToNull(pending.bio),
+      location: emptyToNull(pending.location),
+      avatarUrl: emptyToNull(pending.avatarUrl),
+      theme: themeToApi(pending.theme),
+    });
+    if (gen !== profileSaveGen.current) return;
+    const { profile: merged, lost } = withPersistedTheme(updated, pending);
+    lastSavedProfile.current = profileSnapshot(merged);
+    setProfile(merged);
+    setAuthProfile(merged);
+    if (lost) {
+      throw new Error("Não foi possível gravar o tema. Tente de novo.");
+    }
+  }, [setAuthProfile]);
+
+  const flushPendingSaves = useCallback(async () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
+    if (testimonialsTimer.current)
+      window.clearTimeout(testimonialsTimer.current);
+    if (profileTimer.current) window.clearTimeout(profileTimer.current);
+    saveTimer.current = null;
+    servicesTimer.current = null;
+    testimonialsTimer.current = null;
+    profileTimer.current = null;
+
+    setSaveState("saving");
+    try {
+      await persistDirtyBlocks();
+      await persistDirtyServices();
+      await persistDirtyTestimonials();
+      await persistDirtyProfile();
+      setSaveState("saved");
+    } catch (err) {
+      setSaveState("error");
+      setMessage(
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Não salvou. Tente de novo.",
+      );
+      throw err;
+    }
+  }, [
+    persistDirtyBlocks,
+    persistDirtyProfile,
+    persistDirtyServices,
+    persistDirtyTestimonials,
+  ]);
+
+  function scheduleSave(timer: { current: number | null }, run: () => Promise<void>) {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
       setSaveState("saving");
       void (async () => {
         try {
-          const updated = await profileApi.update({
-            username: pending.username || undefined,
-            displayName: emptyToNull(pending.displayName),
-            headline: emptyToNull(pending.headline),
-            bio: emptyToNull(pending.bio),
-            location: emptyToNull(pending.location),
-            avatarUrl: emptyToNull(pending.avatarUrl),
-            theme: themeToApi(pending.theme),
-          });
-          if (gen !== profileSaveGen.current) return;
-          const { profile: merged, lost } = withPersistedTheme(
-            updated,
-            pending,
-          );
-          lastSavedProfile.current = profileSnapshot(merged);
-          setProfile(merged);
-          setAuthProfile(merged);
-          if (lost) {
-            setSaveState("error");
-            setMessage("Não foi possível gravar o tema. Tente de novo.");
-            return;
-          }
+          await run();
           setSaveState("saved");
         } catch (err) {
-          if (gen !== profileSaveGen.current) return;
           setSaveState("error");
           setMessage(
             err instanceof ApiError
               ? err.message
-              : "Erro ao salvar aparência",
+              : err instanceof Error
+                ? err.message
+                : "Não salvou. Tente de novo.",
           );
         }
       })();
     }, SAVE_WAIT_MS);
+  }
+
+  useEffect(() => {
+    const dirty = blocks.some(
+      (block) => lastSavedBlock.current[block.id] !== snapshotBlock(block),
+    );
+    if (!dirty) return;
+    scheduleSave(saveTimer, persistDirtyBlocks);
+    return () => {
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [blocks, persistDirtyBlocks]);
+
+  useEffect(() => {
+    if (loading || loadError) return;
+    if (JSON.stringify(services) === lastSavedServices.current) return;
+    scheduleSave(servicesTimer, persistDirtyServices);
+    return () => {
+      if (servicesTimer.current) window.clearTimeout(servicesTimer.current);
+    };
+  }, [services, loading, loadError, persistDirtyServices]);
+
+  useEffect(() => {
+    if (loading || loadError) return;
+    if (JSON.stringify(testimonials) === lastSavedTestimonials.current) return;
+    scheduleSave(testimonialsTimer, persistDirtyTestimonials);
+    return () => {
+      if (testimonialsTimer.current)
+        window.clearTimeout(testimonialsTimer.current);
+    };
+  }, [testimonials, loading, loadError, persistDirtyTestimonials]);
+
+  const isDirty =
+    !loading &&
+    !loadError &&
+    (blocks.some(
+      (block) => lastSavedBlock.current[block.id] !== snapshotBlock(block),
+    ) ||
+      JSON.stringify(services) !== lastSavedServices.current ||
+      JSON.stringify(testimonials) !== lastSavedTestimonials.current ||
+      (profile != null &&
+        profileSnapshot(profile) !== lastSavedProfile.current));
+
+  const saveUi: SaveState =
+    saveState === "saving" || saveState === "error"
+      ? saveState
+      : isDirty
+        ? "pending"
+        : "saved";
+
+  useEffect(() => {
+    if (loading || loadError || !profile) return;
+    if (profileSnapshot(profile) === lastSavedProfile.current) return;
+    scheduleSave(profileTimer, persistDirtyProfile);
     return () => {
       if (profileTimer.current) window.clearTimeout(profileTimer.current);
     };
-  }, [profile, loading, loadError, setAuthProfile]);
+  }, [profile, loading, loadError, persistDirtyProfile]);
+
+  useEffect(() => {
+    if (!isDirty && saveState !== "saving") return;
+    const onLeave = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [isDirty, saveState]);
 
   async function addBlock(type: BlockType) {
     try {
@@ -653,11 +715,7 @@ export function EditorWorkspace() {
       setBlocks((prev) => [...prev, created]);
       setSelectedId(created.id);
       setEditorPanel("block");
-      lastSavedBlock.current[created.id] = JSON.stringify({
-        content: created.content,
-        isVisible: created.isVisible,
-        title: created.title,
-      });
+      lastSavedBlock.current[created.id] = snapshotBlock(created);
       setInserterOpen(false);
       setMobileTab("edit");
       setSaveState("saved");
@@ -744,7 +802,10 @@ export function EditorWorkspace() {
     );
     setServices(next);
     for (const item of removed) {
-      void servicesApi.remove(item.id).catch(() => setSaveState("error"));
+      void servicesApi.remove(item.id).catch(() => {
+        setSaveState("error");
+        setMessage("Não salvou. Tente de novo.");
+      });
     }
   }
 
@@ -754,12 +815,22 @@ export function EditorWorkspace() {
     );
     setTestimonials(next);
     for (const item of removed) {
-      void testimonialsApi.remove(item.id).catch(() => setSaveState("error"));
+      void testimonialsApi.remove(item.id).catch(() => {
+        setSaveState("error");
+        setMessage("Não salvou. Tente de novo.");
+      });
     }
   }
 
   async function onPublish() {
+    const wasPublished = profileRef.current?.status === "PUBLISHED";
+    setPublishing(true);
     try {
+      try {
+        await flushPendingSaves();
+      } catch {
+        return;
+      }
       const published = await profileApi.publish();
       const { profile: merged } = withPersistedTheme(
         published,
@@ -769,9 +840,15 @@ export function EditorWorkspace() {
       setProfile(merged);
       setAuthProfile(merged);
       await refresh();
-      setMessage("Página publicada! Seu link já pode ir na bio.");
+      setMessage(
+        wasPublished
+          ? "Página atualizada."
+          : "Página no ar. Seu link já pode ir na bio.",
+      );
     } catch (err) {
       setMessage(err instanceof ApiError ? err.message : "Erro ao publicar");
+    } finally {
+      setPublishing(false);
     }
   }
 
@@ -855,17 +932,30 @@ export function EditorWorkspace() {
             </span>
             <span
               className={cn(
-                "hidden items-center gap-1.5 text-[12px] md:inline-flex",
-                saveState === "error" ? "text-red-700" : "text-muted",
+                "inline-flex min-w-0 items-center gap-1 text-[11px] sm:text-[12px]",
+                saveUi === "error" ? "text-red-700" : "text-muted",
               )}
             >
-              {saveState === "saving" ? (
+              {saveUi === "pending" ? (
+                "Alterações..."
+              ) : saveUi === "saving" ? (
                 "Salvando..."
-              ) : saveState === "error" ? (
-                "Não salvou"
+              ) : saveUi === "error" ? (
+                <>
+                  <span className="truncate">Não salvou</span>
+                  <button
+                    type="button"
+                    className="shrink-0 font-semibold underline underline-offset-2"
+                    onClick={() =>
+                      void flushPendingSaves().catch(() => undefined)
+                    }
+                  >
+                    Tentar
+                  </button>
+                </>
               ) : (
                 <>
-                  <Check className="h-3.5 w-3.5 text-ink/50" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-ink/50" />
                   Salvo
                 </>
               )}
@@ -903,8 +993,17 @@ export function EditorWorkspace() {
                 </Link>
               </Button>
             ) : null}
-            <Button type="button" className="h-11" onClick={() => void onPublish()}>
-              {profile.status === "PUBLISHED" ? "Atualizar" : "Publicar"}
+            <Button
+              type="button"
+              className="h-11"
+              disabled={publishing}
+              onClick={() => void onPublish()}
+            >
+              {publishing
+                ? "Publicando..."
+                : profile.status === "PUBLISHED"
+                  ? "Atualizar"
+                  : "Publicar"}
             </Button>
           </div>
         </div>
@@ -1232,14 +1331,36 @@ export function EditorWorkspace() {
                         <EyeOff className="h-4 w-4" />
                       )}
                     </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
-                      aria-label="Remover bloco"
-                      onClick={() => void removeBlock(selected.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    {confirmRemoveId === selected.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="h-11 rounded-lg px-2.5 text-[12px] font-semibold text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            setConfirmRemoveId(null);
+                            void removeBlock(selected.id);
+                          }}
+                        >
+                          Apagar?
+                        </button>
+                        <button
+                          type="button"
+                          className="h-11 rounded-lg px-2 text-[12px] font-medium text-muted hover:bg-background hover:text-ink"
+                          onClick={() => setConfirmRemoveId(null)}
+                        >
+                          Não
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-muted hover:bg-red-50 hover:text-red-600"
+                        aria-label="Remover bloco"
+                        onClick={() => setConfirmRemoveId(selected.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1261,21 +1382,30 @@ export function EditorWorkspace() {
                 Toque num bloco para editar
               </p>
               <p className="mt-1 max-w-[240px] text-[13px] leading-relaxed text-muted">
-                A lista à esquerda e o celular no centro abrem os campos aqui.
+                Escolha um bloco na aba Blocos para editar o conteúdo aqui.
               </p>
-              <Button
-                type="button"
-                variant="secondary"
-                className="mt-6 h-11"
-                onClick={() => {
-                  setEditorPanel("appearance");
-                  setSelectedId(null);
-                  setMobileTab("edit");
-                }}
-              >
-                <Palette className="h-4 w-4" />
-                Aparência
-              </Button>
+              <div className="mt-6 flex flex-col items-center gap-2">
+                <Button
+                  type="button"
+                  className="h-11 lg:hidden"
+                  onClick={() => setMobileTab("blocks")}
+                >
+                  Escolher o que editar
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="h-11"
+                  onClick={() => {
+                    setEditorPanel("appearance");
+                    setSelectedId(null);
+                    setMobileTab("edit");
+                  }}
+                >
+                  <Palette className="h-4 w-4" />
+                  Aparência da página
+                </Button>
+              </div>
             </div>
           )}
         </section>

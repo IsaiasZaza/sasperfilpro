@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef } from "react";
-import { AlignCenter, AlignLeft, AlignRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { AlignCenter, AlignLeft, AlignRight, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { pickerHex } from "@/lib/block-look";
@@ -24,6 +24,7 @@ export function BlockLookControls({
   fallbackTextColor = "#14110e",
   fallbackBackground = "#ffffff",
   title = "Aparência deste bloco",
+  backgroundLabel = "Fundo do bloco",
   showTextColor = true,
   showBackground = true,
   showBorder = true,
@@ -41,6 +42,7 @@ export function BlockLookControls({
   fallbackTextColor?: string;
   fallbackBackground?: string;
   title?: string | null;
+  backgroundLabel?: string;
   showTextColor?: boolean;
   showBackground?: boolean;
   showBorder?: boolean;
@@ -53,14 +55,16 @@ export function BlockLookControls({
   showPadding?: boolean;
   showShadow?: boolean;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+
   const patch = (partial: Partial<BlockLook>) => {
     const next = { ...look, ...partial };
     if (JSON.stringify(next) === JSON.stringify(look)) return;
     onChange(next);
   };
 
-  const showColors = showTextColor || showBackground || showBorder;
-  const showShape =
+  const hasAdvanced =
+    showBorder ||
     showFontSize ||
     showAlign ||
     showWidth ||
@@ -72,9 +76,14 @@ export function BlockLookControls({
   return (
     <section className="space-y-4">
       {title ? (
-        <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
-          {title}
-        </h3>
+        <div>
+          <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+            {title}
+          </h3>
+          <p className="mt-1 text-[12px] leading-relaxed text-muted">
+            Vale só neste bloco. O tema da página fica em Aparência.
+          </p>
+        </div>
       ) : null}
       {showAvatar ? (
         <>
@@ -103,14 +112,14 @@ export function BlockLookControls({
           />
         </>
       ) : null}
-      {showColors ? (
+      {showBackground || showTextColor ? (
         <div className="space-y-3">
           {showBackground ? (
             <ColorControl
-              label="Fundo do bloco"
+              label={backgroundLabel}
               value={look.backgroundColor}
               fallback={fallbackBackground}
-              placeholder="Transparente / tema"
+              placeholder="Tema da página"
               onChange={(backgroundColor) => patch({ backgroundColor })}
             />
           ) : null}
@@ -123,102 +132,120 @@ export function BlockLookControls({
               onChange={(textColor) => patch({ textColor })}
             />
           ) : null}
-          {showBorder ? (
-            <ColorControl
-              label="Cor da borda"
-              value={look.borderColor}
-              fallback="#eadfd8"
-              placeholder="Sem borda extra"
-              onChange={(borderColor) => patch({ borderColor })}
-            />
-          ) : null}
         </div>
       ) : null}
-      {showShape ? (
-        <div className="space-y-3">
-          {showFontSize ? (
-            <ChoiceRow
-              label="Tamanho da letra"
-              value={look.fontSize || "md"}
-              onChange={(fontSize) => patch({ fontSize })}
-              options={[
-                { value: "sm", label: "P" },
-                { value: "md", label: "M" },
-                { value: "lg", label: "G" },
-                { value: "xl", label: "GG" },
-              ]}
+      {hasAdvanced ? (
+        <div>
+          <button
+            type="button"
+            className="inline-flex h-11 w-full items-center justify-between rounded-xl border border-line bg-white px-3 text-[13px] font-semibold text-ink"
+            onClick={() => setMoreOpen((open) => !open)}
+            aria-expanded={moreOpen}
+          >
+            Mais opções
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted transition",
+                moreOpen && "rotate-180",
+              )}
             />
-          ) : null}
-          {showAlign ? (
-            <ChoiceRow
-              label={showAvatar ? "Posição (foto e textos)" : "Posição"}
-              value={look.align || "center"}
-              onChange={(align) => patch({ align })}
-              options={[
-                { value: "left", label: "Esquerda", icon: AlignLeft },
-                { value: "center", label: "Centro", icon: AlignCenter },
-                { value: "right", label: "Direita", icon: AlignRight },
-              ]}
-            />
-          ) : null}
-          {showWidth ? (
-            <ChoiceRow
-              label="Largura"
-              value={look.width || "full"}
-              onChange={(width) => patch({ width })}
-              options={[
-                { value: "full", label: "Toda a linha" },
-                { value: "fit", label: "Encaixar" },
-              ]}
-            />
-          ) : null}
-          {showRadius ? (
-            <ChoiceRow
-              label="Cantos"
-              value={look.radius || "md"}
-              onChange={(radius) => patch({ radius })}
-              options={[
-                { value: "none", label: "Reto" },
-                { value: "sm", label: "Leve" },
-                { value: "md", label: "Médio" },
-                { value: "lg", label: "Grande" },
-                { value: "pill", label: "Pílula" },
-              ]}
-            />
-          ) : null}
-          {showPadding ? (
-            <ChoiceRow
-              label="Espaço interno"
-              value={look.padding || "md"}
-              onChange={(padding) => patch({ padding })}
-              options={[
-                { value: "sm", label: "Compacto" },
-                { value: "md", label: "Médio" },
-                { value: "lg", label: "Folgado" },
-              ]}
-            />
-          ) : null}
-          {showShadow ? (
-            <ChoiceRow
-              label="Sombra"
-              value={look.shadow || "none"}
-              onChange={(shadow) => patch({ shadow })}
-              options={[
-                { value: "none", label: "Sem" },
-                { value: "soft", label: "Suave" },
-              ]}
-            />
-          ) : null}
-          {showPulse ? (
-            <ChoiceRow
-              label="O botão pulsa"
-              value={look.pulse ? "yes" : "no"}
-              onChange={(value) => patch({ pulse: value === "yes" })}
-              options={[
-                { value: "yes", label: "Sim" },
-                { value: "no", label: "Não" },
-              ]}
-            />
+          </button>
+          {moreOpen ? (
+            <div className="mt-3 space-y-3">
+              {showBorder ? (
+                <ColorControl
+                  label="Cor da borda"
+                  value={look.borderColor}
+                  fallback="#eadfd8"
+                  placeholder="Sem borda extra"
+                  onChange={(borderColor) => patch({ borderColor })}
+                />
+              ) : null}
+              {showFontSize ? (
+                <ChoiceRow
+                  label="Tamanho da letra"
+                  value={look.fontSize || "md"}
+                  onChange={(fontSize) => patch({ fontSize })}
+                  options={[
+                    { value: "sm", label: "P" },
+                    { value: "md", label: "M" },
+                    { value: "lg", label: "G" },
+                    { value: "xl", label: "GG" },
+                  ]}
+                />
+              ) : null}
+              {showAlign ? (
+                <ChoiceRow
+                  label={showAvatar ? "Posição (foto e textos)" : "Posição"}
+                  value={look.align || "center"}
+                  onChange={(align) => patch({ align })}
+                  options={[
+                    { value: "left", label: "Esquerda", icon: AlignLeft },
+                    { value: "center", label: "Centro", icon: AlignCenter },
+                    { value: "right", label: "Direita", icon: AlignRight },
+                  ]}
+                />
+              ) : null}
+              {showWidth ? (
+                <ChoiceRow
+                  label="Largura"
+                  value={look.width || "full"}
+                  onChange={(width) => patch({ width })}
+                  options={[
+                    { value: "full", label: "Toda a linha" },
+                    { value: "fit", label: "Encaixar" },
+                  ]}
+                />
+              ) : null}
+              {showRadius ? (
+                <ChoiceRow
+                  label="Cantos"
+                  value={look.radius || "md"}
+                  onChange={(radius) => patch({ radius })}
+                  options={[
+                    { value: "none", label: "Reto" },
+                    { value: "sm", label: "Leve" },
+                    { value: "md", label: "Médio" },
+                    { value: "lg", label: "Grande" },
+                    { value: "pill", label: "Pílula" },
+                  ]}
+                />
+              ) : null}
+              {showPadding ? (
+                <ChoiceRow
+                  label="Espaço interno"
+                  value={look.padding || "md"}
+                  onChange={(padding) => patch({ padding })}
+                  options={[
+                    { value: "sm", label: "Compacto" },
+                    { value: "md", label: "Médio" },
+                    { value: "lg", label: "Folgado" },
+                  ]}
+                />
+              ) : null}
+              {showShadow ? (
+                <ChoiceRow
+                  label="Sombra"
+                  value={look.shadow || "none"}
+                  onChange={(shadow) => patch({ shadow })}
+                  options={[
+                    { value: "none", label: "Sem" },
+                    { value: "soft", label: "Suave" },
+                  ]}
+                />
+              ) : null}
+              {showPulse ? (
+                <ChoiceRow
+                  label="O botão pulsa"
+                  value={look.pulse ? "yes" : "no"}
+                  onChange={(value) => patch({ pulse: value === "yes" })}
+                  options={[
+                    { value: "yes", label: "Sim" },
+                    { value: "no", label: "Não" },
+                  ]}
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

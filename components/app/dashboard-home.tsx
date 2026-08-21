@@ -9,6 +9,7 @@ import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { ApiError } from "@/lib/api";
 import { profileApi } from "@/lib/api-client";
 import type { PublicPage } from "@/lib/types/profile";
 
@@ -29,6 +30,7 @@ export function DashboardHome() {
   >("loading");
   const [copied, setCopied] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
 
   async function loadPreview() {
     setPreviewState("loading");
@@ -67,12 +69,17 @@ export function DashboardHome() {
 
   async function publish() {
     setPublishing(true);
+    setPublishError(null);
     try {
       const updated = await profileApi.publish();
       setProfile(updated);
       await loadPreview();
-    } catch {
-      // o editor cobre o erro com mais contexto
+    } catch (err) {
+      setPublishError(
+        err instanceof ApiError
+          ? err.message
+          : "Não foi possível publicar. Tente de novo.",
+      );
     } finally {
       setPublishing(false);
     }
@@ -162,6 +169,11 @@ export function DashboardHome() {
               </button>
             )}
           </div>
+          {publishError ? (
+            <p className="mt-3 text-[13px] font-medium text-red-800">
+              {publishError}
+            </p>
+          ) : null}
         </div>
 
         <div className="relative mx-auto w-full max-w-[280px] justify-self-center sm:max-w-[360px] lg:max-w-[380px]">

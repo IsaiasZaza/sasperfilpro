@@ -209,7 +209,7 @@ export const BLOCK_META: Record<
 > = {
   HERO: {
     label: "Cabeçalho",
-    description: "Foto, nome e headline do perfil",
+    description: "Foto, nome e frase de destaque",
   },
   CTA_BUTTON: {
     label: "Botão principal",
