@@ -35,56 +35,40 @@ export function pickerHex(value: string | undefined, fallback: string): string {
 
 export function lookFrom(content: object): BlockLook {
   const c = content as BlockLook;
-  const align: BlockAlign | undefined =
-    c.align === "left" || c.align === "right" || c.align === "center"
-      ? c.align
-      : undefined;
-  const width: ButtonWidth | undefined =
-    c.width === "fit" || c.width === "full" ? c.width : undefined;
-  const fontSize: FontSize | undefined = FONT_SIZES.includes(
-    c.fontSize as FontSize,
-  )
-    ? (c.fontSize as FontSize)
-    : undefined;
-  const avatarSize: AvatarSize | undefined = AVATAR_SIZES.includes(
-    c.avatarSize as AvatarSize,
-  )
-    ? (c.avatarSize as AvatarSize)
-    : undefined;
-  const avatarShape: AvatarShape | undefined = AVATAR_SHAPES.includes(
-    c.avatarShape as AvatarShape,
-  )
-    ? (c.avatarShape as AvatarShape)
-    : undefined;
-  const radius: BlockRadius | undefined = BLOCK_RADII.includes(
-    c.radius as BlockRadius,
-  )
-    ? (c.radius as BlockRadius)
-    : undefined;
-  const padding: BlockPadding | undefined = BLOCK_PADDINGS.includes(
-    c.padding as BlockPadding,
-  )
-    ? (c.padding as BlockPadding)
-    : undefined;
-  const shadow: BlockShadow | undefined = BLOCK_SHADOWS.includes(
-    c.shadow as BlockShadow,
-  )
-    ? (c.shadow as BlockShadow)
-    : undefined;
-  return {
-    textColor: asLookColor(c.textColor),
-    backgroundColor: asLookColor(c.backgroundColor),
-    borderColor: asLookColor(c.borderColor),
-    align,
-    width,
-    pulse: Boolean(c.pulse),
-    fontSize,
-    avatarSize,
-    avatarShape,
-    radius,
-    padding,
-    shadow,
-  };
+  const look: BlockLook = {};
+
+  const textColor = asLookColor(c.textColor);
+  if (textColor) look.textColor = textColor;
+  const backgroundColor = asLookColor(c.backgroundColor);
+  if (backgroundColor) look.backgroundColor = backgroundColor;
+  const borderColor = asLookColor(c.borderColor);
+  if (borderColor) look.borderColor = borderColor;
+
+  if (c.align === "left" || c.align === "right" || c.align === "center") {
+    look.align = c.align;
+  }
+  if (c.width === "fit" || c.width === "full") look.width = c.width;
+  if (c.pulse) look.pulse = true;
+  if (FONT_SIZES.includes(c.fontSize as FontSize)) {
+    look.fontSize = c.fontSize as FontSize;
+  }
+  if (AVATAR_SIZES.includes(c.avatarSize as AvatarSize)) {
+    look.avatarSize = c.avatarSize as AvatarSize;
+  }
+  if (AVATAR_SHAPES.includes(c.avatarShape as AvatarShape)) {
+    look.avatarShape = c.avatarShape as AvatarShape;
+  }
+  if (BLOCK_RADII.includes(c.radius as BlockRadius)) {
+    look.radius = c.radius as BlockRadius;
+  }
+  if (BLOCK_PADDINGS.includes(c.padding as BlockPadding)) {
+    look.padding = c.padding as BlockPadding;
+  }
+  if (BLOCK_SHADOWS.includes(c.shadow as BlockShadow)) {
+    look.shadow = c.shadow as BlockShadow;
+  }
+
+  return look;
 }
 
 export function alignStack(align?: BlockAlign) {
@@ -196,6 +180,80 @@ export function lookShadow(shadow?: BlockShadow, fallback?: string) {
   if (shadow === "none") return "none";
   if (shadow === "soft") return "0 10px 28px -16px rgba(20,17,14,0.45)";
   return fallback;
+}
+
+/** A API atual descarta campos de look no `content`; guardamos no `title`. */
+const LOOK_TITLE_PREFIX = "__pp_look__:";
+
+export function packLookTitle(
+  title: string | null | undefined,
+  look: BlockLook,
+): string | null {
+  const base =
+    typeof title === "string" && !title.startsWith(LOOK_TITLE_PREFIX)
+      ? title.trim()
+      : "";
+  const packed: Record<string, unknown> = {};
+  if (look.textColor) packed.textColor = look.textColor;
+  if (look.backgroundColor) packed.backgroundColor = look.backgroundColor;
+  if (look.borderColor) packed.borderColor = look.borderColor;
+  if (look.align) packed.align = look.align;
+  if (look.width) packed.width = look.width;
+  if (look.pulse) packed.pulse = true;
+  if (look.fontSize) packed.fontSize = look.fontSize;
+  if (look.avatarSize) packed.avatarSize = look.avatarSize;
+  if (look.avatarShape) packed.avatarShape = look.avatarShape;
+  if (look.radius) packed.radius = look.radius;
+  if (look.padding) packed.padding = look.padding;
+  if (look.shadow) packed.shadow = look.shadow;
+
+  if (Object.keys(packed).length === 0) {
+    return base.length > 0 ? base : null;
+  }
+  const encoded = `${LOOK_TITLE_PREFIX}${JSON.stringify(packed)}`;
+  return base ? `${base}\n${encoded}` : encoded;
+}
+
+export function unpackLookTitle(title: string | null | undefined): {
+  title: string | null;
+  look: BlockLook;
+} {
+  if (!title || typeof title !== "string") {
+    return { title: title ?? null, look: {} };
+  }
+  const lines = title.split("\n");
+  const lookLine = lines.find((line) => line.startsWith(LOOK_TITLE_PREFIX));
+  const base = lines
+    .filter((line) => !line.startsWith(LOOK_TITLE_PREFIX))
+    .join("\n")
+    .trim();
+
+  if (!lookLine) {
+    return { title: base.length > 0 ? base : null, look: {} };
+  }
+
+  try {
+    const raw = JSON.parse(
+      lookLine.slice(LOOK_TITLE_PREFIX.length),
+    ) as unknown;
+    if (!raw || typeof raw !== "object") {
+      return { title: base.length > 0 ? base : null, look: {} };
+    }
+    return {
+      title: base.length > 0 ? base : null,
+      look: lookFrom(raw),
+    };
+  } catch {
+    return { title: base.length > 0 ? base : null, look: {} };
+  }
+}
+
+export function hydrateBlockLook<
+  T extends { title?: string | null; content: object },
+>(block: T): T {
+  const { title, look } = unpackLookTitle(block.title);
+  const content = { ...look, ...(block.content as object) };
+  return { ...block, title, content };
 }
 
 export function surfaceStyle(

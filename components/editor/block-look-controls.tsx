@@ -58,7 +58,15 @@ export function BlockLookControls({
   const [moreOpen, setMoreOpen] = useState(false);
 
   const patch = (partial: Partial<BlockLook>) => {
-    const next = { ...look, ...partial };
+    const next: BlockLook = { ...look };
+    for (const key of Object.keys(partial) as (keyof BlockLook)[]) {
+      const value = partial[key];
+      if (value === undefined || value === false) {
+        delete next[key];
+      } else {
+        Object.assign(next, { [key]: value });
+      }
+    }
     if (JSON.stringify(next) === JSON.stringify(look)) return;
     onChange(next);
   };
@@ -380,12 +388,28 @@ export function mergeLook<T extends object>(
   content: T,
   look: BlockLook,
 ): T & BlockLook {
-  const next = { ...content, ...look } as T & BlockLook;
-  const keys = Object.keys(look) as (keyof BlockLook)[];
+  const next = { ...content } as T & BlockLook;
+  const keys = [
+    "textColor",
+    "backgroundColor",
+    "borderColor",
+    "align",
+    "width",
+    "pulse",
+    "fontSize",
+    "avatarSize",
+    "avatarShape",
+    "radius",
+    "padding",
+    "shadow",
+  ] as const;
+
   for (const key of keys) {
     const value = look[key];
     if (value === undefined || value === false) {
       delete next[key];
+    } else {
+      Object.assign(next, { [key]: value });
     }
   }
   return next;

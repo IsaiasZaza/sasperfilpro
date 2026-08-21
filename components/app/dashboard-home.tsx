@@ -11,6 +11,7 @@ import { Container } from "@/components/ui/container";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ApiError } from "@/lib/api";
 import { profileApi } from "@/lib/api-client";
+import { hydrateBlockLook } from "@/lib/block-look";
 import type { PublicPage } from "@/lib/types/profile";
 
 function publishedLabel(iso: string | null) {
@@ -36,7 +37,10 @@ export function DashboardHome() {
     setPreviewState("loading");
     try {
       const page = await profileApi.preview();
-      setPreview(page);
+      setPreview({
+        ...page,
+        blocks: (page.blocks || []).map((block) => hydrateBlockLook(block)),
+      });
       setPreviewState("ready");
     } catch {
       setPreview(null);

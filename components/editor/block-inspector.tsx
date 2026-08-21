@@ -101,7 +101,9 @@ export function BlockInspector({
             </Field>
             <BlockLookControls
               look={lookFrom(content)}
-              onChange={(look) => setContent(mergeLook(content, look))}
+              onChange={(nextLook) =>
+                setContent(mergeLook(content, nextLook))
+              }
               title={null}
               showAvatar
               showTextColor={false}

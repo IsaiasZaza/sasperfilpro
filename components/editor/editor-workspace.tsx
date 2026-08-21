@@ -63,6 +63,11 @@ import {
 } from "@/lib/theme";
 import { normalizeHttpUrl, prepareBlockContent } from "@/lib/url";
 import {
+  hydrateBlockLook,
+  lookFrom,
+  packLookTitle,
+} from "@/lib/block-look";
+import {
   BLOCK_META,
   type BlockType,
   type Profile,
@@ -394,9 +399,9 @@ export function EditorWorkspace() {
         testimonialsApi.list(),
       ]);
       const loaded = { ...p, theme: themeFromApi(p.theme) };
-      const ordered = sortBlocks(b).map((block) =>
-        withHeroFromProfile(block, loaded),
-      );
+      const ordered = sortBlocks(b)
+        .map((block) => hydrateBlockLook(block))
+        .map((block) => withHeroFromProfile(block, loaded));
       setProfile(loaded);
       setAuthProfile(loaded);
       setBlocks(ordered);
@@ -494,7 +499,7 @@ export function EditorWorkspace() {
           previousContent,
         ),
         isVisible: block.isVisible,
-        title: block.title,
+        title: packLookTitle(block.title, lookFrom(block.content)),
       });
       lastSavedBlock.current[block.id] = payload;
 
