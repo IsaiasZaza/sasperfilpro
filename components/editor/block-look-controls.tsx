@@ -380,27 +380,14 @@ export function mergeLook<T extends object>(
   content: T,
   look: BlockLook,
 ): T & BlockLook {
-  const next = { ...content } as T & BlockLook;
-  const assign = <K extends keyof BlockLook>(key: K, value: BlockLook[K]) => {
+  const next = { ...content, ...look } as T & BlockLook;
+  const keys = Object.keys(look) as (keyof BlockLook)[];
+  for (const key of keys) {
+    const value = look[key];
     if (value === undefined || value === false) {
       delete next[key];
-    } else {
-      next[key] = value;
     }
-  };
-
-  assign("textColor", look.textColor);
-  assign("backgroundColor", look.backgroundColor);
-  assign("borderColor", look.borderColor);
-  assign("align", look.align);
-  assign("width", look.width);
-  assign("pulse", look.pulse);
-  assign("fontSize", look.fontSize);
-  assign("avatarSize", look.avatarSize);
-  assign("avatarShape", look.avatarShape);
-  assign("radius", look.radius);
-  assign("padding", look.padding);
-  assign("shadow", look.shadow);
+  }
   return next;
 }
 
