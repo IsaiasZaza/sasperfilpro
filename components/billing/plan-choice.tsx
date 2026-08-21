@@ -58,7 +58,7 @@ export function PlanChoice({
             aria-checked={selected}
             onClick={() => onChange(plan.id)}
             className={cn(
-              "relative rounded-2xl border px-4 py-3 text-left transition",
+              "rounded-2xl border px-4 py-3 text-left transition",
               selected
                 ? "border-ink bg-ink text-white"
                 : "border-line bg-white text-ink hover:border-ink/25",
@@ -74,26 +74,31 @@ export function PlanChoice({
                 Recomendado
               </span>
             ) : null}
-            <div className="flex items-baseline justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <p className="font-serif text-[1.15rem] leading-none">{plan.name}</p>
-              {plan.priceFormatted ? (
-                <p
-                  className={cn(
-                    "text-[13px] font-semibold",
-                    selected ? "text-white/90" : "text-ink",
-                  )}
-                >
-                  {plan.priceFormatted}
-                  <span
+              <div className="flex shrink-0 items-center gap-2">
+                {plan.priceFormatted ? (
+                  <p
                     className={cn(
-                      "font-normal",
-                      selected ? "text-white/60" : "text-muted",
+                      "text-[13px] font-semibold",
+                      selected ? "text-white/90" : "text-ink",
                     )}
                   >
-                    /mês
-                  </span>
-                </p>
-              ) : null}
+                    {plan.priceFormatted}
+                    <span
+                      className={cn(
+                        "font-normal",
+                        selected ? "text-white/60" : "text-muted",
+                      )}
+                    >
+                      /mês
+                    </span>
+                  </p>
+                ) : null}
+                {selected ? (
+                  <Check className="h-4 w-4 shrink-0 text-lime" />
+                ) : null}
+              </div>
             </div>
             <p
               className={cn(
@@ -103,9 +108,6 @@ export function PlanChoice({
             >
               {plan.description}
             </p>
-            {selected ? (
-              <Check className="absolute right-3 top-3 h-4 w-4 text-lime" />
-            ) : null}
           </button>
         );
       })}
