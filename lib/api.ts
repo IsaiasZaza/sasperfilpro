@@ -104,11 +104,11 @@ async function tryRefreshSession(): Promise<"ok" | "expired" | "subscription"> {
 }
 
 export async function api<T>(path: string, options: ApiOptions = {}): Promise<T> {
-  const { body, formData, headers, _retry, ...rest } = options;
+  const { body, formData, headers, _retry, credentials, ...rest } = options;
 
   const res = await fetch(`${API_URL}${path}`, {
     ...rest,
-    credentials: "include",
+    credentials: credentials ?? "include",
     headers: formData
       ? { ...(headers || {}) }
       : {

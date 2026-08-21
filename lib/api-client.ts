@@ -215,7 +215,8 @@ export const testimonialsApi = {
 export const publicApi = {
   getPage(username: string) {
     return api<PublicPage>(`/p/${encodeURIComponent(username)}`, {
-      cache: "no-store",
+      credentials: "omit",
+      next: { revalidate: 60 },
     });
   },
   checkUsername(username: string) {
@@ -227,7 +228,10 @@ export const publicApi = {
 
 export const billingApi = {
   plans() {
-    return api<PlansCatalog>("/billing/plans", { cache: "no-store" });
+    return api<PlansCatalog>("/billing/plans", {
+      credentials: "omit",
+      next: { revalidate: 3600 },
+    });
   },
   checkout(input: { email: string; password: string; plan: PlanId }) {
     return api<{ checkoutUrl: string | null }>("/billing/checkout", {

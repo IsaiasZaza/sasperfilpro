@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ProfilePreview } from "@/components/profile/profile-preview";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { loadPublicPage } from "@/lib/public-page";
+import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { resolvePaintTheme } from "@/lib/theme";
 
 type PageProps = {
@@ -15,17 +17,42 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { username } = await params;
   const page = await loadPublicPage(username);
+  const path = `/u/${username}`;
+
   if (!page) {
-    return { title: "Página não encontrada" };
+    return {
+      title: "Página não encontrada",
+      robots: { index: false, follow: false },
+    };
   }
+
   const name = page.displayName || page.username || username;
   const headline = page.headline?.trim();
+  const title = headline ? `${name} · ${headline}` : name;
+  const description =
+    page.bio?.trim() ||
+    headline ||
+    `Página profissional de ${name} no ${SITE_NAME}. Serviços, contato e WhatsApp em um só link.`;
+
   return {
-    title: headline ? `${name} · ${headline}` : name,
-    description:
-      page.bio?.trim() ||
-      headline ||
-      `Página de ${name} no PerfilPro`,
+    title,
+    description,
+    alternates: { canonical: path },
+    robots: { index: true, follow: true },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      url: path,
+      locale: "pt_BR",
+      siteName: SITE_NAME,
+      images: page.avatarUrl ? [{ url: page.avatarUrl, alt: name }] : undefined,
+    },
+    twitter: {
+      card: page.avatarUrl ? "summary" : "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -44,7 +71,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
           Este perfil não existe ou ainda não foi publicado.
         </p>
         <Button asChild className="mt-8" size="lg">
-          <Link href="/#planos">Criar minha página</Link>
+          <Link href="/planos">Criar minha página</Link>
         </Button>
       </div>
     );
@@ -57,12 +84,30 @@ export default async function PublicProfilePage({ params }: PageProps) {
       : painted.font === "mono"
         ? "font-mono"
         : "font-sans";
+  const name = page.displayName || page.username || username;
+  const url = absoluteUrl(`/u/${page.username || username}`);
 
   return (
     <div
       className={`relative min-h-screen ${fontClass}`}
       style={{ background: painted.background }}
     >
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "ProfilePage",
+          url,
+          name,
+          description: page.bio || page.headline || undefined,
+          mainEntity: {
+            "@type": "Person",
+            name,
+            description: page.headline || page.bio || undefined,
+            image: page.avatarUrl || undefined,
+            url,
+          },
+        }}
+      />
       <div className="mx-auto min-h-screen w-full max-w-md">
         <ProfilePreview
           page={page}

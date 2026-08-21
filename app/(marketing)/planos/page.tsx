@@ -4,9 +4,16 @@ import { billingApi } from "@/lib/api-client";
 import type { Plan } from "@/lib/types/billing";
 
 export const metadata: Metadata = {
-  title: "Planos — PerfilPro",
+  title: "Planos e preços",
   description:
-    "Sua página profissional no ar em minutos. 7 dias grátis nos planos Pro e Premium.",
+    "Planos Pro e Premium para sua página profissional. A partir de R$ 20/mês, 7 dias grátis. Cartão na Stripe, cobrança só depois do teste.",
+  alternates: { canonical: "/planos" },
+  openGraph: {
+    title: "Planos e preços — PerfilPro",
+    description:
+      "Planos Pro e Premium para sua página profissional. A partir de R$ 20/mês, com 7 dias grátis.",
+    url: "/planos",
+  },
 };
 
 export const dynamic = "force-dynamic";

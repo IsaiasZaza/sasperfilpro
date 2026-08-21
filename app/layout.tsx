@@ -1,6 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import {
+  getGoogleSiteVerification,
+  getSiteUrl,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+} from "@/lib/site";
 import "./globals.css";
 
 const sans = Plus_Jakarta_Sans({
@@ -16,38 +23,63 @@ const serif = Fraunces({
   axes: ["opsz", "SOFT"],
 });
 
-const title = "PerfilPro — Tudo o que você é, em um só link";
-const description =
-  "Crie sua página profissional para a bio do Instagram. Mostre serviços, depoimentos e leve o cliente direto para o WhatsApp."
+const site = getSiteUrl();
+const googleVerification = getGoogleSiteVerification();
+
+export const viewport: Viewport = {
+  themeColor: "#D4E05C",
+  width: "device-width",
+  initialScale: 1,
+};
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://perfilpro.vercel.app"),
-  title,
-  description,
+  metadataBase: new URL(site),
+  title: {
+    default: SITE_TITLE,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  category: "technology",
   keywords: [
     "link na bio",
-    "Instagram",
-    "página profissional",
-    "WhatsApp",
-    "autônomos",
-    "pequenos negócios",
+    "página profissional Instagram",
+    "cartão de visitas digital",
+    "WhatsApp para bio",
+    "linktree Brasil",
+    "página para autônomos",
+    "PerfilPro",
   ],
+  authors: [{ name: SITE_NAME, url: site }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
   openGraph: {
-    title,
-    description,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     type: "website",
     locale: "pt_BR",
-    siteName: "PerfilPro",
+    siteName: SITE_NAME,
+    url: site,
   },
   twitter: {
     card: "summary_large_image",
-    title,
-    description,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
   },
+  verification: googleVerification
+    ? { google: googleVerification }
+    : undefined,
 };
 
 export default function RootLayout({

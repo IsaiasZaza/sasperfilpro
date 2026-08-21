@@ -263,14 +263,6 @@ export function LoginForm({
           onChange={setPassword}
           placeholder="Sua senha"
           autoComplete="current-password"
-          extra={
-            <Link
-              href="/recuperar-senha"
-              className="text-[12px] font-medium text-muted hover:text-ink"
-            >
-              Esqueci
-            </Link>
-          }
         />
         {needsCheckout ? (
           <div className="space-y-3">

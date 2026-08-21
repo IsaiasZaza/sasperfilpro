@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SubscriptionManager } from "@/components/billing/subscription-manager";
 
 export const metadata: Metadata = {
-  title: "Assinatura — PerfilPro",
+  title: "Assinatura",
   robots: { index: false, follow: false },
 };
 

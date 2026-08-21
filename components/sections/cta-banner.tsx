@@ -20,7 +20,7 @@ export function CtaBanner() {
               </p>
               <div className="mt-8">
                 <Button asChild variant="secondary" size="xl">
-                  <Link href="/#planos">Criar minha página agora</Link>
+                  <Link href="/planos">Criar minha página agora</Link>
                 </Button>
               </div>
             </div>

@@ -1,11 +1,5 @@
-import type { Metadata } from "next";
-import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
-
-export const metadata: Metadata = {
-  title: "Recuperar senha — PerfilPro",
-  robots: { index: false, follow: false },
-};
+import { redirect } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-  return <ForgotPasswordForm />;
+  redirect("/login");
 }
