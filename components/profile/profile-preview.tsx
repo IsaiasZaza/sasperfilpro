@@ -193,7 +193,14 @@ function BlockView({
           ) : null}
           {bioText ? (
             <p
-              className="mt-2.5 max-w-[280px] break-words leading-relaxed"
+              className={cn(
+                "mt-2.5 w-full max-w-[280px] break-words leading-relaxed",
+                stacked
+                  ? "mx-auto"
+                  : look.align === "right"
+                    ? "ml-auto"
+                    : undefined,
+              )}
               style={{ color: theme.muted, fontSize: sizes.body }}
             >
               {bioText}
