@@ -28,9 +28,13 @@ import {
   Eye,
   EyeOff,
   GripVertical,
+  LayoutTemplate,
+  Loader2,
   Palette,
   Plus,
+  Search,
   Trash2,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -40,16 +44,19 @@ import { Logo } from "@/components/brand/logo";
 import { AppearancePanel } from "@/components/editor/appearance-panel";
 import { BlockInspector } from "@/components/editor/block-inspector";
 import {
+  BLOCK_GROUPS,
   BLOCK_ICONS,
+  BLOCK_KEYWORDS,
   BLOCK_TIPS,
-  INSERTABLE_BLOCKS,
   UNIQUE_BLOCKS,
 } from "@/components/editor/editor-meta";
+import { TemplateGallery } from "@/components/editor/template-gallery";
 import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
-import { Toast } from "@/components/ui/toast";
+import { Toast, type ToastVariant } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api";
+import type { PageTemplate, TemplateBlock } from "@/lib/page-templates";
 import {
   blocksApi,
   profileApi,
@@ -80,11 +87,22 @@ import {
 import { cn } from "@/lib/utils";
 
 type MobileTab = "blocks" | "edit" | "preview";
-type EditorPanel = "block" | "appearance";
+type EditorPanel = "block" | "appearance" | "templates";
 
 const SAVE_WAIT_MS = 1200;
 
 type SaveState = "saved" | "pending" | "saving" | "error";
+
+type ToastState = { text: string; variant: ToastVariant } | null;
+
+/** Busca sem acento e sem caixa: "serviços" acha "servicos". */
+function foldText(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
 
 function emptyToNull(value: string | null | undefined): string | null {
   if (value == null) return null;
@@ -220,6 +238,39 @@ function defaultContent(
   }
 }
 
+/**
+ * Modelo não apaga o que o usuário já preencheu: nome, foto, bio, telefone e
+ * cidade vêm do perfil atual e só caem no texto de exemplo quando estão vazios.
+ */
+function templateBlockContent(
+  item: TemplateBlock,
+  profile: Profile | null,
+  previousPhone: string,
+): Record<string, unknown> {
+  const content: Record<string, unknown> = { ...item.content };
+
+  if (item.type === "HERO") {
+    content.name = profile?.displayName || (content.name as string) || "";
+    if (profile?.headline) content.headline = profile.headline;
+    if (profile?.bio) content.bio = profile.bio;
+    if (profile?.avatarUrl) content.avatarUrl = profile.avatarUrl;
+    return content;
+  }
+
+  if (item.type === "WHATSAPP") {
+    content.phone = previousPhone;
+    return content;
+  }
+
+  if (item.type === "LOCATION") {
+    const city = profile?.location?.trim();
+    content.address = city || "Minha cidade";
+    return content;
+  }
+
+  return content;
+}
+
 function SortableBlockRow({
   block,
   selected,
@@ -348,13 +399,22 @@ export function EditorWorkspace() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("saved");
-  const [message, setMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
   const [inserterOpen, setInserterOpen] = useState(false);
+  const [inserterQuery, setInserterQuery] = useState("");
   const [mobileTab, setMobileTab] = useState<MobileTab>("blocks");
   const [editorPanel, setEditorPanel] = useState<EditorPanel>("block");
   const [copied, setCopied] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState<string | null>(null);
+
+  const notify = useCallback(
+    (text: string, variant: ToastVariant = "info") => {
+      setToast({ text, variant });
+    },
+    [],
+  );
 
   const saveTimer = useRef<number | null>(null);
   const saveInFlight = useRef<Promise<void> | null>(null);
@@ -374,6 +434,20 @@ export function EditorWorkspace() {
   const orderedBlocks = useMemo(() => sortBlocks(blocks), [blocks]);
   const selected = orderedBlocks.find((b) => b.id === selectedId) ?? null;
   const blockIds = useMemo(() => orderedBlocks.map((b) => b.id), [orderedBlocks]);
+
+  const inserterGroups = useMemo(() => {
+    const query = foldText(inserterQuery);
+    return BLOCK_GROUPS.map((group) => ({
+      label: group.label,
+      types: group.types.filter((type) => {
+        if (!query) return true;
+        const haystack = foldText(
+          `${BLOCK_META[type].label} ${BLOCK_META[type].description} ${BLOCK_KEYWORDS[type]}`,
+        );
+        return haystack.includes(query);
+      }),
+    })).filter((group) => group.types.length > 0);
+  }, [inserterQuery]);
 
   const previewPage: PublicPage | null = useMemo(() => {
     if (!profile) return null;
@@ -467,17 +541,21 @@ export function EditorWorkspace() {
   }, [loading, loadError]);
 
   useEffect(() => {
-    if (!message) return;
-    const timer = window.setTimeout(() => setMessage(null), 2800);
+    if (!toast) return;
+    // Erro fica mais tempo na tela: quem errou precisa ler.
+    const timer = window.setTimeout(
+      () => setToast(null),
+      toast.variant === "error" ? 6000 : 3200,
+    );
     return () => window.clearTimeout(timer);
-  }, [message]);
+  }, [toast]);
 
   useEffect(() => {
     try {
       const warn = sessionStorage.getItem("perfilpro:publish-warn");
       if (!warn) return;
       sessionStorage.removeItem("perfilpro:publish-warn");
-      setMessage(warn);
+      setToast({ text: warn, variant: "info" });
     } catch {
       // ignore
     }
@@ -749,8 +827,9 @@ export function EditorWorkspace() {
           // Evita loop infinito de "Salvando..." quando o dirty não estabiliza.
           if (passes >= 3) {
             setSaveState("error");
-            setMessage(
+            notify(
               "Não estabilizou o salvamento do tema. Confira se o backend aceita o campo atmosphere.",
+              "error",
             );
             return;
           }
@@ -765,12 +844,13 @@ export function EditorWorkspace() {
         setSaveState("saved");
       } catch (err) {
         setSaveState("error");
-        setMessage(
+        notify(
           err instanceof ApiError
             ? err.message
             : err instanceof Error
               ? err.message
               : "Não salvou. Tente de novo.",
+          "error",
         );
         throw err;
       } finally {
@@ -783,6 +863,7 @@ export function EditorWorkspace() {
     await promise;
   }, [
     hasUnsavedChanges,
+    notify,
     persistDirtyBlocks,
     persistDirtyProfile,
     persistDirtyServices,
@@ -870,22 +951,26 @@ export function EditorWorkspace() {
       setEditorPanel("block");
       lastSavedBlock.current[created.id] = snapshotBlock(created);
       setInserterOpen(false);
+      setInserterQuery("");
       setMobileTab("edit");
       setSaveState("saved");
+      notify(`${BLOCK_META[type].label} adicionado.`, "success");
     } catch (err) {
       const detail =
         err instanceof ApiError && Array.isArray(err.details)
           ? (err.details[0] as { message?: string } | undefined)?.message
           : null;
-      setMessage(
+      notify(
         detail ||
           (err instanceof ApiError ? err.message : "Erro ao criar bloco"),
+        "error",
       );
       setSaveState("error");
     }
   }
 
   async function removeBlock(id: string) {
+    const label = blocks.find((b) => b.id === id)?.type;
     try {
       await blocksApi.remove(id);
       const next = blocks
@@ -898,8 +983,133 @@ export function EditorWorkspace() {
           next.map((b) => ({ id: b.id, sortOrder: b.sortOrder })),
         );
       }
+      notify(
+        label ? `${BLOCK_META[label].label} removido.` : "Bloco removido.",
+        "info",
+      );
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Erro ao remover");
+      notify(err instanceof ApiError ? err.message : "Erro ao remover", "error");
+    }
+  }
+
+  async function applyTemplate(template: PageTemplate) {
+    const current = profileRef.current;
+    const previousPhone =
+      (
+        blocksRef.current.find((block) => block.type === "WHATSAPP")
+          ?.content as { phone?: string } | undefined
+      )?.phone || "";
+
+    setApplyingTemplate(template.id);
+    setSaveState("saving");
+    try {
+      for (const block of blocksRef.current) {
+        await blocksApi.remove(block.id);
+      }
+      lastSavedBlock.current = {};
+
+      const created: ProfileBlock[] = [];
+      for (const [index, item] of template.blocks.entries()) {
+        created.push(
+          await blocksApi.create({
+            type: item.type,
+            content: prepareBlockContent(
+              item.type,
+              templateBlockContent(item, current, previousPhone),
+            ),
+            sortOrder: index,
+          }),
+        );
+      }
+      blocksRef.current = created;
+      setBlocks(created);
+      for (const block of created) {
+        lastSavedBlock.current[block.id] = snapshotBlock(block);
+      }
+      setSelectedId(created[0]?.id ?? null);
+
+      if (template.services?.length && servicesRef.current.length === 0) {
+        const nextServices: ServiceItem[] = [];
+        for (const item of template.services) {
+          nextServices.push(
+            await servicesApi.create({
+              name: item.name,
+              description: item.description ?? null,
+              priceCents: item.priceCents,
+            }),
+          );
+        }
+        servicesRef.current = nextServices;
+        setServices(nextServices);
+        lastSavedServices.current = JSON.stringify(nextServices);
+      }
+
+      if (
+        template.testimonials?.length &&
+        testimonialsRef.current.length === 0
+      ) {
+        const nextTestimonials: TestimonialItem[] = [];
+        for (const item of template.testimonials) {
+          nextTestimonials.push(
+            await testimonialsApi.create({
+              authorName: item.authorName,
+              text: item.text,
+              rating: item.rating,
+            }),
+          );
+        }
+        testimonialsRef.current = nextTestimonials;
+        setTestimonials(nextTestimonials);
+        lastSavedTestimonials.current = JSON.stringify(nextTestimonials);
+      }
+
+      const heroContent = created.find((block) => block.type === "HERO")
+        ?.content as Record<string, unknown> | undefined;
+      const locationBlock = created.find((block) => block.type === "LOCATION");
+      const updated = await profileApi.update({
+        displayName: pickHeroText(heroContent, "name", current?.displayName),
+        headline: pickHeroText(heroContent, "headline", current?.headline),
+        bio: pickHeroText(heroContent, "bio", current?.bio),
+        location: locationBlock
+          ? emptyToNull(
+              (locationBlock.content as { address?: string }).address,
+            )
+          : pickHeroText(heroContent, "location", current?.location),
+        avatarUrl: pickHeroText(heroContent, "avatarUrl", current?.avatarUrl),
+        theme: template.theme,
+      });
+      const { profile: merged } = withPersistedTheme(
+        updated,
+        current ? { ...current, theme: template.theme } : current,
+      );
+      applySavedProfile(
+        profileRef,
+        lastSavedProfile,
+        setProfile,
+        setAuthProfile,
+        merged,
+      );
+
+      setEditorPanel("block");
+      setMobileTab("preview");
+      setSaveState("saved");
+      notify(
+        `Modelo ${template.label} aplicado. Agora troque os textos.`,
+        "success",
+      );
+    } catch (err) {
+      setSaveState("error");
+      notify(
+        err instanceof ApiError
+          ? err.message
+          : "Não foi possível aplicar o modelo.",
+        "error",
+      );
+      // A troca mexe em vários registros: recarrega para não deixar a tela
+      // divergindo do backend.
+      await load();
+    } finally {
+      setApplyingTemplate(null);
     }
   }
 
@@ -988,7 +1198,7 @@ export function EditorWorkspace() {
     for (const item of removed) {
       void servicesApi.remove(item.id).catch(() => {
         setSaveState("error");
-        setMessage("Não salvou. Tente de novo.");
+        notify("Não salvou. Tente de novo.", "error");
       });
     }
   }
@@ -1001,7 +1211,7 @@ export function EditorWorkspace() {
     for (const item of removed) {
       void testimonialsApi.remove(item.id).catch(() => {
         setSaveState("error");
-        setMessage("Não salvou. Tente de novo.");
+        notify("Não salvou. Tente de novo.", "error");
       });
     }
   }
@@ -1028,13 +1238,17 @@ export function EditorWorkspace() {
         merged,
       );
       await refresh();
-      setMessage(
+      notify(
         wasPublished
           ? "Página atualizada. Abra o link público para ver."
           : "Página no ar. Seu link já pode ir na bio.",
+        "success",
       );
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Erro ao publicar");
+      notify(
+        err instanceof ApiError ? err.message : "Erro ao publicar",
+        "error",
+      );
     } finally {
       setPublishing(false);
     }
@@ -1052,9 +1266,12 @@ export function EditorWorkspace() {
         merged,
       );
       await refresh();
-      setMessage("Página despublicada.");
+      notify("Página despublicada.", "info");
     } catch (err) {
-      setMessage(err instanceof ApiError ? err.message : "Erro ao despublicar");
+      notify(
+        err instanceof ApiError ? err.message : "Erro ao despublicar",
+        "error",
+      );
     }
   }
 
@@ -1063,7 +1280,7 @@ export function EditorWorkspace() {
     const url = `${window.location.origin}/u/${profile.username}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
-    setMessage("Link copiado. Cole na bio.");
+    notify("Link copiado. Cole na bio.", "success");
     window.setTimeout(() => setCopied(false), 1600);
   }
 
@@ -1071,14 +1288,39 @@ export function EditorWorkspace() {
 
   if (loading) {
     return (
-      <div className="flex h-dvh flex-col bg-background">
-        <div className="h-16 border-b border-line bg-white" />
-        <div className="grid min-h-0 flex-1 lg:grid-cols-[272px_minmax(0,1fr)_minmax(280px,380px)]">
-          <div className="hidden border-r border-line bg-white lg:block" />
-          <div className="flex items-center justify-center bg-background">
-            <div className="h-[520px] w-[260px] rounded-[2.4rem] bg-line/70" />
+      <div className="flex h-dvh animate-pulse flex-col bg-background">
+        <div className="flex h-14 items-center justify-between border-b border-line bg-white px-3 sm:h-16 sm:px-5">
+          <div className="flex items-center gap-3">
+            <div className="h-7 w-28 rounded-full bg-line" />
+            <div className="hidden h-5 w-16 rounded-full bg-line/70 sm:block" />
           </div>
-          <div className="hidden border-l border-line bg-white lg:block" />
+          <div className="flex items-center gap-2">
+            <div className="hidden h-10 w-32 rounded-full bg-line/70 sm:block" />
+            <div className="h-10 w-24 rounded-full bg-line" />
+          </div>
+        </div>
+        <div className="grid min-h-0 flex-1 lg:grid-cols-[272px_minmax(0,1fr)_minmax(280px,380px)]">
+          <div className="hidden flex-col gap-2 border-r border-line bg-white p-3 lg:flex">
+            <div className="h-11 rounded-full bg-line" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="h-10 rounded-xl bg-line/60" />
+              <div className="h-10 rounded-xl bg-line/60" />
+            </div>
+            <div className="mt-3 space-y-1.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-14 rounded-xl bg-line/50" />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center justify-center bg-background">
+            <div className="h-[520px] w-[260px] rounded-[2.4rem] bg-line/60" />
+          </div>
+          <div className="hidden flex-col gap-3 border-l border-line bg-white p-5 lg:flex">
+            <div className="h-9 w-36 rounded-lg bg-line" />
+            <div className="h-11 rounded-xl bg-line/50" />
+            <div className="h-11 rounded-xl bg-line/50" />
+            <div className="h-24 rounded-xl bg-line/40" />
+          </div>
         </div>
         <p className="sr-only">Carregando editor</p>
       </div>
@@ -1087,7 +1329,10 @@ export function EditorWorkspace() {
 
   if (loadError || !profile) {
     return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-background px-5 text-center">
+      <div className="panel-in flex h-dvh flex-col items-center justify-center gap-4 bg-background px-5 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+          <TriangleAlert className="h-5 w-5" />
+        </span>
         <p className="text-[17px] font-semibold text-ink">
           Não foi possível abrir o editor
         </p>
@@ -1124,16 +1369,27 @@ export function EditorWorkspace() {
             </span>
             <span
               className={cn(
-                "inline-flex min-w-0 items-center gap-1 text-[11px] sm:text-[12px]",
-                saveUi === "error" ? "text-red-700" : "text-muted",
+                "inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors sm:text-[12px]",
+                saveUi === "error"
+                  ? "border-red-200 bg-red-50 text-red-700"
+                  : saveUi === "saved"
+                    ? "border-line bg-background text-muted"
+                    : "border-line bg-white text-muted",
               )}
             >
               {saveUi === "pending" ? (
-                "Aguardando..."
+                <>
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bronze-soft" />
+                  Alterações pendentes
+                </>
               ) : saveUi === "saving" ? (
-                "Salvando..."
+                <>
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+                  Salvando
+                </>
               ) : saveUi === "error" ? (
                 <>
+                  <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">Não salvou</span>
                   <button
                     type="button"
@@ -1147,7 +1403,7 @@ export function EditorWorkspace() {
                 </>
               ) : (
                 <>
-                  <Check className="h-3.5 w-3.5 shrink-0 text-ink/50" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-ink/45" />
                   Salvo
                 </>
               )}
@@ -1191,22 +1447,27 @@ export function EditorWorkspace() {
               disabled={publishing}
               onClick={() => void onPublish()}
             >
-              {publishing
-                ? "Publicando..."
-                : profile.status === "PUBLISHED"
-                  ? "Atualizar"
-                  : "Publicar"}
+              {publishing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Publicando
+                </>
+              ) : profile.status === "PUBLISHED" ? (
+                "Atualizar"
+              ) : (
+                "Publicar"
+              )}
             </Button>
           </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-3 border-b border-line bg-white p-1 lg:hidden">
+      <div className="grid grid-cols-3 gap-1 border-b border-line bg-white p-1 lg:hidden">
         {(
           [
             ["blocks", "Blocos"],
             ["edit", "Editar"],
-            ["preview", "Página"],
+            ["preview", "Prévia"],
           ] as const
         ).map(([id, label]) => (
           <button
@@ -1214,8 +1475,10 @@ export function EditorWorkspace() {
             type="button"
             onClick={() => setMobileTab(id)}
             className={cn(
-              "h-11 rounded-full text-[13px] font-medium",
-              mobileTab === id ? "bg-ink text-white" : "text-muted",
+              "h-11 rounded-full text-[13px] font-semibold transition-colors",
+              mobileTab === id
+                ? "bg-ink text-white"
+                : "text-muted hover:bg-background",
             )}
           >
             {label}
@@ -1240,70 +1503,110 @@ export function EditorWorkspace() {
               {inserterOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               {inserterOpen ? "Fechar" : "Adicionar bloco"}
             </Button>
-            <button
-              type="button"
-              onClick={() => {
-                setEditorPanel("appearance");
-                setSelectedId(null);
-                setMobileTab("edit");
-                setInserterOpen(false);
-              }}
-              className={cn(
-                "mt-2 flex h-11 w-full items-center gap-2 rounded-xl px-3 text-left text-[13px] font-semibold transition-colors",
-                editorPanel === "appearance"
-                  ? "bg-background text-ink"
-                  : "text-muted hover:bg-background hover:text-ink",
-              )}
-            >
-              <Palette className="h-4 w-4" />
-              Aparência
-            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {(
+                [
+                  ["templates", "Modelos", LayoutTemplate],
+                  ["appearance", "Aparência", Palette],
+                ] as const
+              ).map(([panel, label, Icon]) => (
+                <button
+                  key={panel}
+                  type="button"
+                  onClick={() => {
+                    setEditorPanel(panel);
+                    setSelectedId(null);
+                    setMobileTab("edit");
+                    setInserterOpen(false);
+                  }}
+                  className={cn(
+                    "flex h-10 items-center justify-center gap-1.5 rounded-xl border text-[12px] font-semibold transition-colors",
+                    editorPanel === panel
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white text-muted hover:border-ink/20 hover:text-ink",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {inserterOpen ? (
-            <div className="border-b border-line bg-background/70 p-3">
-              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
-                Novo bloco
-              </p>
-              <div className="grid grid-cols-1 gap-1">
-                {INSERTABLE_BLOCKS.map((type) => {
-                  const Icon = BLOCK_ICONS[type];
-                  const existing = UNIQUE_BLOCKS.includes(type)
-                    ? orderedBlocks.find((block) => block.type === type)
-                    : undefined;
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        if (existing) {
-                          setEditorPanel("block");
-                          setSelectedId(existing.id);
-                          setInserterOpen(false);
-                          setMobileTab("edit");
-                          return;
-                        }
-                        void addBlock(type);
-                      }}
-                      className="flex min-h-11 items-center gap-2.5 rounded-xl border border-transparent bg-white px-2.5 py-2 text-left hover:border-ink/10"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
-                        <Icon className="h-3.5 w-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[13px] font-semibold text-ink">
-                          {BLOCK_META[type].label}
-                        </span>
-                        {existing ? (
-                          <span className="block text-[11px] text-muted">
-                            Já na página — clicar para editar
-                          </span>
-                        ) : null}
-                      </span>
-                    </button>
-                  );
-                })}
+            <div className="panel-in border-b border-line bg-background/70 p-3">
+              <div className="relative mb-2.5">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-soft" />
+                <input
+                  type="search"
+                  value={inserterQuery}
+                  onChange={(event) => setInserterQuery(event.target.value)}
+                  placeholder="Buscar bloco: whatsapp, preços..."
+                  aria-label="Buscar bloco"
+                  className="h-11 w-full rounded-xl border border-line bg-white pl-9 pr-3 text-[13px] text-ink outline-none placeholder:text-muted-soft focus:border-ink/25"
+                />
               </div>
+              {inserterGroups.length === 0 ? (
+                <p className="px-1 py-6 text-center text-[12px] text-muted">
+                  Nada com esse nome. Tente “link”, “preços” ou “mapa”.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {inserterGroups.map((group) => (
+                    <div key={group.label}>
+                      <p className="mb-1 px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-soft">
+                        {group.label}
+                      </p>
+                      <div className="grid grid-cols-1 gap-1">
+                        {group.types.map((type) => {
+                          const Icon = BLOCK_ICONS[type];
+                          const existing = UNIQUE_BLOCKS.includes(type)
+                            ? orderedBlocks.find((block) => block.type === type)
+                            : undefined;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => {
+                                if (existing) {
+                                  setEditorPanel("block");
+                                  setSelectedId(existing.id);
+                                  setInserterOpen(false);
+                                  setMobileTab("edit");
+                                  return;
+                                }
+                                void addBlock(type);
+                              }}
+                              className="flex min-h-11 items-center gap-2.5 rounded-xl border border-transparent bg-white px-2.5 py-2 text-left transition-colors hover:border-ink/10 hover:bg-white active:scale-[0.99]"
+                            >
+                              <span
+                                className={cn(
+                                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                  existing
+                                    ? "bg-background text-muted"
+                                    : "bg-ink text-white",
+                                )}
+                              >
+                                <Icon className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block text-[13px] font-semibold text-ink">
+                                  {BLOCK_META[type].label}
+                                </span>
+                                <span className="block truncate text-[11px] text-muted">
+                                  {existing
+                                    ? "Já na página — abrir para editar"
+                                    : BLOCK_META[type].description}
+                                </span>
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : null}
 
@@ -1315,10 +1618,30 @@ export function EditorWorkspace() {
               Segure as listras para arrastar, ou use as setas.
             </p>
             {orderedBlocks.length === 0 ? (
-              <p className="px-1 py-8 text-[13px] leading-relaxed text-muted">
-                Nenhum bloco ainda. Toque em Adicionar bloco para montar a
-                página.
-              </p>
+              <div className="panel-in rounded-2xl border border-dashed border-line px-4 py-6 text-center">
+                <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-background text-ink">
+                  <LayoutTemplate className="h-4 w-4" />
+                </span>
+                <p className="mt-3 text-[13px] font-semibold text-ink">
+                  Sua página está vazia
+                </p>
+                <p className="mt-1 text-[12px] leading-relaxed text-muted">
+                  Comece por um modelo pronto e depois só troque os textos.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="mt-3 h-10 w-full"
+                  onClick={() => {
+                    setEditorPanel("templates");
+                    setSelectedId(null);
+                    setMobileTab("edit");
+                    setInserterOpen(false);
+                  }}
+                >
+                  Ver modelos
+                </Button>
+              </div>
             ) : (
             <DndContext
               sensors={sensors}
@@ -1396,7 +1719,7 @@ export function EditorWorkspace() {
               <div className="flex min-h-0 w-full flex-1 flex-col lg:hidden">
                 <div className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-2.5">
                   <p className="text-[12px] font-medium text-muted">
-                    Prévia — só visualização
+                    Toque num bloco para editar
                   </p>
                   {profile.username ? (
                     <Link
@@ -1414,6 +1737,13 @@ export function EditorWorkspace() {
                     page={previewPage}
                     showHidden
                     showStatusBar={false}
+                    selectedId={editorPanel === "block" ? selectedId : null}
+                    onSelectBlock={(id) => {
+                      setEditorPanel("block");
+                      setSelectedId(id);
+                      setMobileTab("edit");
+                      setInserterOpen(false);
+                    }}
                   />
                 </div>
               </div>
@@ -1427,8 +1757,41 @@ export function EditorWorkspace() {
             mobileTab === "edit" ? "block" : "hidden lg:block",
           )}
         >
-          {editorPanel === "appearance" ? (
-            <div className="flex h-full min-h-0 flex-col">
+          {editorPanel === "templates" ? (
+            <div className="panel-in flex h-full min-h-0 flex-col">
+              <div className="border-b border-line px-4 py-4 sm:px-5">
+                <button
+                  type="button"
+                  className="mb-3 inline-flex h-10 items-center gap-1.5 text-[13px] font-medium text-muted lg:hidden"
+                  onClick={() => setMobileTab("blocks")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Blocos
+                </button>
+                <div className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-ink text-white">
+                    <LayoutTemplate className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h2 className="text-[15px] font-semibold text-ink">
+                      Modelos prontos
+                    </h2>
+                    <p className="mt-0.5 text-[13px] text-muted">
+                      Uma página inteira montada em um toque.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="px-5 py-5">
+                <TemplateGallery
+                  hasContent={orderedBlocks.length > 0}
+                  applyingId={applyingTemplate}
+                  onApply={(template) => void applyTemplate(template)}
+                />
+              </div>
+            </div>
+          ) : editorPanel === "appearance" ? (
+            <div className="panel-in flex h-full min-h-0 flex-col">
               <div className="border-b border-line px-4 py-4 sm:px-5">
                 <button
                   type="button"
@@ -1481,7 +1844,7 @@ export function EditorWorkspace() {
               </div>
             </div>
           ) : selected && SelectedIcon ? (
-            <div className="flex h-full min-h-0 flex-col">
+            <div key={selected.id} className="panel-in flex h-full min-h-0 flex-col">
               <div className="border-b border-line px-4 py-4 sm:px-5">
                 <button
                   type="button"
@@ -1572,20 +1935,37 @@ export function EditorWorkspace() {
               </div>
             </div>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center px-6 py-16 text-center">
-              <p className="text-[15px] font-semibold text-ink">
-                Toque num bloco para editar
+            <div className="panel-in flex h-full flex-col items-center justify-center px-6 py-16 text-center">
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-background text-ink">
+                <LayoutTemplate className="h-4 w-4" />
+              </span>
+              <p className="mt-3 text-[15px] font-semibold text-ink">
+                Escolha o que editar
               </p>
               <p className="mt-1 max-w-[240px] text-[13px] leading-relaxed text-muted">
-                Escolha um bloco na aba Blocos para editar o conteúdo aqui.
+                Toque num bloco da lista ou da prévia. Ou comece por um modelo
+                pronto.
               </p>
-              <div className="mt-6 flex flex-col items-center gap-2">
+              <div className="mt-6 flex w-full max-w-[240px] flex-col gap-2">
                 <Button
                   type="button"
+                  className="h-11"
+                  onClick={() => {
+                    setEditorPanel("templates");
+                    setSelectedId(null);
+                    setMobileTab("edit");
+                  }}
+                >
+                  <LayoutTemplate className="h-4 w-4" />
+                  Ver modelos prontos
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
                   className="h-11 lg:hidden"
                   onClick={() => setMobileTab("blocks")}
                 >
-                  Escolher o que editar
+                  Ir para os blocos
                 </Button>
                 <Button
                   type="button"
@@ -1605,7 +1985,12 @@ export function EditorWorkspace() {
           )}
         </section>
       </div>
-      <Toast message={message || ""} show={Boolean(message)} />
+      <Toast
+        message={toast?.text || ""}
+        variant={toast?.variant}
+        show={Boolean(toast)}
+        onDismiss={() => setToast(null)}
+      />
     </div>
   );
 }

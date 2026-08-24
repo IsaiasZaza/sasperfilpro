@@ -69,16 +69,26 @@ export default async function PublicProfilePage({ params }: PageProps) {
   if (!page) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background px-5 text-center">
-        <Logo href="/" size="lg" />
-        <h1 className="mt-10 font-serif text-[2rem] text-ink">
+        <div className="pp-rise">
+          <Logo href="/" size="lg" />
+        </div>
+        <h1
+          className="pp-rise mt-10 font-serif text-[2rem] text-ink"
+          style={{ ["--pp-delay" as string]: "90ms" }}
+        >
           Página não encontrada
         </h1>
-        <p className="mt-2 max-w-sm text-[15px] text-muted">
+        <p
+          className="pp-rise mt-2 max-w-sm text-[15px] text-muted"
+          style={{ ["--pp-delay" as string]: "160ms" }}
+        >
           Este perfil não existe ou ainda não foi publicado.
         </p>
-        <Button asChild className="mt-8" size="lg">
-          <Link href="/planos">Criar minha página</Link>
-        </Button>
+        <div className="pp-rise mt-8" style={{ ["--pp-delay" as string]: "240ms" }}>
+          <Button asChild size="lg">
+            <Link href="/planos">Criar minha página</Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -117,18 +127,22 @@ export default async function PublicProfilePage({ params }: PageProps) {
           },
         }}
       />
-      <div className="mx-auto min-h-screen w-full max-w-md">
-        <ProfilePreview
-          page={page}
-          showStatusBar={false}
-          className="min-h-screen"
-        />
-      </div>
+      <ProfilePreview
+        page={page}
+        showStatusBar={false}
+        variant="page"
+        className="min-h-screen"
+      />
       {page.showBranding !== false ? (
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center pb-5">
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center pb-5">
           <Link
             href="/"
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-[11px] font-medium text-muted hover:text-ink"
+            className="pp-tap pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-medium backdrop-blur-md"
+            style={{
+              background: `color-mix(in srgb, ${painted.card} 72%, transparent)`,
+              border: `1px solid ${painted.line}`,
+              color: painted.muted,
+            }}
           >
             <LogoMark className="h-4 w-4" />
             Feito com PerfilPro

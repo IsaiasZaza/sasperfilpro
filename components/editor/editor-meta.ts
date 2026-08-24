@@ -24,6 +24,25 @@ export const INSERTABLE_BLOCKS: BlockType[] = [
 
 export const UNIQUE_BLOCKS: BlockType[] = ["HERO", "SERVICES", "TESTIMONIALS"];
 
+/** Agrupa o inserter por intenção, não por tipo técnico. */
+export const BLOCK_GROUPS: { label: string; types: BlockType[] }[] = [
+  { label: "Essenciais", types: ["HERO", "WHATSAPP", "SERVICES"] },
+  { label: "Links e ações", types: ["CTA_BUTTON", "LINK_BUTTON", "SOCIAL"] },
+  { label: "Confiança", types: ["TESTIMONIALS", "LOCATION"] },
+];
+
+/** Termos que o usuário pode digitar na busca do inserter. */
+export const BLOCK_KEYWORDS: Record<BlockType, string> = {
+  HERO: "cabecalho capa foto nome perfil topo apresentacao",
+  CTA_BUTTON: "botao acao agendar comprar chamada cta",
+  LINK_BUTTON: "link site url instagram catalogo portfolio",
+  WHATSAPP: "whatsapp zap contato telefone mensagem conversa",
+  SOCIAL: "redes sociais instagram tiktok youtube facebook icones",
+  SERVICES: "servicos precos tabela valores produtos cardapio",
+  TESTIMONIALS: "depoimentos avaliacoes clientes estrelas prova",
+  LOCATION: "localizacao endereco mapa cidade bairro onde",
+};
+
 export const BLOCK_ICONS: Record<BlockType, LucideIcon> = {
   HERO: UserRound,
   CTA_BUTTON: Crosshair,

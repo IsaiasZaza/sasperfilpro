@@ -80,14 +80,21 @@ function initials(name: string) {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 }
 
+/** Micro-interação de hover/toque. Pulse já anima transform — não empilhar. */
+function tapClass(pulse?: boolean) {
+  return pulse ? undefined : "pp-tap";
+}
+
 function BlockView({
   block,
   theme,
   page,
+  motion,
 }: {
   block: ProfileBlock;
   theme: ReturnType<typeof resolvePaintTheme>;
   page: PublicPage;
+  motion?: boolean;
 }) {
   if (!block.isVisible) return null;
   const look = lookFrom(block.content);
@@ -115,7 +122,7 @@ function BlockView({
       const photo = avatarPixels(look.avatarSize);
       const radius = avatarRadius(look.avatarShape);
       const stacked = !look.align || look.align === "center";
-      const avatar = avatarUrl ? (
+      const avatarNode = avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={avatarUrl}
@@ -144,6 +151,11 @@ function BlockView({
         >
           {initials(name)}
         </div>
+      );
+      const avatar = motion ? (
+        <span className="pp-avatar shrink-0">{avatarNode}</span>
+      ) : (
+        avatarNode
       );
       const texts = (
         <div
@@ -304,7 +316,10 @@ function BlockView({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className={full ? "w-full" : "w-auto max-w-full"}
+              className={cn(
+                full ? "w-full" : "w-auto max-w-full",
+                tapClass(look.pulse),
+              )}
             >
               {card}
             </a>
@@ -353,7 +368,13 @@ function BlockView({
             href={content.url || "#"}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(look)}
+            className={buttonShellClass(
+              look,
+              cn(
+                tapClass(look.pulse),
+                motion && style === "primary" && "pp-sheen",
+              ),
+            )}
             style={{
               ...lookStyle,
               fontSize: sizes.button,
@@ -387,9 +408,10 @@ function BlockView({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "flex min-h-14 items-center gap-3 px-2.5 py-2",
+              "group flex min-h-14 items-center gap-3 px-2.5 py-2",
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
               look.pulse && "block-pulse",
+              tapClass(look.pulse),
             )}
             style={{
               ...surfaceStyle(look, {
@@ -433,7 +455,7 @@ function BlockView({
               ) : null}
             </span>
             <ArrowUpRight
-              className="h-4 w-4 shrink-0 opacity-45"
+              className="h-4 w-4 shrink-0 opacity-45 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               aria-hidden="true"
             />
           </a>
@@ -450,7 +472,10 @@ function BlockView({
             href={whatsappHref(content.phone || "", content.message)}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(look)}
+            className={buttonShellClass(
+              look,
+              cn(tapClass(look.pulse), motion && "pp-sheen"),
+            )}
             style={{
               ...surfaceStyle(look, {
                 background: "#128c4b",
@@ -492,7 +517,10 @@ function BlockView({
                     href={item.url || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={buttonShellClass(look, "min-h-11 font-medium")}
+                    className={buttonShellClass(
+                      look,
+                      cn("min-h-11 font-medium", tapClass(look.pulse)),
+                    )}
                     style={{
                       ...surfaceStyle(look, {
                         background: brand.background,
@@ -536,6 +564,7 @@ function BlockView({
                 className={cn(
                   "flex items-center justify-center",
                   look.pulse && "block-pulse",
+                  tapClass(look.pulse),
                 )}
                 style={{
                   width: iconBox,
@@ -641,7 +670,7 @@ function BlockView({
                     href={whatsappHref(whatsapp.phone, message)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={className}
+                    className={cn(className, "pp-tap")}
                     style={style}
                   >
                     {inner}
@@ -737,6 +766,11 @@ function networkFallback(network: SocialNetwork) {
   return labels[network] || network;
 }
 
+/** Atraso da cascata de entrada, com teto pra páginas com muitos blocos. */
+function riseDelay(index: number) {
+  return { ["--pp-delay" as string]: `${Math.min(index * 70, 700)}ms` };
+}
+
 export function ProfilePreview({
   page,
   className,
@@ -744,6 +778,7 @@ export function ProfilePreview({
   showHidden = false,
   selectedId,
   onSelectBlock,
+  variant = "device",
 }: {
   page: PublicPage;
   className?: string;
@@ -751,9 +786,15 @@ export function ProfilePreview({
   showHidden?: boolean;
   selectedId?: string | null;
   onSelectBlock?: (id: string) => void;
+  /**
+   * `device` roda dentro da moldura do editor (scroll próprio).
+   * `page` é a bio pública: rola com o documento e ganha a animação de entrada.
+   */
+  variant?: "device" | "page";
 }) {
   const theme = resolvePaintTheme(page.theme);
   const editable = Boolean(onSelectBlock);
+  const asPage = variant === "page";
   const blocks = [...(page.blocks || [])]
     .filter((block) => editable || showHidden || block.isVisible)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -765,7 +806,8 @@ export function ProfilePreview({
   return (
     <div
       className={cn(
-        "relative h-full overflow-y-auto no-scrollbar",
+        "relative",
+        asPage ? "w-full" : "h-full overflow-y-auto no-scrollbar",
         theme.font === "serif" && "font-serif",
         theme.font === "mono" && "font-mono",
         theme.font === "sans" && "font-sans",
@@ -781,63 +823,89 @@ export function ProfilePreview({
       }
     >
       <ThemeAtmosphere atmosphere={theme.atmosphere} accent={theme.accent} />
-      <div className="relative z-[1] px-3.5 pb-16 pt-1">
-        {showStatusBar ? <StatusBar color={theme.text} /> : null}
-        {hero ? (
-          <SelectableBlock
-            id={hero.id}
-            label={BLOCK_META[hero.type].label}
-            selected={selectedId === hero.id}
-            hidden={!hero.isVisible}
-            onSelect={onSelectBlock}
-            padded
-          >
-            <BlockView block={hero} theme={theme} page={page} />
-          </SelectableBlock>
-        ) : (
-          <div className="flex flex-col items-center px-3 pt-3 text-center">
-            <div
-              className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white"
-              style={{
-                background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
-              }}
-            >
-              {initials(page.displayName || page.username || "PP")}
-            </div>
-            <h1 className="mt-4 font-serif text-[1.75rem] leading-tight">
-              {page.displayName || page.username}
-            </h1>
-            {page.username ? (
-              <p className="mt-1 text-[13px]" style={{ color: theme.muted }}>
-                @{page.username}
-              </p>
-            ) : null}
-            {page.headline ? (
-              <p className="mt-2 text-[15px] font-medium">{page.headline}</p>
-            ) : null}
-            {!hasLocationBlock && page.location ? (
-              <p
-                className="mt-2 flex items-center justify-center gap-1 text-[13px]"
-                style={{ color: theme.muted }}
-              >
-                <MapPin className="h-3.5 w-3.5" />
-                {page.location}
-              </p>
-            ) : null}
-          </div>
+      <div
+        className={cn(
+          "relative z-[1]",
+          asPage
+            ? "mx-auto w-full max-w-[30rem] px-5 pb-28 pt-10 sm:pt-14"
+            : "px-3.5 pb-16 pt-1",
         )}
-        <div className="mt-3 space-y-2.5">
-          {rest.map((block) => (
+      >
+        {showStatusBar ? <StatusBar color={theme.text} /> : null}
+        <div className={asPage ? "pp-rise" : undefined}>
+          {hero ? (
             <SelectableBlock
-              key={block.id}
-              id={block.id}
-              label={BLOCK_META[block.type].label}
-              selected={selectedId === block.id}
-              hidden={!block.isVisible}
+              id={hero.id}
+              label={BLOCK_META[hero.type].label}
+              selected={selectedId === hero.id}
+              hidden={!hero.isVisible}
               onSelect={onSelectBlock}
+              padded
             >
-              <BlockView block={block} theme={theme} page={page} />
+              <BlockView
+                block={hero}
+                theme={theme}
+                page={page}
+                motion={asPage}
+              />
             </SelectableBlock>
+          ) : (
+            <div className="flex flex-col items-center px-3 pt-3 text-center">
+              <span className={asPage ? "pp-avatar" : undefined}>
+                <span
+                  className="flex h-[88px] w-[88px] items-center justify-center rounded-full text-xl font-semibold text-white"
+                  style={{
+                    background: `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
+                  }}
+                >
+                  {initials(page.displayName || page.username || "PP")}
+                </span>
+              </span>
+              <h1 className="mt-4 font-serif text-[1.75rem] leading-tight">
+                {page.displayName || page.username}
+              </h1>
+              {page.username ? (
+                <p className="mt-1 text-[13px]" style={{ color: theme.muted }}>
+                  @{page.username}
+                </p>
+              ) : null}
+              {page.headline ? (
+                <p className="mt-2 text-[15px] font-medium">{page.headline}</p>
+              ) : null}
+              {!hasLocationBlock && page.location ? (
+                <p
+                  className="mt-2 flex items-center justify-center gap-1 text-[13px]"
+                  style={{ color: theme.muted }}
+                >
+                  <MapPin className="h-3.5 w-3.5" />
+                  {page.location}
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+        <div className={cn(asPage ? "mt-6 space-y-3" : "mt-3 space-y-2.5")}>
+          {rest.map((block, index) => (
+            <div
+              key={block.id}
+              className={asPage ? "pp-rise" : undefined}
+              style={asPage ? riseDelay(index + 1) : undefined}
+            >
+              <SelectableBlock
+                id={block.id}
+                label={BLOCK_META[block.type].label}
+                selected={selectedId === block.id}
+                hidden={!block.isVisible}
+                onSelect={onSelectBlock}
+              >
+                <BlockView
+                  block={block}
+                  theme={theme}
+                  page={page}
+                  motion={asPage}
+                />
+              </SelectableBlock>
+            </div>
           ))}
         </div>
         {blocks.length === 0 ? (

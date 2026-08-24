@@ -209,6 +209,183 @@ h2 {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
+/* --- Editor: entrada de painéis e avisos --- */
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+/* A animação carrega o translate horizontal: combinar com -translate-x-1/2
+   do Tailwind faria as duas transforms competirem. */
+.toast-in {
+  animation: toast-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.panel-in {
+  animation: panel-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* --- Perfil público: entrada em cascata + micro-interações --- */
+
+@keyframes pp-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.pp-rise {
+  animation: pp-rise 0.66s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--pp-delay, 0ms);
+}
+
+@keyframes pp-avatar-in {
+  from {
+    opacity: 0;
+    transform: scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pp-halo {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.38;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 0.62;
+  }
+}
+
+.pp-avatar {
+  position: relative;
+  display: inline-flex;
+  isolation: isolate;
+  animation: pp-avatar-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pp-avatar > * {
+  position: relative;
+  z-index: 1;
+}
+
+.pp-avatar::before {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--theme-accent, #14110e) 42%, transparent),
+    transparent 70%
+  );
+  filter: blur(20px);
+  animation: pp-halo 7.5s ease-in-out infinite;
+}
+
+/* Brilho que atravessa a ação principal: varre uma vez e descansa. */
+@keyframes pp-sheen {
+  0% {
+    transform: translateX(-130%) skewX(-18deg);
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.55;
+  }
+  34% {
+    transform: translateX(230%) skewX(-18deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(230%) skewX(-18deg);
+    opacity: 0;
+  }
+}
+
+.pp-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.pp-sheen::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 42%;
+  background: linear-gradient(
+    100deg,
+    transparent,
+    rgba(255, 255, 255, 0.42),
+    transparent
+  );
+  animation: pp-sheen 6.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pp-sheen::after {
+    display: none;
+  }
+}
+
+/* Feedback de toque/hover. Usa filter em vez de box-shadow porque os blocos
+   recebem box-shadow inline (look do editor), que venceria a classe. */
+.pp-tap {
+  transition:
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.24s ease;
+}
+
+@media (hover: hover) {
+  .pp-tap:hover {
+    transform: translate3d(0, -2px, 0);
+    filter: brightness(1.04)
+      drop-shadow(
+        0 12px 18px color-mix(in srgb, var(--theme-accent, #14110e) 26%, transparent)
+      );
+  }
+}
+
+.pp-tap:active {
+  transform: scale(0.978);
+  transition-duration: 0.1s;
+}
+
+.pp-tap:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent, #14110e) 70%, transparent);
+  outline-offset: 3px;
+}
+
 /* --- Temas dinâmicos: glow ambient (lento, suave) --- */
 
 .theme-fx {
@@ -270,6 +447,28 @@ h2 {
 }
 
 /* --- Variantes por atmosfera (só cor / posição) --- */
+
+/* "calm" é a atmosfera dos temas sem efeito: só uma respiração de cor, sem véu
+   escuro (que sujaria os temas claros). */
+.theme-fx--calm .theme-fx__glow--primary {
+  width: 96%;
+  height: 46%;
+  top: -20%;
+  left: -18%;
+  filter: blur(90px);
+  background: color-mix(in srgb, var(--theme-accent, #14110e) 16%, transparent);
+  animation-duration: 26s;
+}
+
+.theme-fx--calm .theme-fx__glow--secondary {
+  width: 82%;
+  height: 40%;
+  right: -26%;
+  bottom: 2%;
+  filter: blur(96px);
+  background: color-mix(in srgb, var(--theme-accent, #14110e) 12%, transparent);
+  animation-duration: 32s;
+}
 
 .theme-fx--claw .theme-fx__glow--primary {
   background: color-mix(in srgb, var(--theme-accent, #39ff14) 48%, transparent);
