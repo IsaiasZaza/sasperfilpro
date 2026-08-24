@@ -193,14 +193,7 @@ function BlockView({
           ) : null}
           {bioText ? (
             <p
-              className={cn(
-                "mt-2.5 w-full max-w-[280px] break-words leading-relaxed",
-                stacked
-                  ? "mx-auto"
-                  : look.align === "right"
-                    ? "ml-auto"
-                    : undefined,
-              )}
+              className="mt-2.5 w-full break-words leading-relaxed"
               style={{ color: theme.muted, fontSize: sizes.body }}
             >
               {bioText}
@@ -227,7 +220,7 @@ function BlockView({
       return (
         <div
           className={cn(
-            "flex px-3 pb-4 pt-3",
+            "flex w-full px-3 pb-4 pt-3",
             stacked
               ? "flex-col items-center gap-4"
               : look.align === "right"
