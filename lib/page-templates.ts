@@ -360,6 +360,118 @@ export const PAGE_TEMPLATES: PageTemplate[] = [
     ],
   },
   {
+    id: "afiliados",
+    label: "Afiliados",
+    audience: "Influencer, creator, quem vende com link de afiliado",
+    tagline: "Ofertas em destaque, prova social e WhatsApp para tirar dúvida.",
+    theme: {
+      backgroundColor: "#f6f3ee",
+      textColor: "#14110e",
+      primaryColor: "#14110e",
+      buttonStyle: "pill",
+      font: "sans",
+      atmosphere: "none",
+    },
+    blocks: [
+      {
+        type: "HERO",
+        content: {
+          name: "",
+          headline: "As ofertas que eu indico de verdade",
+          bio: "Seleção com cupom, link seguro e suporte no WhatsApp se você tiver dúvida antes de comprar.",
+          avatarSize: "lg",
+        },
+      },
+      {
+        type: "CTA_BUTTON",
+        content: {
+          label: "Ver oferta do momento",
+          url: "https://",
+          style: "primary",
+          pulse: true,
+        },
+      },
+      {
+        type: "LINK_BUTTON",
+        content: {
+          label: "Produto em destaque",
+          subtitle: "Link de afiliado · cupom no checkout",
+          url: "https://",
+          icon: "auto",
+        },
+      },
+      {
+        type: "LINK_BUTTON",
+        content: {
+          label: "Segunda opção",
+          subtitle: "Para quem quer começar agora",
+          url: "https://",
+          icon: "auto",
+        },
+      },
+      {
+        type: "LINK_BUTTON",
+        content: {
+          label: "Media kit / parcerias",
+          subtitle: "Marcas que querem me contratar",
+          url: "https://",
+          icon: "auto",
+        },
+      },
+      { type: "SERVICES", content: { heading: "O que eu indico" } },
+      { type: "TESTIMONIALS", content: { heading: "Quem já comprou" } },
+      {
+        type: "WHATSAPP",
+        content: {
+          phone: "",
+          message: "Oi! Vi sua indicação e quero tirar uma dúvida antes de comprar.",
+          label: "Tirar dúvida no WhatsApp",
+          pulse: true,
+        },
+      },
+      {
+        type: "SOCIAL",
+        content: {
+          layout: "icons",
+          items: [
+            { network: "instagram", url: "https://instagram.com/" },
+            { network: "tiktok", url: "https://www.tiktok.com/@" },
+            { network: "youtube", url: "https://youtube.com/@" },
+          ],
+        },
+      },
+    ],
+    services: [
+      {
+        name: "Curso / produto digital",
+        description: "Link com cupom exclusivo",
+        priceCents: 19700,
+      },
+      {
+        name: "Ferramenta que eu uso",
+        description: "Teste grátis pelo meu link",
+        priceCents: 0,
+      },
+      {
+        name: "Kit recomendado",
+        description: "Os itens que eu mostro nos stories",
+        priceCents: 8900,
+      },
+    ],
+    testimonials: [
+      {
+        authorName: "Larissa M.",
+        text: "Comprei pelo link dela e o cupom funcionou na hora. Valeu a indicação.",
+        rating: 5,
+      },
+      {
+        authorName: "Diego S.",
+        text: "Tirei dúvida no WhatsApp antes de pagar. Fechou e eu segui a compra sem medo.",
+        rating: 5,
+      },
+    ],
+  },
+  {
     id: "consultoria",
     label: "Consultoria e aulas",
     audience: "Mentoria, aula particular, professor",
