@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, Check, Copy, Pencil } from "lucide-react";
+import { ArrowUpRight, Check, Copy, Loader2, Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { PhoneFrame } from "@/components/mockups/phone-frame";
@@ -12,6 +12,7 @@ import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { ApiError } from "@/lib/api";
 import { profileApi } from "@/lib/api-client";
 import { hydrateBlockLook } from "@/lib/block-look";
+import { getSiteHost } from "@/lib/site";
 import type { PublicPage } from "@/lib/types/profile";
 
 function publishedLabel(iso: string | null) {
@@ -126,13 +127,17 @@ export function DashboardHome() {
                 className="flex min-w-0 items-center gap-2 rounded-full border border-ink/10 bg-white px-4 py-3 text-left text-[14px] shadow-sm sm:flex-1 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-[15px] sm:shadow-none"
               >
                 <span className="min-w-0 truncate font-medium text-ink">
-                  perfilpro.app{publicPath}
+                  {getSiteHost()}
+                  {publicPath}
                 </span>
                 {copied ? (
                   <Check className="h-4 w-4 shrink-0 text-emerald-700" />
                 ) : (
                   <Copy className="h-3.5 w-3.5 shrink-0 text-muted" />
                 )}
+                <span className="sr-only">
+                  {copied ? "Link copiado" : "Copiar link da página"}
+                </span>
               </button>
               <Button asChild size="md" className="h-12 w-full sm:h-11 sm:w-auto sm:shrink-0">
                 <Link href="/app/editor">
@@ -152,12 +157,15 @@ export function DashboardHome() {
             </div>
           )}
 
-          <div className="mt-4">
+          <div className="mt-3 flex items-center gap-2">
+            <span aria-live="polite" className="sr-only">
+              {copied ? "Link copiado para a área de transferência." : ""}
+            </span>
             {published && publicPath ? (
               <Link
                 href={publicPath}
                 target="_blank"
-                className="inline-flex items-center gap-1.5 text-[14px] font-medium text-ink/80 underline-offset-4 hover:text-ink hover:underline"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-[14px] font-medium text-ink/80 underline-offset-4 transition-colors hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25"
               >
                 Abrir no ar
                 <ArrowUpRight className="h-4 w-4" />
@@ -167,17 +175,29 @@ export function DashboardHome() {
                 type="button"
                 disabled={publishing}
                 onClick={() => void publish()}
-                className="text-[14px] font-medium text-ink/80 underline-offset-4 hover:text-ink hover:underline disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-lg text-[14px] font-medium text-ink/80 underline-offset-4 transition-colors hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 disabled:opacity-50"
               >
-                {publishing ? "Publicando..." : "Publicar agora"}
+                {publishing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Publicando
+                  </>
+                ) : (
+                  "Publicar agora"
+                )}
               </button>
             )}
           </div>
-          {publishError ? (
-            <p className="mt-3 text-[13px] font-medium text-red-800">
-              {publishError}
-            </p>
-          ) : null}
+          <div aria-live="assertive">
+            {publishError ? (
+              <p
+                role="alert"
+                className="panel-in mt-3 text-[13px] font-medium text-red-800"
+              >
+                {publishError}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         <div className="relative mx-auto w-full max-w-[280px] justify-self-center sm:max-w-[360px] lg:max-w-[380px]">
@@ -195,7 +215,7 @@ export function DashboardHome() {
                   </p>
                   <button
                     type="button"
-                    className="mt-4 text-[13px] font-medium text-ink underline underline-offset-4"
+                    className="mt-2 inline-flex min-h-11 items-center rounded-lg px-2 text-[13px] font-medium text-ink underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25"
                     onClick={() => {
                       void refresh();
                       void loadPreview();
@@ -205,8 +225,9 @@ export function DashboardHome() {
                   </button>
                 </div>
               ) : (
-                <div className="flex h-[420px] items-center justify-center text-sm text-muted sm:h-[520px]">
-                  Abrindo sua página...
+                <div className="flex h-[420px] items-center justify-center sm:h-[520px]">
+                  <div className="h-full w-full animate-pulse rounded-[2rem] bg-white/50" />
+                  <span className="sr-only">Abrindo sua página</span>
                 </div>
               )}
             </div>

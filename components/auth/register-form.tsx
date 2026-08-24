@@ -134,6 +134,8 @@ export function RegisterForm({
     }
   }
 
+  const busy = pending || redirecting;
+
   return (
     <AuthShell
       wide
@@ -158,7 +160,9 @@ export function RegisterForm({
     >
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <Label>Plano</Label>
+          {/* PlanChoice é um radiogroup com aria-label próprio: um Label com
+              htmlFor aqui apontaria para lugar nenhum. */}
+          <p className="mb-1.5 text-[13px] font-medium text-ink">Plano</p>
           <PlanChoice plans={plans} value={plan} onChange={setPlan} />
           {plansError ? (
             <p className="mt-2 text-[12px] text-red-700">
@@ -184,13 +188,18 @@ export function RegisterForm({
             required
             autoComplete="name"
             autoFocus
+            disabled={busy}
+            aria-invalid={Boolean(fieldErrors.name)}
+            aria-describedby={fieldErrors.name ? "name-error" : undefined}
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Maria Oliveira"
             className={AUTH_INPUT_CLASS}
           />
           {fieldErrors.name ? (
-            <p className="mt-1 text-[12px] text-red-700">{fieldErrors.name}</p>
+            <p id="name-error" className="mt-1 text-[12px] text-red-700">
+              {fieldErrors.name}
+            </p>
           ) : null}
         </div>
         <div>
@@ -198,8 +207,12 @@ export function RegisterForm({
           <Input
             id="email"
             type="email"
+            inputMode="email"
             required
             autoComplete="email"
+            disabled={busy}
+            aria-invalid={Boolean(fieldErrors.email)}
+            aria-describedby={fieldErrors.email ? "email-error" : undefined}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
@@ -218,51 +231,61 @@ export function RegisterForm({
             onInput={(event) => event.currentTarget.setCustomValidity("")}
           />
           {fieldErrors.email ? (
-            <p className="mt-1 text-[12px] text-red-700">{fieldErrors.email}</p>
+            <p id="email-error" className="mt-1 text-[12px] text-red-700">
+              {fieldErrors.email}
+            </p>
           ) : null}
         </div>
-        <PasswordInput
-          id="password"
-          label="Senha"
-          value={password}
-          onChange={setPassword}
-          placeholder="Mínimo 8 caracteres"
-          autoComplete="new-password"
-          minLength={8}
-        />
-        {fieldErrors.password ? (
-          <p className="-mt-2 text-[12px] text-red-700">{fieldErrors.password}</p>
-        ) : null}
-        <PasswordInput
-          id="confirmPassword"
-          label="Confirmar senha"
-          value={confirmPassword}
-          onChange={setConfirmPassword}
-          placeholder="Repita a senha"
-          autoComplete="new-password"
-          minLength={8}
-        />
-        {fieldErrors.confirmPassword ? (
-          <p className="-mt-2 text-[12px] text-red-700">
-            {fieldErrors.confirmPassword}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
-            {error}{" "}
-            {error.includes("já tem conta") ? (
-              <Link href="/login" className="font-semibold underline">
-                Ir para o login
-              </Link>
-            ) : null}
-          </p>
-        ) : null}
-        <Button
-          type="submit"
-          className="mt-2 w-full"
-          size="lg"
-          disabled={pending || redirecting}
-        >
+        <div>
+          <PasswordInput
+            id="password"
+            label="Senha"
+            value={password}
+            onChange={setPassword}
+            placeholder="Mínimo 8 caracteres"
+            autoComplete="new-password"
+            minLength={8}
+            disabled={busy}
+          />
+          {fieldErrors.password ? (
+            <p className="mt-1 text-[12px] text-red-700">
+              {fieldErrors.password}
+            </p>
+          ) : null}
+        </div>
+        <div>
+          <PasswordInput
+            id="confirmPassword"
+            label="Confirmar senha"
+            value={confirmPassword}
+            onChange={setConfirmPassword}
+            placeholder="Repita a senha"
+            autoComplete="new-password"
+            minLength={8}
+            disabled={busy}
+          />
+          {fieldErrors.confirmPassword ? (
+            <p className="mt-1 text-[12px] text-red-700">
+              {fieldErrors.confirmPassword}
+            </p>
+          ) : null}
+        </div>
+        <div aria-live="assertive">
+          {error ? (
+            <p
+              role="alert"
+              className="panel-in rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700"
+            >
+              {error}{" "}
+              {error.includes("já tem conta") ? (
+                <Link href="/login" className="font-semibold underline">
+                  Ir para o login
+                </Link>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+        <Button type="submit" className="mt-2 w-full" size="lg" disabled={busy}>
           {redirecting
             ? "Abrindo o checkout..."
             : pending

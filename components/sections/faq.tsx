@@ -23,25 +23,36 @@ export function FAQ() {
         <div className="mx-auto mt-10 max-w-2xl divide-y divide-line overflow-hidden rounded-[1.6rem] border border-line bg-card">
           {MARKETING_FAQS.map((item, index) => {
             const isOpen = open === index;
+            const panelId = `faq-panel-${index}`;
+            const buttonId = `faq-button-${index}`;
             return (
               <div key={item.q}>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                  id={buttonId}
+                  className="flex min-h-14 w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-black/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ink/20"
                   aria-expanded={isOpen}
+                  aria-controls={panelId}
                   onClick={() => setOpen(isOpen ? null : index)}
                 >
                   <span className="text-[15px] font-medium tracking-[-0.01em] text-ink">
                     {item.q}
                   </span>
                   <Plus
+                    aria-hidden="true"
                     className={cn(
                       "h-4 w-4 shrink-0 text-muted transition-transform duration-200",
                       isOpen && "rotate-45",
                     )}
                   />
                 </button>
+                {/* inert em vez de hidden: tira a resposta fechada da árvore de
+                    acessibilidade sem matar a animação de altura. */}
                 <div
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={buttonId}
+                  inert={!isOpen}
                   className={cn(
                     "grid transition-[grid-template-rows] duration-200",
                     isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",

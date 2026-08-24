@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,6 @@ import {
   parsePriceToCents,
   type Profile,
 } from "@/lib/types/profile";
-import { cn } from "@/lib/utils";
 
 const STEPS = [
   { id: 1, title: "Link", text: "Escolha o endereço da sua página" },
@@ -266,7 +266,15 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
           </span>
         </div>
         <p className="mt-1 text-[14px] text-muted">{STEPS[step - 1].text}</p>
-        <div className="mt-4 h-1 overflow-hidden rounded-full bg-line">
+        <div
+          role="progressbar"
+          aria-label="Progresso da configuração"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={step}
+          aria-valuetext={`Passo ${step} de ${STEPS.length}: ${STEPS[step - 1].title}`}
+          className="mt-4 h-1 overflow-hidden rounded-full bg-line"
+        >
           <div
             className="h-full rounded-full bg-ink transition-all duration-300"
             style={{ width: `${progress}%` }}
@@ -274,7 +282,14 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-line bg-[#fffcf8] p-5 sm:p-7">
+      {/* Form de verdade para o Enter avançar o passo em vez de não fazer nada. */}
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!pending) void next();
+        }}
+        className="rounded-2xl border border-line bg-[#fffcf8] p-5 sm:p-7"
+      >
         {step === 1 ? (
           <div>
             <Label htmlFor="username">Seu link</Label>
@@ -283,6 +298,10 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
               <Input
                 id="username"
                 value={username}
+                autoFocus
+                autoCapitalize="none"
+                spellCheck={false}
+                disabled={pending}
                 onChange={(event) =>
                   setUsername(normalizeUsername(event.target.value))
                 }
@@ -295,24 +314,32 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         {step === 2 ? (
           <div className="space-y-4">
             <div>
-              <Label>Nome no perfil</Label>
+              <Label htmlFor="displayName">Nome no perfil</Label>
               <Input
+                id="displayName"
                 value={displayName}
+                autoFocus
+                autoComplete="name"
+                disabled={pending}
                 onChange={(event) => setDisplayName(event.target.value)}
               />
             </div>
             <div>
-              <Label>Frase de destaque</Label>
+              <Label htmlFor="headline">Frase de destaque</Label>
               <Input
+                id="headline"
                 value={headline}
+                disabled={pending}
                 onChange={(event) => setHeadline(event.target.value)}
                 placeholder="Lash Designer"
               />
             </div>
             <div>
-              <Label>Cidade</Label>
+              <Label htmlFor="location">Cidade</Label>
               <Input
+                id="location"
                 value={location}
+                disabled={pending}
                 onChange={(event) => setLocation(event.target.value)}
                 placeholder="Brasília - DF"
               />
@@ -323,25 +350,31 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         {step === 3 ? (
           <div className="space-y-4">
             <div>
-              <Label>WhatsApp</Label>
+              <Label htmlFor="phone">WhatsApp</Label>
               <Input
+                id="phone"
                 value={formatWhatsAppPhone(phone)}
                 inputMode="numeric"
                 autoComplete="tel"
+                autoFocus
+                disabled={pending}
+                aria-describedby="phone-hint"
                 onChange={(event) =>
                   setPhone(normalizeWhatsAppPhone(event.target.value))
                 }
                 placeholder="5511999999999"
               />
-              <p className="mt-1.5 text-[12px] text-muted">
+              <p id="phone-hint" className="mt-1.5 text-[12px] text-muted">
                 Só números com código do país (DDI). Ex.: 5511999999999 (BR),
                 351912345678 (PT).
               </p>
             </div>
             <div>
-              <Label>Mensagem automática</Label>
+              <Label htmlFor="message">Mensagem automática</Label>
               <Input
+                id="message"
                 value={message}
+                disabled={pending}
                 onChange={(event) => setMessage(event.target.value)}
               />
             </div>
@@ -351,16 +384,22 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         {step === 4 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <Label>Serviço</Label>
+              <Label htmlFor="serviceName">Serviço</Label>
               <Input
+                id="serviceName"
                 value={serviceName}
+                autoFocus
+                disabled={pending}
                 onChange={(event) => setServiceName(event.target.value)}
               />
             </div>
             <div>
-              <Label>Preço (R$)</Label>
+              <Label htmlFor="servicePrice">Preço (R$)</Label>
               <Input
+                id="servicePrice"
                 value={servicePrice}
+                inputMode="decimal"
+                disabled={pending}
                 onChange={(event) => setServicePrice(event.target.value)}
                 placeholder="180"
               />
@@ -368,24 +407,30 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
           </div>
         ) : null}
 
-        {error ? (
-          <p className="mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <div aria-live="assertive">
+          {error ? (
+            <p
+              role="alert"
+              className="panel-in mt-4 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-700"
+            >
+              {error}
+            </p>
+          ) : null}
+        </div>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            className={cn(
-              "text-[13px] font-medium text-muted hover:text-ink",
-              step === 1 && "invisible",
-            )}
-            onClick={() => setStep((value) => Math.max(1, value - 1))}
-            disabled={pending}
-          >
-            Voltar
-          </button>
+          {step > 1 ? (
+            <button
+              type="button"
+              className="inline-flex min-h-11 items-center rounded-lg px-1 text-[13px] font-medium text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 disabled:opacity-50"
+              onClick={() => setStep((value) => Math.max(1, value - 1))}
+              disabled={pending}
+            >
+              Voltar
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
           <div className="flex gap-2">
             <Button
               type="button"
@@ -396,16 +441,21 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
             >
               Ir para o editor
             </Button>
-            <Button type="button" onClick={() => void next()} disabled={pending}>
-              {pending
-                ? "Salvando..."
-                : step === 4
-                  ? "Abrir editor"
-                  : "Continuar"}
+            <Button type="submit" disabled={pending}>
+              {pending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Salvando
+                </>
+              ) : step === 4 ? (
+                "Abrir editor"
+              ) : (
+                "Continuar"
+              )}
             </Button>
           </div>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
+import { TriangleAlert } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
@@ -117,6 +119,9 @@ export function SubscriptionManager() {
     useState<Subscription>(EMPTY_SUBSCRIPTION);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Separado do `error` de ação: sem a carga inicial não há assinatura para
+  // mostrar, e o estado vazio mentiria dizendo "Sem plano ativo".
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const cancelTitleId = useId();
@@ -150,7 +155,7 @@ export function SubscriptionManager() {
   useEffect(() => {
     void load()
       .catch((err) => {
-        setError(
+        setLoadError(
           err instanceof ApiError
             ? err.message
             : "Não foi possível carregar a assinatura.",
@@ -158,6 +163,22 @@ export function SubscriptionManager() {
       })
       .finally(() => setReady(true));
   }, []);
+
+  async function retryLoad() {
+    setPending("reload");
+    setLoadError(null);
+    try {
+      await load();
+    } catch (err) {
+      setLoadError(
+        err instanceof ApiError
+          ? err.message
+          : "Não foi possível carregar a assinatura.",
+      );
+    } finally {
+      setPending(null);
+    }
+  }
 
   async function run(action: string, fn: () => Promise<unknown>) {
     setPending(action);
@@ -201,6 +222,36 @@ export function SubscriptionManager() {
     return <PageSkeleton className="px-5 py-16" />;
   }
 
+  if (loadError) {
+    return (
+      <Container className="py-16 sm:py-20">
+        <div className="mx-auto flex max-w-md flex-col items-center gap-4 text-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+            <TriangleAlert className="h-5 w-5" />
+          </span>
+          <h1 className="font-serif text-[1.7rem] leading-tight text-ink">
+            Não conseguimos abrir sua assinatura
+          </h1>
+          <p className="text-[15px] leading-relaxed text-muted">
+            {loadError} Nada foi alterado no seu plano — é só tentar de novo.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              disabled={pending !== null}
+              onClick={() => void retryLoad()}
+            >
+              {pending === "reload" ? "Carregando..." : "Tentar de novo"}
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/app">Voltar ao painel</Link>
+            </Button>
+          </div>
+        </div>
+      </Container>
+    );
+  }
+
   const current = planById(plans, subscription.plan);
   const otherId = otherPlanId(subscription.plan);
   const other = planById(plans, otherId);
@@ -223,11 +274,16 @@ export function SubscriptionManager() {
         />
       </div>
 
-      {error ? (
-        <p className="mt-6 rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <div aria-live="assertive">
+        {error ? (
+          <p
+            role="alert"
+            className="panel-in mt-6 rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700"
+          >
+            {error}
+          </p>
+        ) : null}
+      </div>
 
       <section className="mt-4 rounded-[1.6rem] border border-line bg-card p-6 sm:p-8">
         <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-muted-soft">

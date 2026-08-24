@@ -47,6 +47,7 @@ export function LoginForm({
   const [trialUsed, setTrialUsed] = useState<boolean | undefined>();
   const [plan, setPlan] = useState<PlanId>("PRO");
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [trialDays, setTrialDays] = useState(7);
   const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
@@ -79,7 +80,10 @@ export function LoginForm({
     if (!needsCheckout) return;
     void billingApi
       .plans()
-      .then((catalog) => setPlans(catalog.plans))
+      .then((catalog) => {
+        setPlans(catalog.plans);
+        setTrialDays(catalog.trialDays);
+      })
       .catch(() => undefined);
   }, [needsCheckout]);
 
@@ -191,7 +195,10 @@ export function LoginForm({
         );
         void billingApi
           .plans()
-          .then((catalog) => setPlans(catalog.plans))
+          .then((catalog) => {
+            setPlans(catalog.plans);
+            setTrialDays(catalog.trialDays);
+          })
           .catch(() => undefined);
         return;
       }
@@ -207,11 +214,12 @@ export function LoginForm({
     }
   }
 
+  const busy = pending || redirecting;
   const checkoutSuccess = initialCheckout === "success";
   const checkoutCopy =
     trialUsed === true
       ? "Sua assinatura não está ativa. Assine de novo para entrar."
-      : "Escolha um plano. Os 7 primeiros dias são grátis.";
+      : `Escolha um plano. Os ${trialDays} primeiros dias são grátis.`;
 
   return (
     <AuthShell
@@ -236,19 +244,23 @@ export function LoginForm({
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        {info ? (
-          <p className="rounded-xl bg-lime/40 px-3.5 py-2.5 text-[13px] text-ink">
-            {info}
-          </p>
-        ) : null}
+        <div aria-live="polite">
+          {info ? (
+            <p className="panel-in rounded-xl bg-lime/40 px-3.5 py-2.5 text-[13px] text-ink">
+              {info}
+            </p>
+          ) : null}
+        </div>
         <div>
           <Label htmlFor="email">E-mail</Label>
           <Input
             id="email"
             type="email"
+            inputMode="email"
             autoComplete="email"
             autoFocus
             required
+            disabled={busy}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
@@ -274,24 +286,25 @@ export function LoginForm({
           onChange={setPassword}
           placeholder="Sua senha"
           autoComplete="current-password"
+          disabled={busy}
         />
         {needsCheckout ? (
-          <div className="space-y-3">
+          <div className="panel-in space-y-3">
             <p className="text-[13px] leading-relaxed text-muted">{checkoutCopy}</p>
             <PlanChoice plans={plans} value={plan} onChange={setPlan} />
           </div>
         ) : null}
-        {error ? (
-          <p className="rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700">
-            {error}
-          </p>
-        ) : null}
-        <Button
-          type="submit"
-          className="mt-2 w-full"
-          size="lg"
-          disabled={pending || redirecting}
-        >
+        <div aria-live="assertive">
+          {error ? (
+            <p
+              role="alert"
+              className="panel-in rounded-xl bg-red-50 px-3.5 py-2.5 text-[13px] text-red-700"
+            >
+              {error}
+            </p>
+          ) : null}
+        </div>
+        <Button type="submit" className="mt-2 w-full" size="lg" disabled={busy}>
           {redirecting
             ? "Abrindo o checkout..."
             : pending
@@ -301,7 +314,7 @@ export function LoginForm({
               : needsCheckout
                 ? trialUsed
                   ? "Cadastrar cartão na Stripe"
-                  : "Cadastrar cartão e começar grátis"
+                  : `Cadastrar cartão e começar ${trialDays} dias grátis`
                 : checkoutSuccess
                   ? "Entrar no app"
                   : "Entrar"}

@@ -3,7 +3,7 @@ import { PhoneFrame } from "@/components/mockups/phone-frame";
 import { ProfileMaria } from "@/components/mockups/profile-screens";
 import { Container } from "@/components/ui/container";
 
-export function Hero() {
+export function Hero({ trialDays = 7 }: { trialDays?: number }) {
   return (
     <section
       id="inicio"
@@ -15,7 +15,7 @@ export function Hero() {
       <Container className="relative grid items-center gap-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-8">
         <div className="max-w-xl">
           <p className="animate-fade-up mb-4 inline-flex items-center rounded-full border border-ink/10 bg-white/55 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink">
-            7 dias grátis · Pro e Premium
+            {trialDays} dias grátis · Pro e Premium
           </p>
           <h1 className="animate-fade-up font-serif text-[2.6rem] leading-[0.98] text-ink sm:text-[3.6rem] lg:text-[4.15rem] [animation-delay:80ms]">
             Tudo o que você é. Em um só link.

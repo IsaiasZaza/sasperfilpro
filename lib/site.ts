@@ -26,6 +26,11 @@ export function getGoogleSiteVerification() {
   );
 }
 
+/** Domínio sem protocolo, para exibir o link ao usuário. */
+export function getSiteHost() {
+  return getSiteUrl().replace(/^https?:\/\//, "");
+}
+
 export function absoluteUrl(path = "/") {
   const base = getSiteUrl();
   if (!path || path === "/") return base;

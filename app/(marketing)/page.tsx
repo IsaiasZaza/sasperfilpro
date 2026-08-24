@@ -94,7 +94,7 @@ export default async function Home() {
           ],
         }}
       />
-      <Hero />
+      <Hero trialDays={trialDays} />
       <ProofMarquee />
       <HowItWorks trialDays={trialDays} />
       <FeaturesShowcase />

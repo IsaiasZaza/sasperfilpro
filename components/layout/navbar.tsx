@@ -27,6 +27,15 @@ export function Navbar() {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   return (
     <header
       className={cn(
@@ -40,12 +49,15 @@ export function Navbar() {
         <Logo href="/" mark={scrolled || open ? "brand" : "contrast"} />
 
         <div className="flex items-center gap-3">
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav
+            aria-label="Seções da página"
+            className="hidden items-center gap-7 lg:flex"
+          >
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="text-[13px] font-medium tracking-[-0.01em] text-muted transition-colors hover:text-ink"
+                className="rounded-lg text-[13px] font-medium tracking-[-0.01em] text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25"
               >
                 {link.label}
               </a>
@@ -63,9 +75,10 @@ export function Navbar() {
 
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white/60 lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/60 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25 lg:hidden"
             aria-label={open ? "Fechar menu" : "Abrir menu"}
             aria-expanded={open}
+            aria-controls="marketing-mobile-menu"
             onClick={() => setOpen((value) => !value)}
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -74,13 +87,16 @@ export function Navbar() {
       </Container>
 
       {open ? (
-        <div className="border-t border-line bg-[#f6f3ee] lg:hidden">
+        <div
+          id="marketing-mobile-menu"
+          className="border-t border-line bg-[#f6f3ee] lg:hidden"
+        >
           <Container className="flex flex-col gap-1 py-4">
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="rounded-xl px-3 py-3 text-[15px] text-ink"
+                className="flex min-h-11 items-center rounded-xl px-3 text-[15px] text-ink transition-colors hover:bg-black/2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25"
                 onClick={() => setOpen(false)}
               >
                 {link.label}

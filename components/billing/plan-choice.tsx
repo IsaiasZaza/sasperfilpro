@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
 import { CATALOG_FALLBACK } from "@/lib/billing";
 import type { Plan, PlanId } from "@/lib/types/billing";
@@ -18,6 +18,7 @@ export function PlanChoice({
   compact?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
+  const groupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -29,25 +30,38 @@ export function PlanChoice({
     return (
       <div
         className={cn("grid gap-2", compact ? "" : "sm:grid-cols-2")}
-        aria-hidden
+        aria-busy="true"
       >
         {[0, 1].map((i) => (
           <div
             key={i}
-            className="h-[5.5rem] animate-pulse rounded-2xl border border-line bg-white/80"
+            aria-hidden="true"
+            className="min-h-[5.5rem] animate-pulse rounded-2xl border border-line bg-white/80"
           />
         ))}
+        <span className="sr-only">Carregando planos</span>
       </div>
     );
   }
 
+  // Radiogroup navega por setas: Tab entra no grupo, setas trocam a opção.
+  // O tabIndex acompanha a seleção, então o foco tem que ir junto.
+  function moveFocus(currentIndex: number, delta: number) {
+    const next = (currentIndex + delta + items.length) % items.length;
+    onChange(items[next].id);
+    groupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      ?.[next]?.focus();
+  }
+
   return (
     <div
+      ref={groupRef}
       className={cn("grid gap-2", compact ? "" : "sm:grid-cols-2")}
       role="radiogroup"
       aria-label="Plano"
     >
-      {items.map((plan) => {
+      {items.map((plan, index) => {
         const selected = plan.id === value;
         const recommended = plan.id === "PREMIUM";
         return (
@@ -56,9 +70,19 @@ export function PlanChoice({
             type="button"
             role="radio"
             aria-checked={selected}
+            tabIndex={selected ? 0 : -1}
             onClick={() => onChange(plan.id)}
+            onKeyDown={(event) => {
+              if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                event.preventDefault();
+                moveFocus(index, 1);
+              } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                event.preventDefault();
+                moveFocus(index, -1);
+              }
+            }}
             className={cn(
-              "rounded-2xl border px-4 py-3 text-left transition",
+              "min-h-[5.5rem] rounded-2xl border px-4 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink/25",
               selected
                 ? "border-ink bg-ink text-white"
                 : "border-line bg-white text-ink hover:border-ink/25",

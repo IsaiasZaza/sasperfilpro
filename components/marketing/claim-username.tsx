@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { publicApi } from "@/lib/api-client";
 import { saveClaimedUsername } from "@/lib/claimed-username";
 import { isValidUsername, normalizeUsername } from "@/lib/reserved-usernames";
+import { getSiteHost } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "checking" | "available" | "taken" | "invalid";
@@ -36,6 +37,7 @@ export function ClaimUsername({
   className?: string;
 }) {
   const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [hint, setHint] = useState("");
@@ -82,11 +84,15 @@ export function ClaimUsername({
       return;
     }
     const username = normalizeUsername(value);
-    if (username) saveClaimedUsername(username);
-    const href = username
-      ? `/cadastro?u=${encodeURIComponent(username)}`
-      : "/cadastro";
-    router.push(href);
+    // Botão desabilitado parece quebrado num CTA: em vez disso, puxa o foco
+    // para o campo e explica o que falta.
+    if (!username) {
+      inputRef.current?.focus();
+      setHint("Escreva o link que você quer reservar.");
+      return;
+    }
+    saveClaimedUsername(username);
+    router.push(`/cadastro?u=${encodeURIComponent(username)}`);
   }
 
   const ready = status === "idle" || status === "available";
@@ -102,15 +108,18 @@ export function ClaimUsername({
         <label className="flex min-w-0 flex-1 items-center">
           <span className="shrink-0 text-[13px] font-medium text-muted-soft sm:text-[15px]">
             <span className="sm:hidden">/u/</span>
-            <span className="hidden sm:inline">perfilpro.app/u/</span>
+            <span className="hidden sm:inline">{getSiteHost()}/u/</span>
           </span>
           <input
+            ref={inputRef}
+            type="text"
             value={value}
             onChange={(event) =>
               setValue(normalizeUsername(event.target.value))
             }
             placeholder="seunome"
             autoComplete="off"
+            autoCapitalize="none"
             spellCheck={false}
             aria-label="Escolha o username da sua página"
             className={cn(
@@ -131,6 +140,7 @@ export function ClaimUsername({
         </Button>
       </div>
       <p
+        aria-live="polite"
         className={cn(
           "mt-3 flex min-h-5 items-center gap-1.5 px-2 text-[13px]",
           status === "available" && "text-emerald-700",
