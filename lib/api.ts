@@ -26,7 +26,19 @@ export class ApiError extends Error {
 
 export function isSubscriptionRequired(err: unknown) {
   const error = err as { status?: number; code?: string };
-  return error.status === 402 || error.code === "SUBSCRIPTION_REQUIRED";
+  return error.code === "SUBSCRIPTION_REQUIRED";
+}
+
+export function isPlanGateError(err: unknown) {
+  const error = err as { code?: string };
+  return (
+    error.code === "PLAN_LIMIT_REACHED" || error.code === "PLAN_FEATURE_LOCKED"
+  );
+}
+
+export function isCheckoutRequired(err: unknown) {
+  const error = err as { code?: string };
+  return error.code === "CHECKOUT_REQUIRED";
 }
 
 export function fieldErrorsFromDetails(details: unknown): Record<string, string> {
@@ -101,7 +113,7 @@ async function tryRefreshSession(): Promise<"ok" | "expired" | "subscription"> {
       } catch {
         return "expired";
       }
-      if (res.status === 402 || json.error?.code === "SUBSCRIPTION_REQUIRED") {
+      if (json.error?.code === "SUBSCRIPTION_REQUIRED") {
         return "subscription";
       }
       if (!res.ok || json.error) return "expired";

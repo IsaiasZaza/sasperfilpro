@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Check } from "lucide-react";
-import { CATALOG_FALLBACK } from "@/lib/billing";
-import type { Plan, PlanId } from "@/lib/types/billing";
+import { CATALOG_FALLBACK, paidPlans } from "@/lib/billing";
+import type { PaidPlanId, Plan } from "@/lib/types/billing";
 import { cn } from "@/lib/utils";
 
 export function PlanChoice({
@@ -13,8 +13,8 @@ export function PlanChoice({
   compact = false,
 }: {
   plans: Plan[];
-  value: PlanId;
-  onChange: (plan: PlanId) => void;
+  value: PaidPlanId;
+  onChange: (plan: PaidPlanId) => void;
   compact?: boolean;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -24,7 +24,7 @@ export function PlanChoice({
     setMounted(true);
   }, []);
 
-  const items = plans.length > 0 ? plans : CATALOG_FALLBACK;
+  const items = paidPlans(plans.length > 0 ? plans : CATALOG_FALLBACK);
 
   if (!mounted) {
     return (
@@ -48,7 +48,8 @@ export function PlanChoice({
   // O tabIndex acompanha a seleção, então o foco tem que ir junto.
   function moveFocus(currentIndex: number, delta: number) {
     const next = (currentIndex + delta + items.length) % items.length;
-    onChange(items[next].id);
+    const nextId = items[next].id;
+    if (nextId === "PRO" || nextId === "PREMIUM") onChange(nextId);
     groupRef.current
       ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
       ?.[next]?.focus();
@@ -71,7 +72,9 @@ export function PlanChoice({
             role="radio"
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
-            onClick={() => onChange(plan.id)}
+            onClick={() => {
+              if (plan.id === "PRO" || plan.id === "PREMIUM") onChange(plan.id);
+            }}
             onKeyDown={(event) => {
               if (event.key === "ArrowRight" || event.key === "ArrowDown") {
                 event.preventDefault();

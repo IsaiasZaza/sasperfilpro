@@ -193,7 +193,7 @@ export type PublicPage = {
   blocks: ProfileBlock[];
   services: ServiceItem[];
   testimonials: TestimonialItem[];
-  plan?: "PRO" | "PREMIUM" | null;
+  plan?: "FREE" | "PRO" | "PREMIUM" | null;
   showBranding?: boolean;
 };
 

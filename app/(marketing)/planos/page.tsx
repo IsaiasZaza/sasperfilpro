@@ -6,12 +6,12 @@ import type { Plan } from "@/lib/types/billing";
 export const metadata: Metadata = {
   title: "Planos e preços",
   description:
-    "Planos Pro e Premium para sua página profissional. A partir de R$ 20/mês, 7 dias grátis. Cartão na Stripe, cobrança só depois do teste.",
+    "Planos Free, Pro e Premium para sua página profissional. Comece grátis, sem cartão. Faça upgrade quando quiser.",
   alternates: { canonical: "/planos" },
   openGraph: {
     title: "Planos e preços — PerfilPro",
     description:
-      "Planos Pro e Premium para sua página profissional. A partir de R$ 20/mês, com 7 dias grátis.",
+      "Planos Free, Pro e Premium para sua página profissional. Comece grátis e faça upgrade quando quiser.",
     url: "/planos",
   },
 };
@@ -24,13 +24,11 @@ type PageProps = {
 
 export default async function PlanosPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  let trialDays = 7;
   let plans: Plan[] = [];
   let loadError = false;
 
   try {
     const catalog = await billingApi.plans();
-    trialDays = catalog.trialDays;
     plans = catalog.plans;
     loadError = catalog.plans.length === 0;
   } catch {
@@ -40,7 +38,6 @@ export default async function PlanosPage({ searchParams }: PageProps) {
 
   return (
     <PlanosView
-      trialDays={trialDays}
       plans={plans}
       checkout={params.checkout}
       reason={params.reason}

@@ -1,32 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { PlanCards } from "@/components/billing/plan-cards";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/ui/container";
-import { STRIPE_TRIAL_COPY } from "@/lib/billing";
-import type { Plan } from "@/lib/types/billing";
+import { authApi } from "@/lib/api-client";
+import type { Plan, PlanId } from "@/lib/types/billing";
 
 function bannerMessage(checkout?: string, reason?: string) {
   if (reason === "expired") {
-    return "Sua assinatura não está ativa. Escolha um plano para continuar.";
+    return "Sua conta não tem acesso ao painel. Entre ou escolha um plano.";
   }
   if (checkout === "canceled") {
-    return "Checkout cancelado. Cadastre o cartão na Stripe para liberar a conta.";
+    return "Checkout cancelado. Você pode assinar de novo quando quiser.";
   }
   return null;
 }
 
 export function PlanosView({
-  trialDays,
   plans,
   checkout,
   reason,
   loadError,
 }: {
-  trialDays: number;
   plans: Plan[];
   checkout?: string;
   reason?: string;
@@ -34,6 +32,18 @@ export function PlanosView({
 }) {
   const initial = bannerMessage(checkout, reason);
   const [banner, setBanner] = useState<string | null>(initial);
+  const [currentPlan, setCurrentPlan] = useState<PlanId | null>(null);
+  const [email, setEmail] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    void authApi
+      .me()
+      .then((me) => {
+        setCurrentPlan(me.subscription?.plan ?? null);
+        setEmail(me.email);
+      })
+      .catch(() => undefined);
+  }, []);
 
   return (
     <main className="bg-background">
@@ -57,13 +67,13 @@ export function PlanosView({
         <div className="pointer-events-none absolute -left-20 top-6 h-64 w-64 rounded-full bg-white/35 blur-3xl" />
         <Container className="relative text-center">
           <p className="inline-flex items-center rounded-full border border-ink/10 bg-white/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink">
-            {trialDays} dias grátis
+            Comece no Free
           </p>
           <h1 className="mx-auto mt-5 max-w-3xl font-serif text-[2.35rem] leading-[1.05] text-ink sm:text-[3.4rem]">
-            Sua página profissional no ar em minutos. {trialDays} dias grátis.
+            Sua página profissional no ar em minutos. Sem cartão no começo.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-ink/70 sm:text-base">
-            {STRIPE_TRIAL_COPY}
+            Toda conta nasce no Free. Pro e Premium entram depois, pelo checkout.
           </p>
         </Container>
       </section>
@@ -83,7 +93,11 @@ export function PlanosView({
               </Button>
             </div>
           ) : (
-            <PlanCards plans={plans} />
+            <PlanCards
+              plans={plans}
+              currentPlan={currentPlan}
+              defaultEmail={email}
+            />
           )}
           <p className="mt-10 text-center text-[14px] text-muted">
             Já tenho conta.{" "}

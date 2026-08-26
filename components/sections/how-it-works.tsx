@@ -1,8 +1,8 @@
-import { CreditCard, Link2, Share2 } from "lucide-react";
+import { Link2, Share2, UserPlus } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Reveal } from "@/components/ui/reveal";
 
-export function HowItWorks({ trialDays = 7 }: { trialDays?: number }) {
+export function HowItWorks() {
   const steps = [
     {
       number: "01",
@@ -12,9 +12,9 @@ export function HowItWorks({ trialDays = 7 }: { trialDays?: number }) {
     },
     {
       number: "02",
-      icon: CreditCard,
-      title: "Escolha o plano e cadastre o cartão",
-      text: `Pro ou Premium, ${trialDays} dias grátis. O cartão entra na Stripe agora; a cobrança só depois do teste.`,
+      icon: UserPlus,
+      title: "Crie a conta no Free",
+      text: "Toda conta nasce no Free, já com acesso ao painel. Sem cartão. Upgrade para Pro ou Premium fica para depois.",
     },
     {
       number: "03",

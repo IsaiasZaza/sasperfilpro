@@ -61,20 +61,43 @@ export function TemplateGallery({
   hasContent,
   applyingId,
   onApply,
+  locked = false,
+  onUnlock,
 }: {
   /** Já existem blocos na página — aplicar um modelo vai substituí-los. */
   hasContent: boolean;
   applyingId: string | null;
   onApply: (template: PageTemplate) => void;
+  locked?: boolean;
+  onUnlock?: () => void;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
   return (
     <div className="space-y-3">
-      <p className="text-[13px] leading-relaxed text-muted">
-        Cada modelo monta os blocos, o tema e alguns textos de exemplo. Depois
-        você troca o que quiser — nada fica travado.
-      </p>
+      {locked ? (
+        <div className="rounded-2xl border border-line bg-background px-4 py-3.5">
+          <p className="text-[14px] font-semibold text-ink">
+            Modelos no Pro e Premium
+          </p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted">
+            Os modelos prontos montam tema, serviços e depoimentos. No Free
+            você monta a página bloco a bloco.
+          </p>
+          <button
+            type="button"
+            className="mt-3 text-[13px] font-semibold text-ink underline-offset-4 hover:underline"
+            onClick={() => onUnlock?.()}
+          >
+            Ver planos
+          </button>
+        </div>
+      ) : (
+        <p className="text-[13px] leading-relaxed text-muted">
+          Cada modelo monta os blocos, o tema e alguns textos de exemplo. Depois
+          você troca o que quiser — nada fica travado.
+        </p>
+      )}
 
       {PAGE_TEMPLATES.map((template) => {
         const applying = applyingId === template.id;
@@ -119,7 +142,17 @@ export function TemplateGallery({
               })}
             </div>
 
-            {confirming ? (
+            {locked ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="mt-3 h-10 w-full"
+                onClick={() => onUnlock?.()}
+              >
+                Disponível no Pro
+              </Button>
+            ) : confirming ? (
               <div className="mt-3 rounded-xl bg-background p-2.5">
                 <p className="text-[12px] leading-relaxed text-muted">
                   Isso troca os blocos atuais pelos do modelo. Seu nome, foto,

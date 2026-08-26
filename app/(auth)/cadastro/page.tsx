@@ -8,7 +8,6 @@ export const metadata: Metadata = {
 
 type PageProps = {
   searchParams: Promise<{
-    plan?: string;
     u?: string;
     username?: string;
   }>;
@@ -17,9 +16,6 @@ type PageProps = {
 export default async function RegisterPage({ searchParams }: PageProps) {
   const params = await searchParams;
   return (
-    <RegisterForm
-      initialPlan={params.plan}
-      initialUsername={params.u || params.username}
-    />
+    <RegisterForm initialUsername={params.u || params.username} />
   );
 }

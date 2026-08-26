@@ -22,12 +22,10 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  let trialDays = 7;
   let plans: Plan[] = [];
 
   try {
     const catalog = await billingApi.plans();
-    trialDays = catalog.trialDays;
     plans = catalog.plans;
   } catch {
     plans = [];
@@ -67,7 +65,7 @@ export default async function Home() {
               offers: {
                 "@type": "AggregateOffer",
                 priceCurrency: "BRL",
-                lowPrice: "20",
+                lowPrice: "0",
                 highPrice: "39",
               },
             },
@@ -94,13 +92,13 @@ export default async function Home() {
           ],
         }}
       />
-      <Hero trialDays={trialDays} />
+      <Hero />
       <ProofMarquee />
-      <HowItWorks trialDays={trialDays} />
+      <HowItWorks />
       <FeaturesShowcase />
       <Examples />
       <Comparison />
-      <Pricing trialDays={trialDays} plans={plans} />
+      <Pricing plans={plans} />
       <ForWho />
       <FAQ />
       <FinalCta />

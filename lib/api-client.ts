@@ -1,7 +1,9 @@
 import { api } from "@/lib/api";
 import type { ApiTheme } from "@/lib/theme";
 import type {
+  CheckoutResponse,
   LoginResponse,
+  PaidPlanId,
   Plan,
   PlanId,
   PlansCatalog,
@@ -27,7 +29,6 @@ export const authApi = {
     email: string;
     password: string;
     confirmPassword: string;
-    plan: PlanId;
   }) {
     return api<RegisterResponse>("/auth/register", {
       method: "POST",
@@ -233,8 +234,13 @@ export const billingApi = {
       next: { revalidate: 3600 },
     });
   },
-  checkout(input: { email: string; password: string; plan: PlanId }) {
-    return api<{ checkoutUrl: string | null }>("/billing/checkout", {
+  checkout(input: { email: string; password: string; plan: PaidPlanId }) {
+    if (input.plan !== "PRO" && input.plan !== "PREMIUM") {
+      return Promise.reject(
+        new Error("Checkout só aceita PRO ou PREMIUM."),
+      );
+    }
+    return api<CheckoutResponse>("/billing/checkout", {
       method: "POST",
       body: input,
     });
@@ -250,7 +256,12 @@ export const billingApi = {
       "/billing/subscription",
     );
   },
-  changePlan(plan: PlanId) {
+  changePlan(plan: PaidPlanId) {
+    if (plan !== "PRO" && plan !== "PREMIUM") {
+      return Promise.reject(
+        new Error("Troca de plano só entre PRO e PREMIUM."),
+      );
+    }
     return api<unknown>("/billing/change-plan", {
       method: "POST",
       body: { plan },

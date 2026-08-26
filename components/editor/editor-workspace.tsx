@@ -40,6 +40,8 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { CheckoutDialog } from "@/components/billing/checkout-dialog";
+import { UpgradeModal } from "@/components/billing/upgrade-modal";
 import { Logo } from "@/components/brand/logo";
 import { AppearancePanel } from "@/components/editor/appearance-panel";
 import { BlockInspector } from "@/components/editor/block-inspector";
@@ -58,11 +60,20 @@ import { Toast, type ToastVariant } from "@/components/ui/toast";
 import { ApiError } from "@/lib/api";
 import type { PageTemplate, TemplateBlock } from "@/lib/page-templates";
 import {
+  billingApi,
   blocksApi,
   profileApi,
   servicesApi,
   testimonialsApi,
 } from "@/lib/api-client";
+import {
+  canAddBlock,
+  canAddCountedItem,
+  entitlementsOf,
+  isBlockTypeAllowed,
+  isPlanGateError,
+} from "@/lib/billing";
+import type { PaidPlanId, Plan } from "@/lib/types/billing";
 import {
   mergeThemeResponse,
   themeFromApi,
@@ -389,7 +400,12 @@ function SortableBlockRow({
 }
 
 export function EditorWorkspace() {
-  const { refresh, setProfile: setAuthProfile } = useAuth();
+  const { refresh, setProfile: setAuthProfile, subscription, user } = useAuth();
+  const entitlements = entitlementsOf(subscription);
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState<string | undefined>();
+  const [checkoutPlan, setCheckoutPlan] = useState<PaidPlanId | null>(null);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [blocks, setBlocks] = useState<ProfileBlock[]>([]);
@@ -518,6 +534,18 @@ export function EditorWorkspace() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void billingApi
+      .plans()
+      .then((catalog) => setPlans(catalog.plans))
+      .catch(() => undefined);
+  }, []);
+
+  function requestUpgrade(message?: string) {
+    setUpgradeMessage(message);
+    setUpgradeOpen(true);
+  }
 
   useEffect(() => {
     profileRef.current = profile;
@@ -936,6 +964,14 @@ export function EditorWorkspace() {
   }, [isDirty, saveState]);
 
   async function addBlock(type: BlockType) {
+    if (!canAddBlock(entitlements, blocks.length, type)) {
+      requestUpgrade(
+        isBlockTypeAllowed(entitlements, type)
+          ? "O Free chega no limite de blocos. Assine Pro ou Premium para adicionar mais."
+          : "Esse tipo de bloco não entra no Free. Assine Pro ou Premium para liberar.",
+      );
+      return;
+    }
     try {
       setSaveState("saving");
       const created = await blocksApi.create({
@@ -956,6 +992,11 @@ export function EditorWorkspace() {
       setSaveState("saved");
       notify(`${BLOCK_META[type].label} adicionado.`, "success");
     } catch (err) {
+      if (isPlanGateError(err)) {
+        requestUpgrade();
+        setSaveState("saved");
+        return;
+      }
       const detail =
         err instanceof ApiError && Array.isArray(err.details)
           ? (err.details[0] as { message?: string } | undefined)?.message
@@ -993,6 +1034,12 @@ export function EditorWorkspace() {
   }
 
   async function applyTemplate(template: PageTemplate) {
+    if (!entitlements.customTheme) {
+      requestUpgrade(
+        "Os modelos prontos são do Pro e do Premium. Eles montam tema, serviços e depoimentos.",
+      );
+      return;
+    }
     const current = profileRef.current;
     const previousPhone =
       (
@@ -1563,6 +1610,9 @@ export function EditorWorkspace() {
                           const existing = UNIQUE_BLOCKS.includes(type)
                             ? orderedBlocks.find((block) => block.type === type)
                             : undefined;
+                          const locked =
+                            !existing &&
+                            !canAddBlock(entitlements, orderedBlocks.length, type);
                           return (
                             <button
                               key={type}
@@ -1596,7 +1646,9 @@ export function EditorWorkspace() {
                                 <span className="block truncate text-[11px] text-muted">
                                   {existing
                                     ? "Já na página — abrir para editar"
-                                    : BLOCK_META[type].description}
+                                    : locked
+                                      ? "Disponível no Pro"
+                                      : BLOCK_META[type].description}
                                 </span>
                               </span>
                             </button>
@@ -1626,20 +1678,26 @@ export function EditorWorkspace() {
                   Sua página está vazia
                 </p>
                 <p className="mt-1 text-[12px] leading-relaxed text-muted">
-                  Comece por um modelo pronto e depois só troque os textos.
+                  {entitlements.customTheme
+                    ? "Comece por um modelo pronto e depois só troque os textos."
+                    : "Adicione um bloco para montar a página. Modelos prontos ficam no Pro e no Premium."}
                 </p>
                 <Button
                   type="button"
                   size="sm"
                   className="mt-3 h-10 w-full"
                   onClick={() => {
+                    if (!entitlements.customTheme) {
+                      setInserterOpen(true);
+                      return;
+                    }
                     setEditorPanel("templates");
                     setSelectedId(null);
                     setMobileTab("edit");
                     setInserterOpen(false);
                   }}
                 >
-                  Ver modelos
+                  {entitlements.customTheme ? "Ver modelos" : "Adicionar bloco"}
                 </Button>
               </div>
             ) : (
@@ -1786,6 +1844,12 @@ export function EditorWorkspace() {
                 <TemplateGallery
                   hasContent={orderedBlocks.length > 0}
                   applyingId={applyingTemplate}
+                  locked={!entitlements.customTheme}
+                  onUnlock={() =>
+                    requestUpgrade(
+                      "Os modelos prontos são do Pro e do Premium. Eles montam tema, serviços e depoimentos.",
+                    )
+                  }
                   onApply={(template) => void applyTemplate(template)}
                 />
               </div>
@@ -1818,6 +1882,12 @@ export function EditorWorkspace() {
               <div className="px-5 py-5">
                 <AppearancePanel
                   profile={profile}
+                  themeLocked={!entitlements.customTheme}
+                  onUnlockTheme={() =>
+                    requestUpgrade(
+                      "Cores, temas e modelos visuais ficam no Pro e no Premium.",
+                    )
+                  }
                   onChange={(patch) => {
                     setProfile((prev) =>
                       prev
@@ -1928,6 +1998,19 @@ export function EditorWorkspace() {
                   testimonials={testimonials}
                   onServicesChange={handleServicesChange}
                   onTestimonialsChange={handleTestimonialsChange}
+                  canAddService={canAddCountedItem(
+                    entitlements.maxServices,
+                    services.length,
+                  )}
+                  canAddTestimonial={canAddCountedItem(
+                    entitlements.maxTestimonials,
+                    testimonials.length,
+                  )}
+                  onLimitReached={() =>
+                    requestUpgrade(
+                      "O Free chega no limite de serviços ou depoimentos. Assine Pro ou Premium.",
+                    )
+                  }
                   hasLocationBlock={blocks.some(
                     (b) => b.type === "LOCATION" && b.isVisible,
                   )}
@@ -1943,21 +2026,30 @@ export function EditorWorkspace() {
                 Escolha o que editar
               </p>
               <p className="mt-1 max-w-[240px] text-[13px] leading-relaxed text-muted">
-                Toque num bloco da lista ou da prévia. Ou comece por um modelo
-                pronto.
+                {entitlements.customTheme
+                  ? "Toque num bloco da lista ou da prévia. Ou comece por um modelo pronto."
+                  : "Toque num bloco da lista ou da prévia. Modelos prontos ficam no Pro e no Premium."}
               </p>
               <div className="mt-6 flex w-full max-w-[240px] flex-col gap-2">
                 <Button
                   type="button"
                   className="h-11"
                   onClick={() => {
+                    if (!entitlements.customTheme) {
+                      requestUpgrade(
+                        "Os modelos prontos são do Pro e do Premium. Eles montam tema, serviços e depoimentos.",
+                      );
+                      return;
+                    }
                     setEditorPanel("templates");
                     setSelectedId(null);
                     setMobileTab("edit");
                   }}
                 >
                   <LayoutTemplate className="h-4 w-4" />
-                  Ver modelos prontos
+                  {entitlements.customTheme
+                    ? "Ver modelos prontos"
+                    : "Modelos no Pro"}
                 </Button>
                 <Button
                   type="button"
@@ -1990,6 +2082,23 @@ export function EditorWorkspace() {
         variant={toast?.variant}
         show={Boolean(toast)}
         onDismiss={() => setToast(null)}
+      />
+      <UpgradeModal
+        open={upgradeOpen}
+        plans={plans}
+        message={upgradeMessage}
+        onClose={() => setUpgradeOpen(false)}
+        onChoosePlan={(plan) => {
+          setUpgradeOpen(false);
+          setCheckoutPlan(plan);
+        }}
+      />
+      <CheckoutDialog
+        open={checkoutPlan !== null}
+        planId={checkoutPlan}
+        plans={plans}
+        defaultEmail={user?.email}
+        onClose={() => setCheckoutPlan(null)}
       />
     </div>
   );

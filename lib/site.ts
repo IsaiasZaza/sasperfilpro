@@ -4,7 +4,7 @@ export const SITE_TITLE =
   "PerfilPro — Link na bio profissional para Instagram e WhatsApp";
 
 export const SITE_DESCRIPTION =
-  "Crie sua página profissional para a bio do Instagram. Mostre serviços e depoimentos e leve o cliente direto para o WhatsApp. 7 dias grátis, sem site e sem domínio.";
+  "Crie sua página profissional para a bio do Instagram. Mostre serviços e depoimentos e leve o cliente direto para o WhatsApp. Comece no Free, sem cartão.";
 
 export function getSiteUrl() {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL?.trim();

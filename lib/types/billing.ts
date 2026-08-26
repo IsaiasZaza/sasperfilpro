@@ -1,4 +1,7 @@
-export type PlanId = "PRO" | "PREMIUM";
+import type { BlockType } from "@/lib/types/profile";
+
+export type PlanId = "FREE" | "PRO" | "PREMIUM";
+export type PaidPlanId = "PRO" | "PREMIUM";
 
 export type SubscriptionStatus =
   | "INCOMPLETE"
@@ -10,8 +13,18 @@ export type SubscriptionStatus =
   | "UNPAID"
   | "PAUSED";
 
+export type EntitlementKey =
+  | "maxBlocks"
+  | "maxServices"
+  | "maxTestimonials"
+  | "allowedBlockTypes"
+  | "customTheme";
+
 export type Entitlements = {
   maxBlocks: number | null;
+  maxServices: number | null;
+  maxTestimonials: number | null;
+  allowedBlockTypes: BlockType[] | null;
   customTheme: boolean;
   removeBranding: boolean;
   prioritySupport: boolean;
@@ -25,7 +38,6 @@ export type Plan = {
   priceFormatted: string;
   currency: "BRL";
   interval: "month";
-  trialDays: number;
   features: string[];
   entitlements: Entitlements;
 };
@@ -42,21 +54,15 @@ export type Subscription = {
   cancelAtPeriodEnd: boolean;
   canceledAt: string | null;
   entitlements: Entitlements | null;
-  trialDays?: number;
 };
 
 export type PlansCatalog = {
-  trialDays: number;
   plans: Plan[];
 };
 
 export type RegisterResponse = {
   user: { id: string; name: string; email: string };
-  checkoutUrl: string | null;
-  sessionId: string | null;
-  plan: PlanId;
-  trialGranted: boolean;
-  trialDays: number;
+  accessToken: string;
   subscription: Subscription;
 };
 
@@ -64,6 +70,22 @@ export type LoginResponse = {
   user: { id: string; name: string; email: string };
   accessToken: string;
   subscription: Subscription;
+};
+
+export type CheckoutResponse = {
+  checkoutUrl: string | null;
+  sessionId: string | null;
+  plan: PaidPlanId;
+  subscription: Subscription;
+};
+
+export type PlanErrorDetails = {
+  currentPlan: PlanId;
+  suggestedPlan: PlanId;
+  entitlement: EntitlementKey;
+  blockType?: BlockType;
+  limit?: number;
+  current?: number;
 };
 
 export const EMPTY_SUBSCRIPTION: Subscription = {

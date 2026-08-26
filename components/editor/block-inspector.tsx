@@ -46,6 +46,9 @@ export function BlockInspector({
   testimonials = [],
   onServicesChange,
   onTestimonialsChange,
+  canAddService = true,
+  canAddTestimonial = true,
+  onLimitReached,
   hasLocationBlock = false,
 }: {
   block: ProfileBlock;
@@ -55,6 +58,9 @@ export function BlockInspector({
   testimonials?: TestimonialItem[];
   onServicesChange?: (next: ServiceItem[]) => void;
   onTestimonialsChange?: (next: TestimonialItem[]) => void;
+  canAddService?: boolean;
+  canAddTestimonial?: boolean;
+  onLimitReached?: () => void;
   hasLocationBlock?: boolean;
 }) {
   const setContent = (content: ProfileBlock["content"]) => {
@@ -714,7 +720,11 @@ export function BlockInspector({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() =>
+              onClick={() => {
+                if (!canAddService) {
+                  onLimitReached?.();
+                  return;
+                }
                 onServicesChange?.([
                   ...services,
                   {
@@ -726,8 +736,8 @@ export function BlockInspector({
                     sortOrder: services.length,
                     isVisible: true,
                   },
-                ])
-              }
+                ]);
+              }}
             >
               <Plus className="h-3.5 w-3.5" />
               Adicionar serviço
@@ -869,7 +879,11 @@ export function BlockInspector({
               type="button"
               variant="secondary"
               size="sm"
-              onClick={() =>
+              onClick={() => {
+                if (!canAddTestimonial) {
+                  onLimitReached?.();
+                  return;
+                }
                 onTestimonialsChange?.([
                   ...testimonials,
                   {
@@ -880,8 +894,8 @@ export function BlockInspector({
                     sortOrder: testimonials.length,
                     isVisible: true,
                   },
-                ])
-              }
+                ]);
+              }}
             >
               <Plus className="h-3.5 w-3.5" />
               Adicionar depoimento

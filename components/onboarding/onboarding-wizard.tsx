@@ -14,25 +14,54 @@ import {
   publicApi,
   servicesApi,
 } from "@/lib/api-client";
+import {
+  entitlementsOf,
+  isBlockTypeAllowed,
+} from "@/lib/billing";
 import { formatWhatsAppPhone, isValidWhatsAppPhone, normalizeWhatsAppPhone } from "@/lib/phone";
 import { readClaimedUsername } from "@/lib/claimed-username";
 import { normalizeUsername } from "@/lib/reserved-usernames";
 import {
   isTempUsername,
   parsePriceToCents,
+  type HeroContent,
   type Profile,
 } from "@/lib/types/profile";
 
-const STEPS = [
-  { id: 1, title: "Link", text: "Escolha o endereço da sua página" },
-  { id: 2, title: "Perfil", text: "Nome, frase de destaque e cidade" },
-  { id: 3, title: "WhatsApp", text: "Como o cliente fala com você" },
-  { id: 4, title: "Serviços", text: "O que você oferece" },
-] as const;
+type StepKey = "link" | "profile" | "whatsapp" | "services";
+
+function buildSteps(canLocation: boolean, canServices: boolean) {
+  const steps: { key: StepKey; title: string; text: string }[] = [
+    { key: "link", title: "Link", text: "Escolha o endereço da sua página" },
+    {
+      key: "profile",
+      title: "Perfil",
+      text: canLocation
+        ? "Nome, frase de destaque e cidade"
+        : "Nome e frase de destaque",
+    },
+    { key: "whatsapp", title: "WhatsApp", text: "Como o cliente fala com você" },
+  ];
+  if (canServices) {
+    steps.push({
+      key: "services",
+      title: "Serviços",
+      text: "O que você oferece",
+    });
+  }
+  return steps;
+}
 
 export function OnboardingWizard({ profile }: { profile: Profile }) {
   const router = useRouter();
-  const { setProfile } = useAuth();
+  const { setProfile, subscription } = useAuth();
+  const entitlements = entitlementsOf(subscription);
+  const canLocation = isBlockTypeAllowed(entitlements, "LOCATION");
+  const canServices = isBlockTypeAllowed(entitlements, "SERVICES");
+  const steps = useMemo(
+    () => buildSteps(canLocation, canServices),
+    [canLocation, canServices],
+  );
   const [step, setStep] = useState(1);
   const [username, setUsername] = useState(
     profile.username && !profile.username.startsWith("user-")
@@ -49,13 +78,18 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
+  const current = steps[Math.min(step, steps.length) - 1];
+
   useEffect(() => {
     if (profile.username && !profile.username.startsWith("user-")) return;
     const claimed = readClaimedUsername();
     if (claimed) setUsername(claimed);
   }, [profile.username]);
 
-  const progress = useMemo(() => (step / STEPS.length) * 100, [step]);
+  const progress = useMemo(
+    () => (Math.min(step, steps.length) / steps.length) * 100,
+    [step, steps.length],
+  );
 
   async function persistUsername(raw: string) {
     const normalized = normalizeUsername(raw);
@@ -76,56 +110,79 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
     return updated;
   }
 
+  function profilePatch() {
+    return {
+      displayName: displayName.trim(),
+      headline: headline.trim() || undefined,
+      ...(canLocation ? { location: location.trim() || undefined } : {}),
+    };
+  }
+
   async function goToEditor() {
     const full = await profileApi.get();
     setProfile(full);
     router.replace("/app/editor");
   }
 
+  async function finishOnboarding() {
+    if (displayName.trim()) {
+      const updated = await profileApi.update(profilePatch());
+      setProfile(updated);
+    }
+
+    try {
+      await profileApi.publish();
+    } catch {
+      try {
+        sessionStorage.setItem(
+          "perfilpro:publish-warn",
+          "Perfil salvo, mas a página ainda não foi publicada. Publique no editor quando quiser.",
+        );
+      } catch {
+        // ignore
+      }
+    }
+
+    await goToEditor();
+  }
+
   async function next() {
     setError(null);
     setPending(true);
     try {
-      if (step === 1) {
+      if (current.key === "link") {
         await persistUsername(username);
         setStep(2);
         return;
       }
 
-      if (step === 2) {
+      if (current.key === "profile") {
         if (!displayName.trim()) {
           setError("Informe o nome que aparece no perfil.");
           return;
         }
-        const updated = await profileApi.update({
-          displayName: displayName.trim(),
-          headline: headline.trim() || undefined,
-          location: location.trim() || undefined,
-        });
+        const updated = await profileApi.update(profilePatch());
         setProfile(updated);
 
         const blocks = await blocksApi.list();
+        const heroContent: HeroContent = {
+          name: displayName.trim(),
+          headline: headline.trim(),
+        };
+        if (canLocation) {
+          heroContent.location = location.trim();
+        }
         const hero = blocks.find((b) => b.type === "HERO");
         if (hero) {
-          await blocksApi.update(hero.id, {
-            content: {
-              name: displayName.trim(),
-              headline: headline.trim(),
-              location: location.trim(),
-            },
-          });
+          await blocksApi.update(hero.id, { content: heroContent });
         } else {
           await blocksApi.create({
             type: "HERO",
-            content: {
-              name: displayName.trim(),
-              headline: headline.trim(),
-              location: location.trim(),
-            },
+            content: heroContent,
           });
         }
 
-        if (location.trim()) {
+        if (canLocation && location.trim()) {
           const loc = blocks.find((b) => b.type === "LOCATION");
           if (loc) {
             await blocksApi.update(loc.id, {
@@ -139,11 +196,11 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
           }
         }
 
-        setStep(3);
+        setStep((value) => value + 1);
         return;
       }
 
-      if (step === 3) {
+      if (current.key === "whatsapp") {
         const digits = normalizeWhatsAppPhone(phone);
         if (!isValidWhatsAppPhone(digits)) {
           setError(
@@ -163,13 +220,22 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
             content: { phone: digits, message, label: "WhatsApp" },
           });
         }
-        setStep(4);
+        if (canServices) {
+          setStep((value) => value + 1);
+          return;
+        }
+        await finishOnboarding();
         return;
       }
 
       const priceCents = parsePriceToCents(servicePrice);
       if (!serviceName.trim() || priceCents < 0) {
         setError("Informe um serviço e um preço válido.");
+        return;
+      }
+
+      if (!canServices) {
+        await finishOnboarding();
         return;
       }
 
@@ -189,29 +255,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         });
       }
 
-      if (displayName.trim()) {
-        const updated = await profileApi.update({
-          displayName: displayName.trim(),
-          headline: headline.trim() || undefined,
-          location: location.trim() || undefined,
-        });
-        setProfile(updated);
-      }
-
-      try {
-        await profileApi.publish();
-      } catch {
-        try {
-          sessionStorage.setItem(
-            "perfilpro:publish-warn",
-            "Perfil salvo, mas a página ainda não foi publicada. Publique no editor quando quiser.",
-          );
-        } catch {
-          // ignore
-        }
-      }
-
-      await goToEditor();
+      await finishOnboarding();
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Não foi possível continuar.",
@@ -235,11 +279,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         await persistUsername(username);
       }
       if (displayName.trim()) {
-        const updated = await profileApi.update({
-          displayName: displayName.trim(),
-          headline: headline.trim() || undefined,
-          location: location.trim() || undefined,
-        });
+        const updated = await profileApi.update(profilePatch());
         setProfile(updated);
       }
       await goToEditor();
@@ -262,17 +302,17 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
             Configure sua página
           </h1>
           <span className="shrink-0 text-[12px] font-medium text-muted">
-            {step}/{STEPS.length}
+            {Math.min(step, steps.length)}/{steps.length}
           </span>
         </div>
-        <p className="mt-1 text-[14px] text-muted">{STEPS[step - 1].text}</p>
+        <p className="mt-1 text-[14px] text-muted">{current.text}</p>
         <div
           role="progressbar"
           aria-label="Progresso da configuração"
           aria-valuemin={1}
-          aria-valuemax={STEPS.length}
-          aria-valuenow={step}
-          aria-valuetext={`Passo ${step} de ${STEPS.length}: ${STEPS[step - 1].title}`}
+          aria-valuemax={steps.length}
+          aria-valuenow={Math.min(step, steps.length)}
+          aria-valuetext={`Passo ${Math.min(step, steps.length)} de ${steps.length}: ${current.title}`}
           className="mt-4 h-1 overflow-hidden rounded-full bg-line"
         >
           <div
@@ -290,7 +330,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
         }}
         className="rounded-2xl border border-line bg-[#fffcf8] p-5 sm:p-7"
       >
-        {step === 1 ? (
+        {current.key === "link" ? (
           <div>
             <Label htmlFor="username">Seu link</Label>
             <div className="flex items-center gap-2">
@@ -311,7 +351,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
           </div>
         ) : null}
 
-        {step === 2 ? (
+        {current.key === "profile" ? (
           <div className="space-y-4">
             <div>
               <Label htmlFor="displayName">Nome no perfil</Label>
@@ -334,20 +374,22 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
                 placeholder="Lash Designer"
               />
             </div>
-            <div>
-              <Label htmlFor="location">Cidade</Label>
-              <Input
-                id="location"
-                value={location}
-                disabled={pending}
-                onChange={(event) => setLocation(event.target.value)}
-                placeholder="Brasília - DF"
-              />
-            </div>
+            {canLocation ? (
+              <div>
+                <Label htmlFor="location">Cidade</Label>
+                <Input
+                  id="location"
+                  value={location}
+                  disabled={pending}
+                  onChange={(event) => setLocation(event.target.value)}
+                  placeholder="Brasília - DF"
+                />
+              </div>
+            ) : null}
           </div>
         ) : null}
 
-        {step === 3 ? (
+        {current.key === "whatsapp" ? (
           <div className="space-y-4">
             <div>
               <Label htmlFor="phone">WhatsApp</Label>
@@ -381,7 +423,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
           </div>
         ) : null}
 
-        {step === 4 ? (
+        {current.key === "services" ? (
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="serviceName">Serviço</Label>
@@ -447,7 +489,8 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Salvando
                 </>
-              ) : step === 4 ? (
+              ) : current.key === "services" ||
+                (current.key === "whatsapp" && !canServices) ? (
                 "Abrir editor"
               ) : (
                 "Continuar"

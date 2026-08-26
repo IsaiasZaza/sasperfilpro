@@ -62,8 +62,12 @@ function ColorField({
 export function AppearancePanel({
   profile,
   onChange,
+  themeLocked = false,
+  onUnlockTheme,
 }: {
   profile: Profile;
+  themeLocked?: boolean;
+  onUnlockTheme?: () => void;
   onChange: (patch: {
     theme?: ApiTheme;
     displayName?: string;
@@ -77,6 +81,10 @@ export function AppearancePanel({
   const painted = resolvePaintTheme(profile.theme);
 
   function patchTheme(partial: Partial<ApiTheme>) {
+    if (themeLocked) {
+      onUnlockTheme?.();
+      return;
+    }
     const next = themeToApi({
       backgroundColor: painted.background,
       textColor: painted.text,
@@ -91,6 +99,24 @@ export function AppearancePanel({
 
   return (
     <div className="space-y-8">
+      {themeLocked ? (
+        <div className="rounded-2xl border border-line bg-background px-4 py-3.5">
+          <p className="text-[14px] font-semibold text-ink">Tema do Free</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-muted">
+            Cores, temas e modelos visuais ficam no Pro e no Premium. O
+            endereço da página você continua editando.
+          </p>
+          <button
+            type="button"
+            className="mt-3 text-[13px] font-semibold text-ink underline-offset-4 hover:underline"
+            onClick={() => onUnlockTheme?.()}
+          >
+            Ver planos
+          </button>
+        </div>
+      ) : null}
+      {themeLocked ? null : (
+      <>
       <section>
         <h3 className="font-serif text-lg text-ink">Temas prontos</h3>
         <p className="mt-1 text-[13px] text-muted">
@@ -109,7 +135,7 @@ export function AppearancePanel({
                 type="button"
                 onClick={() => {
                   const next = themeToApi(preset.theme);
-                  if (next) onChange({ theme: next });
+                  if (next) patchTheme(next);
                 }}
                 className={cn(
                   "rounded-xl border p-2.5 text-left transition",
@@ -262,6 +288,8 @@ export function AppearancePanel({
           ))}
         </div>
       </section>
+      </>
+      )}
 
       {profile.canChangeUsername !== false ? (
         <section className="space-y-4 border-t border-line pt-6">

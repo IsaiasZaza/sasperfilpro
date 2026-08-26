@@ -20,8 +20,8 @@ export const MARKETING_FAQS = [
     a: "Pode. Cores, foto, textos e a ordem dos blocos ficam no editor, quando você quiser.",
   },
   {
-    q: "Tem período grátis?",
-    a: "Sim. Os 7 primeiros dias são grátis nos planos Pro e Premium. Você cadastra o cartão no checkout e só é cobrado depois do teste. Pode cancelar quando quiser.",
+    q: "Tem plano grátis?",
+    a: "Sim. Toda conta começa no Free, sem cartão. Você publica a página com limites. Quando quiser mais blocos, tema ou tirar a marca, assina Pro ou Premium.",
   },
   {
     q: "Quanto tempo leva?",

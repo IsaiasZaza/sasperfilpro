@@ -9,20 +9,14 @@ import {
   AUTH_INPUT_CLASS,
   PasswordInput,
 } from "@/components/auth/password-input";
-import { PlanChoice } from "@/components/billing/plan-choice";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ApiError, isSubscriptionRequired } from "@/lib/api";
+import { ApiError } from "@/lib/api";
 import { authApi, billingApi, profileApi } from "@/lib/api-client";
-import { hasWorkspaceAccess, trialUsedFromError } from "@/lib/billing";
-import {
-  clearPendingEmail,
-  readPendingEmail,
-  savePendingEmail,
-} from "@/lib/claimed-username";
+import { hasWorkspaceAccess } from "@/lib/billing";
+import { clearPendingEmail, readPendingEmail } from "@/lib/claimed-username";
 import { persistSessionCookie } from "@/lib/session";
-import type { Plan, PlanId } from "@/lib/types/billing";
 import { needsOnboarding } from "@/lib/types/profile";
 
 export function LoginForm({
@@ -43,12 +37,6 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const [needsCheckout, setNeedsCheckout] = useState(false);
-  const [trialUsed, setTrialUsed] = useState<boolean | undefined>();
-  const [plan, setPlan] = useState<PlanId>("PRO");
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [trialDays, setTrialDays] = useState(7);
-  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     if (!initialEmail) {
@@ -59,38 +47,22 @@ export function LoginForm({
 
   useEffect(() => {
     if (initialCheckout === "success") {
-      setInfo("Pagamento aprovado. Agora é só entrar no editor e criar seu perfil.");
+      setInfo("Pagamento aprovado. Entre para abrir o painel.");
       const sessionId = initialSessionId;
       if (sessionId) {
         void billingApi.confirmSession(sessionId).catch(() => {
           // webhook pode já ter sincronizado
         });
       }
-    } else if (initialCheckout === "local-trial") {
-      setInfo(
-        "Ainda falta o cartão na Stripe. Entre e retome o checkout para liberar a conta.",
-      );
-      setNeedsCheckout(true);
     } else if (initialCheckout === "canceled") {
-      setInfo("Checkout cancelado. Você pode tentar de novo.");
+      setInfo("Checkout cancelado. Você pode tentar de novo em Planos.");
     }
   }, [initialCheckout, initialSessionId]);
 
   useEffect(() => {
-    if (!needsCheckout) return;
-    void billingApi
-      .plans()
-      .then((catalog) => {
-        setPlans(catalog.plans);
-        setTrialDays(catalog.trialDays);
-      })
-      .catch(() => undefined);
-  }, [needsCheckout]);
-
-  useEffect(() => {
     if (!ready || !user) return;
     if (!hasWorkspaceAccess(subscription)) {
-      router.replace("/assinatura");
+      router.replace("/planos?reason=expired");
       return;
     }
     const fallback = needsOnboarding(profile) ? "/onboarding" : "/app";
@@ -125,85 +97,21 @@ export function LoginForm({
       ? needsOnboarding(nextProfile)
         ? "/onboarding"
         : "/app"
-      : "/assinatura";
+      : "/planos?reason=expired";
     window.location.assign(safeNext() || fallback);
-  }
-
-  async function resumeCheckout() {
-    setPending(true);
-    setError(null);
-    try {
-      const data = await billingApi.checkout({
-        email,
-        password,
-        plan,
-      });
-      if (!data.checkoutUrl) {
-        setError(
-          "O checkout da Stripe não abriu. Sem cartão a conta não é liberada. Tente de novo.",
-        );
-        return;
-      }
-      savePendingEmail(email);
-      setRedirecting(true);
-      window.location.href = data.checkoutUrl;
-    } catch (err) {
-      if (err instanceof ApiError && err.code === "ALREADY_SUBSCRIBED") {
-        await enterApp().catch(() => router.push("/app"));
-        return;
-      }
-      if (err instanceof ApiError && err.code === "USE_CHANGE_PLAN") {
-        setError("Você já tem outro plano. Entre e gerencie em Assinatura.");
-        setNeedsCheckout(false);
-        return;
-      }
-      if (err instanceof ApiError && err.status === 401) {
-        setError("E-mail ou senha incorretos.");
-        return;
-      }
-      if (err instanceof ApiError && err.status === 429) {
-        setError("Muitas tentativas. Aguarde um momento e tente de novo.");
-        return;
-      }
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Não foi possível abrir o checkout.",
-      );
-    } finally {
-      setPending(false);
-    }
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (needsCheckout) {
-      await resumeCheckout();
-      return;
-    }
     setPending(true);
     setError(null);
     try {
       await enterApp();
     } catch (err) {
-      if (isSubscriptionRequired(err)) {
-        setNeedsCheckout(true);
-        setTrialUsed(trialUsedFromError(err));
-        setError(null);
-        setInfo(
-          "Sua conta está pronta. Escolha Pro ou Premium para entrar.",
-        );
-        void billingApi
-          .plans()
-          .then((catalog) => {
-            setPlans(catalog.plans);
-            setTrialDays(catalog.trialDays);
-          })
-          .catch(() => undefined);
-        return;
-      }
       if (err instanceof ApiError && err.status === 429) {
         setError("Muitas tentativas. Aguarde um momento e tente de novo.");
+      } else if (err instanceof ApiError && err.status === 401) {
+        setError("E-mail ou senha incorretos.");
       } else {
         setError(
           err instanceof ApiError ? err.message : "Não foi possível entrar.",
@@ -214,16 +122,10 @@ export function LoginForm({
     }
   }
 
-  const busy = pending || redirecting;
   const checkoutSuccess = initialCheckout === "success";
-  const checkoutCopy =
-    trialUsed === true
-      ? "Sua assinatura não está ativa. Assine de novo para entrar."
-      : `Escolha um plano. Os ${trialDays} primeiros dias são grátis.`;
 
   return (
     <AuthShell
-      wide={needsCheckout}
       title={checkoutSuccess ? "Pagamento ok" : "Entrar"}
       subtitle={
         checkoutSuccess
@@ -260,7 +162,7 @@ export function LoginForm({
             autoComplete="email"
             autoFocus
             required
-            disabled={busy}
+            disabled={pending}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="voce@email.com"
@@ -286,14 +188,8 @@ export function LoginForm({
           onChange={setPassword}
           placeholder="Sua senha"
           autoComplete="current-password"
-          disabled={busy}
+          disabled={pending}
         />
-        {needsCheckout ? (
-          <div className="panel-in space-y-3">
-            <p className="text-[13px] leading-relaxed text-muted">{checkoutCopy}</p>
-            <PlanChoice plans={plans} value={plan} onChange={setPlan} />
-          </div>
-        ) : null}
         <div aria-live="assertive">
           {error ? (
             <p
@@ -304,20 +200,12 @@ export function LoginForm({
             </p>
           ) : null}
         </div>
-        <Button type="submit" className="mt-2 w-full" size="lg" disabled={busy}>
-          {redirecting
-            ? "Abrindo o checkout..."
-            : pending
-              ? needsCheckout
-                ? "Abrindo..."
-                : "Entrando..."
-              : needsCheckout
-                ? trialUsed
-                  ? "Cadastrar cartão na Stripe"
-                  : `Cadastrar cartão e começar ${trialDays} dias grátis`
-                : checkoutSuccess
-                  ? "Entrar no app"
-                  : "Entrar"}
+        <Button type="submit" className="mt-2 w-full" size="lg" disabled={pending}>
+          {pending
+            ? "Entrando..."
+            : checkoutSuccess
+              ? "Entrar no app"
+              : "Entrar"}
         </Button>
       </form>
     </AuthShell>
