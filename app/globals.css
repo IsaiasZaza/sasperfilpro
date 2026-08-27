@@ -793,3 +793,51 @@ h2 {
 .theme-preset-swatch .theme-fx__veil {
   display: none;
 }
+
+/* Fontes da página pública / preview — não misturar com a chrome do app. */
+[class*="pp-font-"] h1,
+[class*="pp-font-"] h2 {
+  font-family: inherit;
+  font-optical-sizing: auto;
+  font-variation-settings: normal;
+  letter-spacing: inherit;
+}
+
+.pp-font-sans {
+  font-family: var(--font-plus-jakarta), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.011em;
+}
+.pp-font-outfit {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.pp-font-nunito {
+  font-family: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+.pp-font-serif {
+  font-family: var(--font-fraunces), ui-serif, Georgia, serif;
+  font-optical-sizing: auto;
+  font-variation-settings: "SOFT" 40, "opsz" 72;
+  letter-spacing: -0.02em;
+}
+.pp-font-playfair {
+  font-family: var(--font-playfair), ui-serif, Georgia, serif;
+  letter-spacing: -0.02em;
+}
+.pp-font-cormorant {
+  font-family: var(--font-cormorant), ui-serif, Georgia, serif;
+  letter-spacing: -0.015em;
+}
+.pp-font-lora {
+  font-family: var(--font-lora), ui-serif, Georgia, serif;
+  letter-spacing: -0.01em;
+}
+.pp-font-syne {
+  font-family: var(--font-syne), ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+.pp-font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0;
+}

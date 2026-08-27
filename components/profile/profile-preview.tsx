@@ -36,6 +36,7 @@ import {
   resolveLinkBrand,
 } from "@/lib/link-brand";
 import { ThemeAtmosphere } from "@/components/profile/theme-atmosphere";
+import { pageFontClass } from "@/lib/page-fonts";
 import { resolvePaintTheme } from "@/lib/theme";
 import {
   BLOCK_META,
@@ -204,7 +205,7 @@ function BlockView({
           )}
         >
           <h1
-            className="break-words font-serif leading-[1.15] tracking-tight"
+            className="break-words leading-[1.15] tracking-tight"
             style={{ color, fontSize: lookFontPx(look, "title") }}
           >
             {name}
@@ -1368,9 +1369,7 @@ export function ProfilePreview({
       className={cn(
         "relative",
         asPage ? "w-full" : "h-full overflow-y-auto no-scrollbar",
-        theme.font === "serif" && "font-serif",
-        theme.font === "mono" && "font-mono",
-        theme.font === "sans" && "font-sans",
+        pageFontClass(theme.font),
         className,
       )}
       style={

@@ -71,7 +71,16 @@ type ApiTheme = {
   backgroundColor?: string;
   textColor?: string;
   buttonStyle?: "pill" | "rounded" | "square";
-  font?: "sans" | "serif" | "mono";
+  font?:
+    | "sans"
+    | "outfit"
+    | "nunito"
+    | "serif"
+    | "playfair"
+    | "cormorant"
+    | "lora"
+    | "syne"
+    | "mono";
   atmosphere?: AtmosphereId; // já existia; round-trip obrigatório
   backgroundImage?: string; // NOVO — URL http(s) pública
   overlay?: number; // NOVO — 0–80; só faz sentido com backgroundImage

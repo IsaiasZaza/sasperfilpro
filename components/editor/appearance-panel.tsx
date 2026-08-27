@@ -12,6 +12,7 @@ import {
   type ApiTheme,
   type AtmosphereId,
 } from "@/lib/theme";
+import { PAGE_FONTS, pageFontClass } from "@/lib/page-fonts";
 import type { Profile } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
@@ -328,28 +329,41 @@ export function AppearancePanel({
 
       <section>
         <h3 className="font-serif text-lg text-ink">Fonte</h3>
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {(
-            [
-              ["sans", "Simples"],
-              ["serif", "Clássica"],
-              ["mono", "Fixa"],
-            ] as const
-          ).map(([value, label]) => (
+        <p className="mt-1 text-[13px] text-muted">
+          Vale para o nome, a bio e os botões da sua página.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {PAGE_FONTS.map((option) => (
             <button
-              key={value}
+              key={option.id}
               type="button"
-              onClick={() => patchTheme({ font: value })}
+              onClick={() => patchTheme({ font: option.id })}
               className={cn(
-                "rounded-xl border px-2 py-3 text-[12px] font-semibold",
-                painted.font === value
+                "rounded-xl border px-2.5 py-2.5 text-left transition",
+                painted.font === option.id
                   ? "border-ink bg-ink text-white"
-                  : "border-line bg-white text-ink",
-                value === "serif" && "font-serif",
-                value === "mono" && "font-mono",
+                  : "border-line bg-white text-ink hover:border-ink/15",
               )}
             >
-              {label}
+              <span
+                className={cn(
+                  "block text-[18px] font-semibold leading-none",
+                  pageFontClass(option.id),
+                )}
+              >
+                {option.sample}
+              </span>
+              <span className="mt-1.5 block text-[12px] font-semibold">
+                {option.label}
+              </span>
+              <span
+                className={cn(
+                  "mt-0.5 block text-[10px]",
+                  painted.font === option.id ? "text-white/70" : "text-muted",
+                )}
+              >
+                {option.hint}
+              </span>
             </button>
           ))}
         </div>

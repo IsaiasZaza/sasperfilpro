@@ -1,4 +1,5 @@
 import type { ProfileTheme } from "@/lib/types/profile";
+import { asPageFont, type PageFontId } from "@/lib/page-fonts";
 
 export type AtmosphereId =
   | "none"
@@ -16,7 +17,7 @@ export type ApiTheme = {
   backgroundColor?: string;
   textColor?: string;
   buttonStyle?: "pill" | "rounded" | "square";
-  font?: "sans" | "serif" | "mono";
+  font?: PageFontId;
   /** Efeito de fundo animado. Backend deve aceitar e devolver este campo. */
   atmosphere?: AtmosphereId;
   /** Foto de fundo da página (URL http(s) ou "" para limpar). */
@@ -34,7 +35,7 @@ export type PaintTheme = {
   line: string;
   primaryColor: string;
   buttonStyle: "pill" | "rounded" | "square";
-  font: "sans" | "serif" | "mono";
+  font: PageFontId;
   buttonRadius: string;
   atmosphere: AtmosphereId;
   /** Gradiente de fundo (sobre a cor sólida). */
@@ -240,10 +241,8 @@ function asButtonStyle(value: unknown): PaintTheme["buttonStyle"] {
     : "pill";
 }
 
-function asFont(value: unknown): PaintTheme["font"] {
-  return value === "serif" || value === "mono" || value === "sans"
-    ? value
-    : "sans";
+function asFont(value: unknown): PageFontId {
+  return asPageFont(value);
 }
 
 export function asAtmosphere(value: unknown): AtmosphereId {
@@ -426,6 +425,13 @@ export function mergeThemeResponse(
     const apiHasAtmosphere = rawIn.atmosphere != null;
     if (!apiHasAtmosphere && localTheme?.atmosphere && localTheme.atmosphere !== "none") {
       next.atmosphere = localTheme.atmosphere;
+    }
+    if (
+      localTheme?.font &&
+      localTheme.font !== next.font &&
+      (rawIn.font == null || rawIn.font !== localTheme.font)
+    ) {
+      next.font = localTheme.font;
     }
     if (clearedImage) {
       next.backgroundImage = null;

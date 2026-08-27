@@ -6,6 +6,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Button } from "@/components/ui/button";
 import { loadPublicPage } from "@/lib/public-page";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
+import { pageFontClass } from "@/lib/page-fonts";
 import { resolvePaintTheme } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -94,18 +95,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
   }
 
   const painted = resolvePaintTheme(page.theme);
-  const fontClass =
-    painted.font === "serif"
-      ? "font-serif"
-      : painted.font === "mono"
-        ? "font-mono"
-        : "font-sans";
   const name = page.displayName || page.username || username;
   const url = absoluteUrl(`/u/${page.username || username}`);
 
   return (
     <div
-      className={`relative min-h-screen ${fontClass}`}
+      className={`relative min-h-screen ${pageFontClass(painted.font)}`}
       style={{
         background: painted.wash,
         ["--theme-accent" as string]: painted.accent,
