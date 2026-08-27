@@ -94,7 +94,10 @@ export function AppearancePanel({
       buttonStyle: painted.buttonStyle,
       font: painted.font,
       atmosphere: painted.atmosphere,
-      backgroundImage: painted.backgroundImage || undefined,
+      backgroundImage:
+        painted.backgroundImage === null
+          ? null
+          : painted.backgroundImage || undefined,
       overlay: painted.overlay,
       ...partial,
     });
@@ -227,6 +230,7 @@ export function AppearancePanel({
           buttonLabel={
             painted.backgroundImage ? "Trocar foto de fundo" : "Enviar foto"
           }
+          removeLabel="Remover foto"
           emptyLabel="Fundo"
           onUploaded={(bannerUrl) =>
             patchTheme({
@@ -234,6 +238,7 @@ export function AppearancePanel({
               overlay: painted.overlay || 40,
             })
           }
+          onRemove={() => patchTheme({ backgroundImage: null, overlay: 0 })}
           upload={async (file) => {
             const data = await profileApi.uploadBanner(file);
             return data.bannerUrl;
@@ -241,45 +246,34 @@ export function AppearancePanel({
           onLocked={onUnlockTheme}
         />
         {painted.backgroundImage ? (
-          <>
-            <div>
-              <Label>Escurecer a foto</Label>
-              <p className="mb-1.5 mt-0.5 text-[12px] leading-snug text-muted">
-                Deixa os blocos mais fáceis de ler por cima da imagem.
-              </p>
-              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-                {[
-                  { value: 0, label: "Nada" },
-                  { value: 20, label: "Leve" },
-                  { value: 40, label: "Médio" },
-                  { value: 60, label: "Forte" },
-                ].map((item) => (
-                  <button
-                    key={item.value}
-                    type="button"
-                    onClick={() => patchTheme({ overlay: item.value })}
-                    className={cn(
-                      "min-h-11 rounded-xl border text-[12px] font-semibold",
-                      painted.overlay === item.value
-                        ? "border-ink bg-ink text-white"
-                        : "border-line bg-white text-ink hover:border-ink/15",
-                    )}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
+          <div>
+            <Label>Escurecer a foto</Label>
+            <p className="mb-1.5 mt-0.5 text-[12px] leading-snug text-muted">
+              Deixa os blocos mais fáceis de ler por cima da imagem.
+            </p>
+            <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+              {[
+                { value: 0, label: "Nada" },
+                { value: 20, label: "Leve" },
+                { value: 40, label: "Médio" },
+                { value: 60, label: "Forte" },
+              ].map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => patchTheme({ overlay: item.value })}
+                  className={cn(
+                    "min-h-11 rounded-xl border text-[12px] font-semibold",
+                    painted.overlay === item.value
+                      ? "border-ink bg-ink text-white"
+                      : "border-line bg-white text-ink hover:border-ink/15",
+                  )}
+                >
+                  {item.label}
+                </button>
+              ))}
             </div>
-            <button
-              type="button"
-              className="text-[13px] font-semibold text-muted hover:text-ink"
-              onClick={() =>
-                patchTheme({ backgroundImage: "", overlay: 0 })
-              }
-            >
-              Remover foto de fundo
-            </button>
-          </>
+          </div>
         ) : null}
       </section>
 

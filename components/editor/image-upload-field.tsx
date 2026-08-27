@@ -40,21 +40,25 @@ function uploadMessage(err: unknown) {
 export function ImageUploadField({
   value,
   onUploaded,
+  onRemove,
   onLocked,
   upload,
   variant = "avatar",
   photoSize = 88,
   buttonLabel = "Alterar foto",
+  removeLabel = "Remover foto",
   emptyLabel = "Foto",
   hint = "JPEG, PNG ou WEBP. Máximo 1 MB.",
 }: {
   value: string | null;
   onUploaded: (url: string) => void;
+  onRemove?: () => void;
   onLocked?: () => void;
   upload: (file: File) => Promise<string>;
   variant?: "avatar" | "cover";
   photoSize?: number;
   buttonLabel?: string;
+  removeLabel?: string;
   emptyLabel?: string;
   hint?: string;
 }) {
@@ -177,22 +181,41 @@ export function ImageUploadField({
           className="sr-only"
           onChange={(event) => void onFileChange(event)}
         />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={pending}
-          onClick={() => inputRef.current?.click()}
-        >
-          {pending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Enviando...
-            </>
-          ) : (
-            buttonLabel
-          )}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            disabled={pending}
+            onClick={() => inputRef.current?.click()}
+          >
+            {pending ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              buttonLabel
+            )}
+          </Button>
+          {value && onRemove ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={pending}
+              onClick={() => {
+                revokeLocalPreview();
+                setPreviewSrc(null);
+                setBroken(false);
+                setError(null);
+                onRemove();
+              }}
+            >
+              {removeLabel}
+            </Button>
+          ) : null}
+        </div>
         <p className="text-[12px] leading-relaxed text-muted">{hint}</p>
         {error ? (
           <p role="alert" className="text-[12px] text-red-700">

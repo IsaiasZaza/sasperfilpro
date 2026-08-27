@@ -136,9 +136,13 @@ export function BlockInspector({
                   value={content.bannerUrl || null}
                   variant="cover"
                   buttonLabel={content.bannerUrl ? "Trocar capa" : "Enviar capa"}
+                  removeLabel="Remover capa"
                   emptyLabel="Capa"
                   onUploaded={(bannerUrl) =>
                     setContent({ ...content, layout: "banner", bannerUrl })
+                  }
+                  onRemove={() =>
+                    setContent({ ...content, bannerUrl: "" })
                   }
                   upload={async (file) => {
                     const data = await profileApi.uploadBanner(file);
@@ -146,17 +150,6 @@ export function BlockInspector({
                   }}
                   onLocked={onUpgrade}
                 />
-                {content.bannerUrl ? (
-                  <button
-                    type="button"
-                    className="mt-2 text-[13px] font-semibold text-muted hover:text-ink"
-                    onClick={() =>
-                      setContent({ ...content, bannerUrl: "" })
-                    }
-                  >
-                    Remover capa
-                  </button>
-                ) : null}
               </Field>
             ) : null}
             <BlockLookControls

@@ -391,7 +391,9 @@ export function themeToApi(
   } else {
     const raw = parseStoredTheme(theme);
     if (raw.backgroundImage === "" || raw.backgroundImage === null) {
-      api.backgroundImage = "";
+      // null no PUT substitui a URL antiga. Omitir / "" o backend ignora e a foto volta.
+      api.backgroundImage = null;
+      api.overlay = 0;
     }
   }
   return api;
@@ -417,15 +419,21 @@ export function mergeThemeResponse(
 
   if (!isThemeEmpty(fromApi)) {
     const rawIn = parseStoredTheme(incoming);
+    const rawLocal = parseStoredTheme(local);
+    const clearedImage =
+      rawLocal.backgroundImage === "" || rawLocal.backgroundImage === null;
     const next = { ...fromApi };
     const apiHasAtmosphere = rawIn.atmosphere != null;
     if (!apiHasAtmosphere && localTheme?.atmosphere && localTheme.atmosphere !== "none") {
       next.atmosphere = localTheme.atmosphere;
     }
-    if (rawIn.backgroundImage == null && localTheme?.backgroundImage) {
+    if (clearedImage) {
+      next.backgroundImage = null;
+      next.overlay = 0;
+    } else if (rawIn.backgroundImage == null && localTheme?.backgroundImage) {
       next.backgroundImage = localTheme.backgroundImage;
     }
-    if (rawIn.overlay == null && localTheme?.overlay) {
+    if (!clearedImage && rawIn.overlay == null && localTheme?.overlay) {
       next.overlay = localTheme.overlay;
     }
     return { theme: next, lost: false };
