@@ -137,7 +137,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-10 flex justify-center pb-5">
           <Link
             href="/"
-            className="pp-tap pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[11px] font-medium backdrop-blur-md"
+            className="pp-tap pointer-events-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-medium backdrop-blur-md"
             style={{
               background: `color-mix(in srgb, ${painted.card} 72%, transparent)`,
               border: `1px solid ${painted.line}`,

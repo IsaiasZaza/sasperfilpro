@@ -209,7 +209,7 @@ function BlockView({
           >
             {name}
           </h1>
-          {page.username ? (
+          {page.username && !motion ? (
             <p
               className="mt-1 break-all font-medium"
               style={{ color: theme.muted, fontSize: lookFontPx(look, "meta") }}
@@ -672,7 +672,7 @@ function BlockView({
         <span className="min-w-0 flex-1 text-left">
           <span className="flex items-center gap-1.5">
             <span
-              className="block truncate font-semibold leading-tight"
+              className="block font-semibold leading-tight [overflow-wrap:anywhere]"
               style={{ fontSize: sizes.body }}
             >
               {content.label || "Link"}
@@ -833,7 +833,7 @@ function BlockView({
               "group flex items-center gap-3.5",
               surfaceClass(look),
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
-              look.pulse && "wa-pulse",
+              look.pulse && "block-pulse",
               tapClass(look),
             )}
             style={{
@@ -845,7 +845,8 @@ function BlockView({
                 shadow: "0 10px 24px -12px rgba(20, 140, 70, 0.55)",
                 shadowColor: fill,
               }),
-              minHeight: metrics.minHeight + 8,
+              minHeight: Math.max(48, metrics.minHeight + 8),
+              ...pulseStyle(fill),
             }}
           >
             <span
@@ -866,14 +867,14 @@ function BlockView({
             </span>
             <span className="min-w-0 flex-1 text-left leading-tight">
               <span
-                className="block truncate font-semibold"
+                className="block font-semibold [overflow-wrap:anywhere]"
                 style={{ fontSize: lookFontPx(look, "button") }}
               >
                 {label}
               </span>
               {showHint ? (
                 <span
-                  className="mt-0.5 block truncate font-medium"
+                  className="mt-0.5 block font-medium"
                   style={{
                     fontSize: lookFontPx(look, "meta"),
                     opacity: 0.78,
@@ -907,26 +908,29 @@ function BlockView({
         price: lookFontPx(look, "price"),
         bio: lookFontPx(look, "bio"),
       };
-      const iconBox = socialIconPixels(look.fontSize);
-      const paintSocial = (brand: { background: string; color: string }) => {
+      const iconBox = Math.max(44, socialIconPixels(look.fontSize));
+      const paintSocial = (brand: (typeof SOCIAL_BRAND)[keyof typeof SOCIAL_BRAND]) => {
         if (socialStyle === "mono") {
           return {
             background: theme.accent,
             color: look.textColor || "#fff",
             border: undefined as string | undefined,
+            glow: theme.accent,
           };
         }
         if (socialStyle === "ghost") {
           return {
             background: "transparent",
-            color: look.textColor || theme.text,
-            border: `1.5px solid ${look.borderColor || theme.line}`,
+            color: look.textColor || brand.ink,
+            border: `1.5px solid ${look.borderColor || brand.ink}`,
+            glow: brand.glow,
           };
         }
         return {
           background: look.backgroundColor || brand.background,
           color: look.textColor || brand.color,
           border: look.borderColor ? `1px solid ${look.borderColor}` : undefined,
+          glow: brand.glow,
         };
       };
       if (layout === "buttons") {
@@ -934,6 +938,7 @@ function BlockView({
           <div className="space-y-2">
             {items.map((item, index) => {
               const brand = SOCIAL_BRAND[item.network] || SOCIAL_BRAND.site;
+              const paint = paintSocial(brand);
               return (
                 <div
                   key={`${item.network}-${item.url}-${index}`}
@@ -949,29 +954,44 @@ function BlockView({
                     className={buttonShellClass(
                       look,
                       cn(
-                        "min-h-11 font-medium",
+                        "group min-h-12 gap-3 overflow-hidden font-medium",
                         surfaceClass(look),
-                        tapClass(look),
+                        look.pulse ? undefined : "pp-social",
                       ),
                     )}
                     style={{
                       ...surfaceStyle(look, {
-                        background: paintSocial(brand).background,
-                        color: paintSocial(brand).color,
+                        background: paint.background,
+                        color: paint.color,
                         radius: theme.buttonRadius,
-                        padding: "10px 14px",
-                        shadowColor: theme.accent,
+                        padding: "8px 14px 8px 8px",
+                        shadowColor: paint.glow,
                       }),
-                      border: paintSocial(brand).border,
+                      border: paint.border,
                       fontSize: sizes.body,
-                      ...pulseStyle(look.backgroundColor || brand.background),
+                      ["--social-glow" as string]: paint.glow,
+                      ...pulseStyle(look.backgroundColor || paint.glow),
                     }}
                   >
-                    <SocialIcon
-                      network={item.network}
-                      className="h-4 w-4"
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        background:
+                          socialStyle === "ghost"
+                            ? `${brand.ink}14`
+                            : "rgba(255,255,255,0.2)",
+                        color: paint.color,
+                      }}
+                    >
+                      <SocialIcon network={item.network} className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-left">
+                      {item.label || networkFallback(item.network)}
+                    </span>
+                    <ArrowUpRight
+                      className="h-4 w-4 shrink-0 opacity-55 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                      aria-hidden
                     />
-                    {item.label || networkFallback(item.network)}
                   </a>
                 </div>
               );
@@ -981,7 +1001,7 @@ function BlockView({
       }
       return (
         <div
-          className={cn("flex flex-wrap gap-2.5", justifyAlign(look.align))}
+          className={cn("flex flex-wrap gap-3", justifyAlign(look.align))}
           style={surfaceStyle(look, {
             radius: look.backgroundColor ? "1.25rem" : undefined,
             padding: look.backgroundColor ? "12px" : undefined,
@@ -990,6 +1010,10 @@ function BlockView({
           {items.map((item, index) => {
             const brand = SOCIAL_BRAND[item.network] || SOCIAL_BRAND.site;
             const paint = paintSocial(brand);
+            const tiktokRing =
+              item.network === "tiktok" &&
+              socialStyle === "brand" &&
+              !look.backgroundColor;
             return (
               <a
                 key={`${item.network}-${item.url}-${index}`}
@@ -999,8 +1023,9 @@ function BlockView({
                 aria-label={item.label || networkFallback(item.network)}
                 className={cn(
                   "flex items-center justify-center",
-                  look.pulse && "block-pulse",
-                  tapClass(look),
+                  look.pulse && items.length === 1
+                    ? "block-pulse"
+                    : "pp-social",
                 )}
                 style={{
                   width: iconBox,
@@ -1009,13 +1034,19 @@ function BlockView({
                   color: paint.color,
                   borderRadius: lookRadius(look.radius, "9999px"),
                   border: paint.border,
-                  ...pulseStyle(brand.background),
+                  boxShadow: tiktokRing
+                    ? "0 0 0 1.5px #25f4ee99, 0 0 0 3px #fe2c5588"
+                    : socialStyle === "brand"
+                      ? "0 8px 18px -12px rgba(20,17,14,0.55)"
+                      : undefined,
+                  ["--social-glow" as string]: paint.glow,
+                  ...pulseStyle(paint.glow),
                 }}
               >
                 <SocialIcon
                   network={item.network}
                   className={
-                    iconBox >= 56 ? "h-6 w-6" : iconBox <= 40 ? "h-4 w-4" : "h-5 w-5"
+                    iconBox >= 56 ? "h-6 w-6" : iconBox <= 44 ? "h-4 w-4" : "h-5 w-5"
                   }
                 />
               </a>
@@ -1058,7 +1089,7 @@ function BlockView({
           >
             {content.heading || "Serviços"}
           </p>
-          <div className={cn("w-full", asCards ? "grid grid-cols-2 gap-2" : "space-y-1.5")}>
+          <div className={cn("w-full", asCards ? "grid grid-cols-1 gap-2.5" : "space-y-2")}>
             {items.map((item: ServiceItem) => {
               const showPrice = serviceHasPrice(item);
               const price = showPrice
@@ -1141,10 +1172,12 @@ function BlockView({
                     tapClass(look),
                   );
               const style = {
-                background: look.backgroundColor ? "transparent" : theme.card,
-                border: `1px solid ${look.borderColor || theme.line}`,
+                background: look.backgroundColor
+                  ? "transparent"
+                  : `color-mix(in srgb, ${theme.text} 12%, ${theme.card})`,
+                border: `1px solid ${look.borderColor || `color-mix(in srgb, ${theme.text} 22%, ${theme.line})`}`,
                 borderRadius: lookRadius(look.radius, asCards ? "1.1rem" : "1rem"),
-                padding: asCards ? "12px" : "12px 14px",
+                padding: asCards ? "14px" : "12px 14px",
                 color: theme.text,
               };
               if (whatsapp?.phone) {
@@ -1219,8 +1252,10 @@ function BlockView({
                   asQuote
                     ? undefined
                     : {
-                        background: look.backgroundColor ? "transparent" : theme.card,
-                        border: `1px solid ${look.borderColor || theme.line}`,
+                        background: look.backgroundColor
+                          ? "transparent"
+                          : `color-mix(in srgb, ${theme.text} 12%, ${theme.card})`,
+                        border: `1px solid ${look.borderColor || `color-mix(in srgb, ${theme.text} 22%, ${theme.line})`}`,
                         borderRadius: lookRadius(look.radius, "1rem"),
                         padding: "14px",
                       }
@@ -1368,7 +1403,7 @@ export function ProfilePreview({
           asPage
             ? cn(
                 "mx-auto w-full max-w-[30rem] px-5 pb-28",
-                heroIsBanner ? "pt-0" : "pt-10 sm:pt-14",
+                heroIsBanner ? "pt-0" : "pt-10 sm:pt-16",
               )
             : cn("px-3.5 pb-16", heroIsBanner ? "pt-0" : "pt-1"),
         )}
@@ -1417,7 +1452,7 @@ export function ProfilePreview({
               <h1 className="mt-6 font-serif text-[1.75rem] leading-tight">
                 {page.displayName || page.username}
               </h1>
-              {page.username ? (
+              {page.username && !asPage ? (
                 <p className="mt-1 text-[13px]" style={{ color: theme.muted }}>
                   @{page.username}
                 </p>
@@ -1437,7 +1472,7 @@ export function ProfilePreview({
             </div>
           )}
         </div>
-        <div className={cn(asPage ? "mt-6 space-y-3" : "mt-3 space-y-2.5")}>
+        <div className={cn(asPage ? "mt-7 space-y-3.5" : "mt-3 space-y-2.5")}>
           {rest.map((block, index) => (
             <div
               key={block.id}

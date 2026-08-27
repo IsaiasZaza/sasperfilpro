@@ -20,14 +20,14 @@ const ATMOSPHERE_OPTIONS: {
   label: string;
   hint: string;
 }[] = [
-  { id: "none", label: "Limpo", hint: "Sem efeito" },
-  { id: "claw", label: "Claw", hint: "Neon monstro" },
-  { id: "comic", label: "Hero", hint: "Comic punch" },
-  { id: "arc", label: "Arc", hint: "Brilho reator" },
-  { id: "symbiote", label: "Symbiote", hint: "Roxo vivo" },
-  { id: "storm", label: "Storm", hint: "Choque" },
-  { id: "inferno", label: "Inferno", hint: "Fogo" },
-  { id: "cosmic", label: "Cosmic", hint: "Galáxia" },
+  { id: "none", label: "Nenhum", hint: "Só as cores" },
+  { id: "claw", label: "Neon", hint: "Traços vivos" },
+  { id: "comic", label: "Quadrinhos", hint: "Estilo HQ" },
+  { id: "arc", label: "Reator", hint: "Círculo de luz" },
+  { id: "symbiote", label: "Roxo", hint: "Manchas" },
+  { id: "storm", label: "Tempestade", hint: "Raios" },
+  { id: "inferno", label: "Fogo", hint: "Chamas" },
+  { id: "cosmic", label: "Espaço", hint: "Estrelas" },
 ];
 
 function ColorField({
@@ -182,7 +182,7 @@ export function AppearancePanel({
       <section>
         <h3 className="font-serif text-lg text-ink">Atmosfera</h3>
         <p className="mt-1 text-[13px] text-muted">
-          Efeito animado por cima das cores.
+          Um movimento suave por cima das cores. Nenhum deixa a página quieta.
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
           {ATMOSPHERE_OPTIONS.map((option) => (
@@ -244,20 +244,28 @@ export function AppearancePanel({
           <>
             <div>
               <Label>Escurecer a foto</Label>
+              <p className="mb-1.5 mt-0.5 text-[12px] leading-snug text-muted">
+                Deixa os blocos mais fáceis de ler por cima da imagem.
+              </p>
               <div className="mt-1.5 grid grid-cols-4 gap-1.5">
-                {[0, 20, 40, 60].map((value) => (
+                {[
+                  { value: 0, label: "Nada" },
+                  { value: 20, label: "Leve" },
+                  { value: 40, label: "Médio" },
+                  { value: 60, label: "Forte" },
+                ].map((item) => (
                   <button
-                    key={value}
+                    key={item.value}
                     type="button"
-                    onClick={() => patchTheme({ overlay: value })}
+                    onClick={() => patchTheme({ overlay: item.value })}
                     className={cn(
                       "min-h-11 rounded-xl border text-[12px] font-semibold",
-                      painted.overlay === value
+                      painted.overlay === item.value
                         ? "border-ink bg-ink text-white"
                         : "border-line bg-white text-ink hover:border-ink/15",
                     )}
                   >
-                    {value === 0 ? "Não" : `${value}%`}
+                    {item.label}
                   </button>
                 ))}
               </div>

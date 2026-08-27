@@ -14,7 +14,7 @@ import {
 import { ImageUploadField } from "@/components/editor/image-upload-field";
 import { ServicesEditor } from "@/components/editor/services-editor";
 import { FieldHead, SizeRow } from "@/components/editor/size-pills";
-import { SocialIcon } from "@/components/profile/brand-icons";
+import { SocialIcon, SOCIAL_BRAND } from "@/components/profile/brand-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -115,6 +115,7 @@ export function BlockInspector({
             />
             <ChoiceRow
               label="Layout do topo"
+              hint="Empilhado: foto em cima. Ao lado: foto e texto na mesma linha. Capa: faixa larga com a foto por cima."
               value={
                 content.layout ||
                 (look.align === "left" || look.align === "right"
@@ -124,6 +125,7 @@ export function BlockInspector({
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
                 { value: "stack", label: "Empilhado" },
+                { value: "split", label: "Ao lado" },
                 { value: "banner", label: "Capa" },
               ]}
             />
@@ -315,6 +317,7 @@ export function BlockInspector({
             </Field>
             <ChoiceRow
               label="Como aparece"
+              hint="Cartão mostra o endereço. Com mapa inclui uma prévia do Google Maps."
               value={content.layout || "card"}
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
@@ -334,7 +337,6 @@ export function BlockInspector({
             look={lookFrom(content)}
             onChange={(nextLook) => setContent(mergeLook(content, nextLook))}
             showWidth
-            showPulse
             showFontSize={false}
           />
         </div>
@@ -374,7 +376,10 @@ export function BlockInspector({
               />
             </Field>
           </Section>
-          <Section title="Estilo do botão">
+          <Section
+            title="Estilo do botão"
+            hint="Principal chama mais atenção. Suave é mais leve. Contorno só desenha a borda."
+          >
             <div className="grid grid-cols-3 gap-2">
               {(
                 [
@@ -388,7 +393,7 @@ export function BlockInspector({
                   type="button"
                   onClick={() => setContent({ ...content, style: value })}
                   className={cn(
-                    "rounded-xl border px-2 py-3 text-[12px] font-semibold transition",
+                    "min-h-11 rounded-xl border px-2 py-3 text-[12px] font-semibold transition",
                     style === value
                       ? "border-ink bg-ink text-white"
                       : "border-line bg-white text-ink hover:border-bronze/40",
@@ -484,6 +489,7 @@ export function BlockInspector({
             </Field>
             <ChoiceRow
               label="Formato do link"
+              hint="Linha é o botão clássico. Capa usa a foto grande. Limpo é só o texto."
               value={content.layout || "row"}
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
@@ -497,6 +503,10 @@ export function BlockInspector({
             <div className="flex flex-wrap gap-1.5">
               {LINK_ICON_OPTIONS.map((option) => {
                 const selected = icon === option.id;
+                const chip =
+                  option.id !== "auto" && option.id in SOCIAL_BRAND
+                    ? SOCIAL_BRAND[option.id as SocialNetwork]
+                    : null;
                 return (
                   <button
                     key={option.id}
@@ -508,11 +518,21 @@ export function BlockInspector({
                       })
                     }
                     className={cn(
-                      "inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                      selected
+                      "inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition",
+                      selected && !chip
                         ? "border-ink bg-ink text-white"
-                        : "border-line bg-card text-ink",
+                        : !selected
+                          ? "border-line bg-card text-ink hover:border-ink/20"
+                          : "border-transparent text-white",
                     )}
+                    style={
+                      selected && chip
+                        ? {
+                            background: chip.background,
+                            color: chip.color,
+                          }
+                        : undefined
+                    }
                   >
                     {option.id !== "auto" && option.id !== "emoji" ? (
                       <SocialIcon
@@ -560,7 +580,10 @@ export function BlockInspector({
       const look = lookFrom(content);
       return (
         <div className="space-y-5">
-          <Section title="Contato">
+          <Section
+            title="Contato"
+            hint="O botão verde abre o WhatsApp com o número e a mensagem. A prévia atualiza na hora."
+          >
             <Field>
               <FieldHead
                 label="Texto do botão"
@@ -632,31 +655,22 @@ export function BlockInspector({
       const layout: SocialLayout = content.layout || "icons";
       return (
         <div className="space-y-4">
-          <Section title="Estilo">
-            <div className="grid grid-cols-2 gap-1.5">
-              {(
-                [
-                  ["icons", "Só ícones"],
-                  ["buttons", "Botões com texto"],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setContent({ ...content, layout: value })}
-                  className={cn(
-                    "min-h-11 rounded-xl border px-2 text-[12px] font-semibold",
-                    layout === value
-                      ? "border-ink bg-ink text-white"
-                      : "border-line bg-white text-ink hover:border-bronze/40",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <Section
+            title="Como aparece"
+            hint="A prévia à esquerda atualiza na hora. Ícones são bolinhas de cada rede; botões mostram o nome."
+          >
+            <ChoiceRow
+              label="Formato"
+              value={layout}
+              onChange={(value) => setContent({ ...content, layout: value })}
+              options={[
+                { value: "icons", label: "Ícones" },
+                { value: "buttons", label: "Botões" },
+              ]}
+            />
             <ChoiceRow
               label="Cores"
+              hint="Da rede usa Instagram rosa, YouTube vermelho, TikTok preto. Do tema pinta tudo com a cor da página. Contorno deixa o fundo transparente."
               value={content.style || "brand"}
               onChange={(style) => setContent({ ...content, style })}
               options={[
@@ -666,25 +680,35 @@ export function BlockInspector({
               ]}
             />
           </Section>
-          <Section title="Redes">
+          <Section
+            title="Redes"
+            hint="Escolha a plataforma e cole o endereço. Visitantes tocam o ícone e abrem a rede."
+          >
             {items.length === 0 ? (
               <p className="text-[13px] text-muted">
                 Nenhuma rede ainda. Adicione Instagram, TikTok ou o seu site.
               </p>
             ) : null}
-            {items.map((item, index) => (
+            {items.map((item, index) => {
+              const brand = SOCIAL_BRAND[item.network] || SOCIAL_BRAND.site;
+              return (
               <div
                 key={`${item.network}-${index}`}
                 className="space-y-3 rounded-2xl border border-line bg-white p-3.5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-2 text-[12px] font-semibold text-ink">
-                    <SocialIcon network={item.network} className="h-4 w-4" />
-                    Rede {index + 1}
+                  <p className="flex min-w-0 items-center gap-2 text-[13px] font-semibold text-ink">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white"
+                      style={{ background: brand.background, color: brand.color }}
+                    >
+                      <SocialIcon network={item.network} className="h-4 w-4" />
+                    </span>
+                    {networkLabel(item.network)}
                   </p>
                   <button
                     type="button"
-                    className="text-[12px] font-medium text-red-600"
+                    className="shrink-0 text-[12px] font-medium text-red-600"
                     onClick={() =>
                       setContent({
                         ...content,
@@ -696,7 +720,10 @@ export function BlockInspector({
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {SOCIAL_NETWORKS.map((network) => (
+                  {SOCIAL_NETWORKS.map((network) => {
+                    const chip = SOCIAL_BRAND[network.id];
+                    const selected = item.network === network.id;
+                    return (
                     <button
                       key={network.id}
                       type="button"
@@ -716,18 +743,27 @@ export function BlockInspector({
                         setContent({ ...content, items: next });
                       }}
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-                        item.network === network.id
-                          ? "border-ink bg-ink text-white"
-                          : "border-line bg-card text-ink",
+                        "inline-flex min-h-9 items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition",
+                        selected
+                          ? "border-transparent text-white"
+                          : "border-line bg-card text-ink hover:border-ink/20",
                       )}
+                      style={
+                        selected
+                          ? {
+                              background: chip.background,
+                              color: chip.color,
+                            }
+                          : undefined
+                      }
                     >
                       <SocialIcon network={network.id} className="h-3 w-3" />
                       {network.label}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
-                <Field>
+                <Field hint="Cole o endereço completo. Ex.: https://instagram.com/seunome">
                   <Label>URL</Label>
                   <Input
                     value={item.url}
@@ -752,7 +788,8 @@ export function BlockInspector({
                   />
                 </Field>
               </div>
-            ))}
+              );
+            })}
             <Button
               type="button"
               variant="secondary"
@@ -806,6 +843,7 @@ export function BlockInspector({
             </Field>
             <ChoiceRow
               label="Lista"
+              hint="Linhas empilham nome e preço. Cards viram cartões, um embaixo do outro — mais fáceis de tocar no celular."
               value={content.layout || "list"}
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
@@ -878,6 +916,7 @@ export function BlockInspector({
             </Field>
             <ChoiceRow
               label="Estilo"
+              hint="Cards têm estrelas e fundo. Citação é o texto grande com aspas."
               value={content.layout || "stack"}
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
@@ -1064,16 +1103,23 @@ const LINK_ICON_OPTIONS: { id: string; label: string }[] = [
 
 function Section({
   title,
+  hint,
   children,
 }: {
   title: string;
+  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <section className="space-y-3">
-      <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
-        {title}
-      </h3>
+      <div>
+        <h3 className="text-[12px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {title}
+        </h3>
+        {hint ? (
+          <p className="mt-1 text-[12px] leading-snug text-muted">{hint}</p>
+        ) : null}
+      </div>
       {children}
     </section>
   );

@@ -130,36 +130,35 @@ h2 {
 }
 
 .block-pulse {
-  animation: block-pulse 1.7s ease-out infinite;
+  animation: block-pulse 1.85s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, filter;
 }
 
 .wa-pulse {
-  animation: wa-pulse 2.6s ease-in-out infinite;
-}
-
-@keyframes wa-pulse {
-  0%,
-  100% {
-    box-shadow: 0 8px 22px -12px rgba(20, 140, 70, 0.45);
-  }
-  50% {
-    box-shadow: 0 12px 28px -10px rgba(20, 140, 70, 0.7);
-  }
+  animation: block-pulse 1.85s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform, filter;
 }
 
 @keyframes block-pulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pulse-color, #14110e) 42%, transparent);
-  }
-  70% {
-    transform: scale(1.03);
-    box-shadow: 0 0 0 12px transparent;
-  }
+  0%,
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 transparent;
+    filter: brightness(1);
   }
+  50% {
+    transform: scale(1.028);
+    filter: brightness(1.06)
+      drop-shadow(
+        0 0 10px color-mix(in srgb, var(--pulse-color, #25d366) 50%, transparent)
+      );
+  }
+}
+
+.block-pulse:active,
+.wa-pulse:active {
+  opacity: 0.92;
 }
 
 @keyframes marquee {
@@ -176,8 +175,21 @@ h2 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-marquee {
+  .animate-marquee,
+  .block-pulse,
+  .wa-pulse {
     animation: none;
+  }
+
+  .pp-tap,
+  .pp-social {
+    transition: none;
+  }
+
+  .pp-tap:hover,
+  .pp-social:hover {
+    transform: none;
+    filter: none;
   }
 }
 
@@ -375,9 +387,41 @@ h2 {
 /* Feedback de toque/hover. Usa filter em vez de box-shadow porque os blocos
    recebem box-shadow inline (look do editor), que venceria a classe. */
 .pp-tap {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition:
     transform 0.32s cubic-bezier(0.22, 1, 0.36, 1),
     filter 0.24s ease;
+}
+
+.pp-social {
+  position: relative;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.2s ease;
+}
+
+@media (hover: hover) {
+  .pp-social:hover {
+    z-index: 1;
+    transform: translate3d(0, -3px, 0) scale(1.07);
+    filter: brightness(1.06)
+      drop-shadow(
+        0 10px 16px color-mix(in srgb, var(--social-glow, #14110e) 42%, transparent)
+      );
+  }
+}
+
+.pp-social:active {
+  transform: scale(0.94);
+  transition-duration: 0.08s;
+}
+
+.pp-social:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--social-glow, #14110e) 75%, transparent);
+  outline-offset: 3px;
 }
 
 @media (hover: hover) {

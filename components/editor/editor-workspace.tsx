@@ -53,7 +53,7 @@ import {
   UNIQUE_BLOCKS,
 } from "@/components/editor/editor-meta";
 import { TemplateGallery } from "@/components/editor/template-gallery";
-import { PhoneFrame } from "@/components/mockups/phone-frame";
+import { PreviewStage } from "@/components/editor/preview-stage";
 import { ProfilePreview } from "@/components/profile/profile-preview";
 import { Button } from "@/components/ui/button";
 import { Toast, type ToastVariant } from "@/components/ui/toast";
@@ -1776,28 +1776,23 @@ export function EditorWorkspace() {
         >
           {previewPage ? (
             <>
-              <div className="hidden w-full flex-col items-center overflow-y-auto py-8 lg:flex">
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-soft">
-                  Prévia
-                </p>
-                <PhoneFrame>
-                  <ProfilePreview
-                    page={previewPage}
-                    selectedId={
-                      editorPanel === "block" ? selectedId : null
-                    }
-                    onSelectBlock={(id) => {
-                      setEditorPanel("block");
-                      setSelectedId(id);
-                      setInserterOpen(false);
-                    }}
-                  />
-                </PhoneFrame>
+              <div className="hidden w-full flex-col items-center overflow-y-auto lg:flex">
+                <PreviewStage
+                  page={previewPage}
+                  selectedId={
+                    editorPanel === "block" ? selectedId : null
+                  }
+                  onSelectBlock={(id) => {
+                    setEditorPanel("block");
+                    setSelectedId(id);
+                    setInserterOpen(false);
+                  }}
+                />
               </div>
               <div className="flex min-h-0 w-full flex-1 flex-col lg:hidden">
                 <div className="flex items-center justify-between gap-3 border-b border-line bg-white px-4 py-2.5">
                   <p className="text-[12px] font-medium text-muted">
-                    Toque num bloco para editar
+                    Como no seu celular. Toque num bloco para editar.
                   </p>
                   {profile.username ? (
                     <Link

@@ -119,20 +119,58 @@ const ICONS: Record<
   site: SiteIcon,
 };
 
-export const SOCIAL_BRAND: Record<
-  SocialNetwork,
-  { color: string; background: string }
-> = {
+export type SocialBrand = {
+  color: string;
+  background: string;
+  /** Cor da marca em fundo claro (contorno / chips). */
+  ink: string;
+  glow: string;
+};
+
+export const SOCIAL_BRAND: Record<SocialNetwork, SocialBrand> = {
   instagram: {
     color: "#fff",
-    background: "linear-gradient(135deg, #f9ce34 0%, #ee2a7b 50%, #6228d7 100%)",
+    background: "linear-gradient(135deg, #f9ce34 0%, #ee2a7b 48%, #6228d7 100%)",
+    ink: "#e1306c",
+    glow: "#ee2a7b",
   },
-  tiktok: { color: "#fff", background: "#111111" },
-  youtube: { color: "#fff", background: "#ff0000" },
-  facebook: { color: "#fff", background: "#1877f2" },
-  linkedin: { color: "#fff", background: "#0a66c2" },
-  x: { color: "#fff", background: "#111111" },
-  site: { color: "#fff", background: "#14110e" },
+  tiktok: {
+    color: "#fff",
+    background:
+      "radial-gradient(circle at 28% 22%, rgba(37,244,238,0.55), transparent 42%), radial-gradient(circle at 78% 78%, rgba(254,44,85,0.5), transparent 46%), #111111",
+    ink: "#fe2c55",
+    glow: "#25f4ee",
+  },
+  youtube: {
+    color: "#fff",
+    background: "#ff0000",
+    ink: "#ff0000",
+    glow: "#ff0000",
+  },
+  facebook: {
+    color: "#fff",
+    background: "#1877f2",
+    ink: "#1877f2",
+    glow: "#1877f2",
+  },
+  linkedin: {
+    color: "#fff",
+    background: "#0a66c2",
+    ink: "#0a66c2",
+    glow: "#0a66c2",
+  },
+  x: {
+    color: "#fff",
+    background: "#111111",
+    ink: "#14110e",
+    glow: "#14110e",
+  },
+  site: {
+    color: "#fff",
+    background: "#14110e",
+    ink: "#14110e",
+    glow: "#14110e",
+  },
 };
 
 export function SocialIcon({

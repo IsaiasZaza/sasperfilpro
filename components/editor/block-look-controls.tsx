@@ -61,7 +61,9 @@ export function BlockLookControls({
   showSurface?: boolean;
   showHover?: boolean;
 }) {
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(
+    () => Boolean(look.pulse) || look.shadow === "glow" || look.shadow === "hard",
+  );
 
   const patch = (partial: Partial<BlockLook>) => {
     const next: BlockLook = { ...look };
@@ -104,6 +106,7 @@ export function BlockLookControls({
         <>
           <ChoiceRow
             label="Tamanho da foto"
+            hint="Olhe a prévia: Mini é discreta, Máx preenche quase a largura."
             value={look.avatarSize || "md"}
             onChange={(avatarSize) => patch({ avatarSize })}
             options={[
@@ -130,6 +133,7 @@ export function BlockLookControls({
       {showSurface ? (
         <ChoiceRow
           label="Estilo da superfície"
+          hint="Limpo some o fundo. Cartão vira um retângulo. Vidro é translúcido. Neon brilha. Quadrinhos tem borda forte."
           value={look.surface || "clean"}
           onChange={(surface) => patch({ ...SURFACE_PRESETS[surface] })}
           options={[
@@ -137,7 +141,7 @@ export function BlockLookControls({
             { value: "card", label: "Cartão" },
             { value: "glass", label: "Vidro" },
             { value: "neon", label: "Neon" },
-            { value: "comic", label: "HQ" },
+            { value: "comic", label: "Quadrinhos" },
           ]}
         />
       ) : null}
@@ -167,14 +171,19 @@ export function BlockLookControls({
         <div>
           <button
             type="button"
-            className="inline-flex h-11 w-full items-center justify-between rounded-xl border border-line bg-white px-3 text-[13px] font-semibold text-ink"
+            className="inline-flex h-auto min-h-11 w-full items-center justify-between gap-3 rounded-xl border border-line bg-white px-3 py-2.5 text-left text-[13px] font-semibold text-ink"
             onClick={() => setMoreOpen((open) => !open)}
             aria-expanded={moreOpen}
           >
-            Mais opções
+            <span>
+              <span className="block">Ajuste fino</span>
+              <span className="mt-0.5 block text-[11px] font-medium text-muted">
+                Cantos, sombra e o que acontece ao tocar
+              </span>
+            </span>
             <ChevronDown
               className={cn(
-                "h-4 w-4 text-muted transition",
+                "h-4 w-4 shrink-0 text-muted transition",
                 moreOpen && "rotate-180",
               )}
             />
@@ -193,6 +202,7 @@ export function BlockLookControls({
               {showFontSize ? (
                 <ChoiceRow
                   label="Tamanho da letra"
+                  hint="Vale para os textos deste bloco. P é discreto, GG é o maior."
                   value={look.fontSize || "md"}
                   onChange={(fontSize) => patch({ fontSize })}
                   options={[
@@ -205,7 +215,8 @@ export function BlockLookControls({
               ) : null}
               {showAlign ? (
                 <ChoiceRow
-                  label={showAvatar ? "Posição (foto e textos)" : "Posição"}
+                  label={showAvatar ? "Posição (foto e textos)" : "Alinhamento"}
+                  hint="Move o conteúdo para a esquerda, centro ou direita."
                   value={look.align || "center"}
                   onChange={(align) => patch({ align })}
                   options={[
@@ -218,17 +229,19 @@ export function BlockLookControls({
               {showWidth ? (
                 <ChoiceRow
                   label="Largura"
+                  hint="Toda a linha ocupa a página. Ajustar deixa o botão só do tamanho do texto."
                   value={look.width || "full"}
                   onChange={(width) => patch({ width })}
                   options={[
                     { value: "full", label: "Toda a linha" },
-                    { value: "fit", label: "Encaixar" },
+                    { value: "fit", label: "Ajustar" },
                   ]}
                 />
               ) : null}
               {showRadius ? (
                 <ChoiceRow
-                  label="Cantos"
+                  label="Arredondamento"
+                  hint="Pílula deixa o botão bem oval. Reto é quadrado."
                   value={look.radius || "md"}
                   onChange={(radius) => patch({ radius })}
                   options={[
@@ -243,6 +256,7 @@ export function BlockLookControls({
               {showPadding ? (
                 <ChoiceRow
                   label="Espaço interno"
+                  hint="Distância entre a borda e o texto."
                   value={look.padding || "md"}
                   onChange={(padding) => patch({ padding })}
                   options={[
@@ -255,12 +269,13 @@ export function BlockLookControls({
               {showShadow ? (
                 <ChoiceRow
                   label="Sombra"
+                  hint="Suave é um relevo leve. Forte parece quadrinhos. Neon brilha."
                   value={look.shadow || "none"}
                   onChange={(shadow) => patch({ shadow })}
                   options={[
                     { value: "none", label: "Sem" },
                     { value: "soft", label: "Suave" },
-                    { value: "hard", label: "HQ" },
+                    { value: "hard", label: "Forte" },
                     { value: "glow", label: "Neon" },
                   ]}
                 />
@@ -268,6 +283,7 @@ export function BlockLookControls({
               {showHover ? (
                 <ChoiceRow
                   label="Ao tocar"
+                  hint="O que o botão faz quando alguém passa o mouse ou clica."
                   value={look.hover || "lift"}
                   onChange={(hover) => patch({ hover })}
                   options={[
@@ -281,6 +297,7 @@ export function BlockLookControls({
               {showPulse ? (
                 <ChoiceRow
                   label="O botão pulsa"
+                  hint="Cresce e brilha sozinho para chamar atenção. Use só no WhatsApp ou no botão principal — em vários ao mesmo tempo cansa."
                   value={look.pulse ? "yes" : "no"}
                   onChange={(value) => patch({ pulse: value === "yes" })}
                   options={[
@@ -382,11 +399,13 @@ function ColorControl({
 
 function ChoiceRow<T extends string>({
   label,
+  hint,
   value,
   onChange,
   options,
 }: {
   label: string;
+  hint?: string;
   value: T;
   onChange: (value: T) => void;
   options: { value: T; label: string; icon?: typeof AlignLeft }[];
@@ -405,7 +424,10 @@ function ChoiceRow<T extends string>({
   return (
     <div>
       <Label>{label}</Label>
-      <div className={cn("grid gap-1.5", cols)}>
+      {hint ? (
+        <p className="mb-1.5 mt-0.5 text-[12px] leading-snug text-muted">{hint}</p>
+      ) : null}
+      <div className={cn("grid gap-1.5", cols)} role="group" aria-label={label}>
         {options.map((option) => {
           const Icon = option.icon;
           const selected = value === option.value;
@@ -413,6 +435,7 @@ function ChoiceRow<T extends string>({
             <button
               key={option.value}
               type="button"
+              aria-pressed={selected}
               onClick={() => {
                 if (option.value === value) return;
                 onChange(option.value);

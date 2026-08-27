@@ -170,15 +170,15 @@ export function lookFontPx(look: BlockLook, role: TextRole): string {
 export function buttonMetrics(size?: FontSize) {
   const key = size || "md";
   if (key === "sm") {
-    return { minHeight: 34, padding: "6px 12px", gap: 6, icon: 14 };
+    return { minHeight: 44, padding: "8px 14px", gap: 6, icon: 14 };
   }
   if (key === "lg") {
-    return { minHeight: 48, padding: "11px 16px", gap: 8, icon: 18 };
+    return { minHeight: 52, padding: "12px 16px", gap: 8, icon: 18 };
   }
   if (key === "xl") {
     return { minHeight: 56, padding: "13px 18px", gap: 10, icon: 20 };
   }
-  return { minHeight: 40, padding: "8px 14px", gap: 7, icon: 16 };
+  return { minHeight: 48, padding: "10px 15px", gap: 8, icon: 16 };
 }
 
 export function fontScale(size?: FontSize) {
@@ -456,7 +456,7 @@ export function buttonShellClass(look: BlockLook, extra?: string) {
 }
 
 export function socialIconPixels(size?: FontSize) {
-  if (size === "sm") return 40;
+  if (size === "sm") return 44;
   if (size === "lg") return 56;
   if (size === "xl") return 64;
   return 48;
