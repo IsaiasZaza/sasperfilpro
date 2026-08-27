@@ -500,40 +500,74 @@ function BlockView({
     case "WHATSAPP": {
       const content = block.content as WhatsAppContent;
       const color = look.textColor || "#fff";
-      const sizes = {
-        title: lookFontPx(look, "title"),
-        headline: lookFontPx(look, "headline"),
-        body: lookFontPx(look, "body"),
-        meta: lookFontPx(look, "meta"),
-        button: lookFontPx(look, "button"),
-        label: lookFontPx(look, "heading"),
-        price: lookFontPx(look, "price"),
-        bio: lookFontPx(look, "bio"),
-      };
+      const fill = look.backgroundColor || "#25D366";
+      const metrics = buttonMetrics(lookFontSize(look, "button"));
+      const iconBox = Math.max(32, metrics.minHeight - 6);
+      const iconPx = Math.max(14, Math.round(iconBox * 0.46));
+      const label = whatsappLabel(content.label);
+      const showHint = !/whatsapp/i.test(label);
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
             href={whatsappHref(content.phone || "", content.message)}
             target="_blank"
             rel="noopener noreferrer"
-            className={buttonShellClass(
-              look,
-              cn(tapClass(look.pulse), motion && "pp-sheen"),
+            className={cn(
+              "group flex items-center gap-3",
+              look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
+              look.pulse && "wa-pulse",
+              tapClass(look.pulse),
             )}
             style={{
               ...surfaceStyle(look, {
-                background: "#128c4b",
+                background: fill,
                 color,
-                radius: theme.buttonRadius,
-                padding: buttonMetrics(lookFontSize(look, "button")).padding,
+                radius: "1.15rem",
+                padding: "8px 12px 8px 8px",
+                shadow: "0 10px 24px -12px rgba(20, 140, 70, 0.55)",
               }),
-              minHeight: buttonMetrics(lookFontSize(look, "button")).minHeight,
-              fontSize: sizes.button,
-              ...pulseStyle(look.backgroundColor || "#128c4b"),
+              minHeight: metrics.minHeight + 8,
             }}
           >
-            <WhatsAppIcon className="h-[18px] w-[18px]" />
-            {whatsappLabel(content.label)}
+            <span
+              className="flex shrink-0 items-center justify-center rounded-full"
+              style={{
+                width: iconBox,
+                height: iconBox,
+                background: "rgba(255,255,255,0.22)",
+                color,
+              }}
+            >
+              <span
+                className="inline-flex"
+                style={{ width: iconPx, height: iconPx }}
+              >
+                <WhatsAppIcon className="h-full w-full" />
+              </span>
+            </span>
+            <span className="min-w-0 flex-1 text-left leading-tight">
+              <span
+                className="block truncate font-semibold"
+                style={{ fontSize: lookFontPx(look, "button") }}
+              >
+                {label}
+              </span>
+              {showHint ? (
+                <span
+                  className="mt-0.5 block truncate font-medium"
+                  style={{
+                    fontSize: lookFontPx(look, "meta"),
+                    opacity: 0.78,
+                  }}
+                >
+                  WhatsApp
+                </span>
+              ) : null}
+            </span>
+            <ArrowUpRight
+              className="h-4 w-4 shrink-0 opacity-55 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+              aria-hidden="true"
+            />
           </a>
         </div>
       );

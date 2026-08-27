@@ -508,7 +508,7 @@ export function BlockInspector({
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
             fallbackTextColor="#ffffff"
-            fallbackBackground="#128c4b"
+            fallbackBackground="#25D366"
             backgroundLabel="Cor do botão"
             showWidth
             showPulse

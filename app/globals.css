@@ -133,6 +133,20 @@ h2 {
   animation: block-pulse 1.7s ease-out infinite;
 }
 
+.wa-pulse {
+  animation: wa-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes wa-pulse {
+  0%,
+  100% {
+    box-shadow: 0 8px 22px -12px rgba(20, 140, 70, 0.45);
+  }
+  50% {
+    box-shadow: 0 12px 28px -10px rgba(20, 140, 70, 0.7);
+  }
+}
+
 @keyframes block-pulse {
   0% {
     transform: scale(1);

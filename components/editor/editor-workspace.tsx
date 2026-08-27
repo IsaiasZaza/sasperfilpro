@@ -224,7 +224,6 @@ function defaultContent(
         phone: "",
         message: "Oi! Vi seu perfil no PerfilPro",
         label: "WhatsApp",
-        pulse: true,
       };
     case "SOCIAL":
       return {
