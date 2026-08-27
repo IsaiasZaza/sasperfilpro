@@ -4,11 +4,15 @@ import { Label } from "@/components/ui/label";
 import type { FontSize } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
-const OPTIONS: { value: FontSize; label: string }[] = [
-  { value: "sm", label: "P" },
-  { value: "md", label: "M" },
-  { value: "lg", label: "G" },
-  { value: "xl", label: "GG" },
+const OPTIONS: {
+  value: FontSize;
+  label: string;
+  sample: string;
+}[] = [
+  { value: "sm", label: "Pequena", sample: "11px" },
+  { value: "md", label: "Média", sample: "13px" },
+  { value: "lg", label: "Grande", sample: "16px" },
+  { value: "xl", label: "Bem grande", sample: "19px" },
 ];
 
 export function SizePills({
@@ -20,8 +24,8 @@ export function SizePills({
 }) {
   return (
     <div
-      className="flex shrink-0 gap-0.5"
-      role="group"
+      className="inline-flex h-8 shrink-0 items-center rounded-full border border-line bg-[#f7f4ef] p-0.5"
+      role="radiogroup"
       aria-label="Tamanho da letra"
     >
       {OPTIONS.map((option) => {
@@ -30,18 +34,23 @@ export function SizePills({
           <button
             key={option.value}
             type="button"
+            role="radio"
+            aria-checked={selected}
+            aria-label={option.label}
+            title={option.label}
             onClick={() => {
               if (option.value === value) return;
               onChange(option.value);
             }}
             className={cn(
-              "inline-flex h-7 min-w-7 items-center justify-center rounded-md px-1.5 text-[10px] font-semibold",
+              "inline-flex h-7 w-7 items-center justify-center rounded-full font-serif leading-none transition",
               selected
-                ? "bg-ink text-white"
-                : "border border-line bg-white text-muted hover:text-ink",
+                ? "bg-ink text-white shadow-sm"
+                : "text-muted hover:text-ink",
             )}
+            style={{ fontSize: option.sample }}
           >
-            {option.label}
+            A
           </button>
         );
       })}
