@@ -1,0 +1,11 @@
+file 'reel-01-hook.png'
+duration 2.6
+file 'reel-02-problema.png'
+duration 2.8
+file 'reel-03-gratis.png'
+duration 3.2
+file 'reel-04-incluso.png'
+duration 3.6
+file 'reel-05-cta.png'
+duration 4.2
+file 'reel-05-cta.png'

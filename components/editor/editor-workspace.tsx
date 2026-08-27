@@ -88,6 +88,7 @@ import {
 } from "@/lib/block-look";
 import {
   BLOCK_META,
+  sortBySortOrder,
   type BlockType,
   type Profile,
   type ProfileBlock,
@@ -510,15 +511,15 @@ export function EditorWorkspace() {
       setProfile(loaded);
       setAuthProfile(loaded);
       setBlocks(ordered);
-      setServices(s);
-      setTestimonials(t);
+      setServices(sortBySortOrder(s));
+      setTestimonials(sortBySortOrder(t));
       setSelectedId(ordered[0]?.id ?? null);
       lastSavedBlock.current = {};
       for (const block of ordered) {
         lastSavedBlock.current[block.id] = snapshotBlock(block);
       }
-      lastSavedServices.current = JSON.stringify(s);
-      lastSavedTestimonials.current = JSON.stringify(t);
+        lastSavedServices.current = JSON.stringify(sortBySortOrder(s));
+        lastSavedTestimonials.current = JSON.stringify(sortBySortOrder(t));
       lastSavedProfile.current = profileSnapshot(loaded);
     } catch (err) {
       setLoadError(
@@ -741,6 +742,7 @@ export function EditorWorkspace() {
             name: local.name,
             description: local.description,
             priceCents: local.priceCents,
+            sortOrder: local.sortOrder,
             isVisible: local.isVisible,
           }),
         );
@@ -750,13 +752,15 @@ export function EditorWorkspace() {
             name: local.name,
             description: local.description,
             priceCents: local.priceCents,
+            sortOrder: local.sortOrder,
             isVisible: local.isVisible,
           }),
         );
       }
     }
-    lastSavedServices.current = JSON.stringify(resolved);
-    setServices(resolved);
+    const orderedServices = sortBySortOrder(resolved);
+    lastSavedServices.current = JSON.stringify(orderedServices);
+    setServices(orderedServices);
   }, []);
 
   const persistDirtyTestimonials = useCallback(async () => {

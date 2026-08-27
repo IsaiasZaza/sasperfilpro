@@ -229,8 +229,8 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
       }
 
       const priceCents = parsePriceToCents(servicePrice);
-      if (!serviceName.trim() || priceCents < 0) {
-        setError("Informe um serviço e um preço válido.");
+      if (!serviceName.trim()) {
+        setError("Informe o nome do serviço.");
         return;
       }
 
@@ -436,7 +436,7 @@ export function OnboardingWizard({ profile }: { profile: Profile }) {
               />
             </div>
             <div>
-              <Label htmlFor="servicePrice">Preço (R$)</Label>
+              <Label htmlFor="servicePrice">Preço (R$) — opcional</Label>
               <Input
                 id="servicePrice"
                 value={servicePrice}

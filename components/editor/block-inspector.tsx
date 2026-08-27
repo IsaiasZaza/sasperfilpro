@@ -11,12 +11,19 @@ import {
   BlockLookControls,
   mergeLook,
 } from "@/components/editor/block-look-controls";
+import { ServicesEditor } from "@/components/editor/services-editor";
+import { FieldHead, SizeRow } from "@/components/editor/size-pills";
 import { SocialIcon } from "@/components/profile/brand-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { avatarPixels, avatarRadius, lookFrom } from "@/lib/block-look";
+import {
+  avatarPixels,
+  avatarRadius,
+  lookFrom,
+  lookFontSize,
+} from "@/lib/block-look";
 import type {
   CtaButtonContent,
   CtaStyle,
@@ -34,7 +41,6 @@ import type {
   TestimonialItem,
   WhatsAppContent,
 } from "@/lib/types/profile";
-import { formatPriceFromCents, parsePriceToCents } from "@/lib/types/profile";
 import { formatWhatsAppPhone, isValidWhatsAppPhone, normalizeWhatsAppPhone } from "@/lib/phone";
 import { isCompleteHttpUrl, normalizeHttpUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
@@ -112,7 +118,13 @@ export function BlockInspector({
           </Section>
           <Section title="Textos do topo">
             <Field hint="Como o nome aparece no cabeçalho da página.">
-              <Label>Nome</Label>
+              <FieldHead
+                label="Nome"
+                size={lookFontSize(look, "title")}
+                onSizeChange={(titleFontSize) =>
+                  setContent({ ...content, titleFontSize })
+                }
+              />
               <Input
                 value={name}
                 onChange={(event) =>
@@ -122,7 +134,13 @@ export function BlockInspector({
               />
             </Field>
             <Field>
-              <Label>Frase de destaque</Label>
+              <FieldHead
+                label="Frase de destaque"
+                size={lookFontSize(look, "headline")}
+                onSizeChange={(headlineFontSize) =>
+                  setContent({ ...content, headlineFontSize })
+                }
+              />
               <Input
                 value={headline}
                 onChange={(event) =>
@@ -132,7 +150,13 @@ export function BlockInspector({
               />
             </Field>
             <Field>
-              <Label>Bio</Label>
+              <FieldHead
+                label="Bio"
+                size={lookFontSize(look, "bio")}
+                onSizeChange={(bioFontSize) =>
+                  setContent({ ...content, bioFontSize })
+                }
+              />
               <Textarea
                 value={bio}
                 onChange={(event) =>
@@ -148,7 +172,13 @@ export function BlockInspector({
               </p>
             ) : (
               <Field>
-                <Label>Cidade no cabeçalho</Label>
+                <FieldHead
+                  label="Cidade no cabeçalho"
+                  size={lookFontSize(look, "meta")}
+                  onSizeChange={(metaFontSize) =>
+                    setContent({ ...content, metaFontSize })
+                  }
+                />
                 <Input
                   value={location}
                   onChange={(event) =>
@@ -161,20 +191,28 @@ export function BlockInspector({
           </Section>
           <BlockLookControls
             look={lookFrom(content)}
-            onChange={(look) => setContent(mergeLook(content, look))}
+            onChange={(nextLook) => setContent(mergeLook(content, nextLook))}
             showAvatar={false}
             showAlign
+            showFontSize={false}
           />
         </div>
       );
     }
     case "LOCATION": {
       const content = block.content as LocationContent;
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Endereço">
             <Field hint="Cidade, bairro ou endereço completo.">
-              <Label>Local</Label>
+              <FieldHead
+                label="Local"
+                size={lookFontSize(look, "body")}
+                onSizeChange={(bodyFontSize) =>
+                  setContent({ ...content, bodyFontSize })
+                }
+              />
               <Input
                 value={content.address ?? ""}
                 onChange={(event) =>
@@ -184,7 +222,13 @@ export function BlockInspector({
               />
             </Field>
             <Field hint="Se vazio, aparece o endereço acima.">
-              <Label>Texto do link</Label>
+              <FieldHead
+                label="Texto do link"
+                size={lookFontSize(look, "meta")}
+                onSizeChange={(metaFontSize) =>
+                  setContent({ ...content, metaFontSize })
+                }
+              />
               <Input
                 value={content.label ?? ""}
                 onChange={(event) =>
@@ -210,9 +254,10 @@ export function BlockInspector({
           </Section>
           <BlockLookControls
             look={lookFrom(content)}
-            onChange={(look) => setContent(mergeLook(content, look))}
+            onChange={(nextLook) => setContent(mergeLook(content, nextLook))}
             showWidth
             showPulse
+            showFontSize={false}
           />
         </div>
       );
@@ -220,11 +265,18 @@ export function BlockInspector({
     case "CTA_BUTTON": {
       const content = block.content as CtaButtonContent;
       const style = (content.style ?? "primary") as CtaStyle;
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Conteúdo">
             <Field>
-              <Label>Texto do botão</Label>
+              <FieldHead
+                label="Texto do botão"
+                size={lookFontSize(look, "button")}
+                onSizeChange={(buttonFontSize) =>
+                  setContent({ ...content, buttonFontSize })
+                }
+              />
               <Input
                 value={content.label ?? ""}
                 onChange={(event) =>
@@ -277,6 +329,7 @@ export function BlockInspector({
             backgroundLabel="Cor do botão"
             showWidth
             showPulse
+            showFontSize={false}
           />
         </div>
       );
@@ -284,11 +337,18 @@ export function BlockInspector({
     case "LINK_BUTTON": {
       const content = block.content as LinkButtonContent;
       const icon = content.icon || "auto";
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Conteúdo">
             <Field>
-              <Label>Texto do botão</Label>
+              <FieldHead
+                label="Texto do botão"
+                size={lookFontSize(look, "button")}
+                onSizeChange={(buttonFontSize) =>
+                  setContent({ ...content, buttonFontSize })
+                }
+              />
               <Input
                 value={content.label ?? ""}
                 onChange={(event) =>
@@ -308,7 +368,13 @@ export function BlockInspector({
               />
             </Field>
             <Field hint="Se vazio, aparece o domínio do link. Ex.: instagram.com">
-              <Label>Subtítulo</Label>
+              <FieldHead
+                label="Subtítulo"
+                size={lookFontSize(look, "meta")}
+                onSizeChange={(metaFontSize) =>
+                  setContent({ ...content, metaFontSize })
+                }
+              />
               <Input
                 value={content.subtitle ?? ""}
                 onChange={(event) =>
@@ -375,17 +441,25 @@ export function BlockInspector({
             showWidth
             showPulse
             backgroundLabel="Cor do botão"
+            showFontSize={false}
           />
         </div>
       );
     }
     case "WHATSAPP": {
       const content = block.content as WhatsAppContent;
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Contato">
             <Field>
-              <Label>Texto do botão</Label>
+              <FieldHead
+                label="Texto do botão"
+                size={lookFontSize(look, "button")}
+                onSizeChange={(buttonFontSize) =>
+                  setContent({ ...content, buttonFontSize })
+                }
+              />
               <Input
                 value={content.label ?? "WhatsApp"}
                 onChange={(event) =>
@@ -438,6 +512,7 @@ export function BlockInspector({
             backgroundLabel="Cor do botão"
             showWidth
             showPulse
+            showFontSize={false}
           />
         </div>
       );
@@ -591,11 +666,18 @@ export function BlockInspector({
     }
     case "SERVICES": {
       const content = block.content as ServicesContent;
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Seção">
             <Field>
-              <Label>Título</Label>
+              <FieldHead
+                label="Título"
+                size={lookFontSize(look, "heading")}
+                onSizeChange={(headingFontSize) =>
+                  setContent({ ...content, headingFontSize })
+                }
+              />
               <Input
                 value={content.heading ?? "Serviços"}
                 onChange={(event) =>
@@ -604,159 +686,61 @@ export function BlockInspector({
               />
             </Field>
           </Section>
-          <Section title="Itens">
-            {services.length === 0 ? (
-              <p className="text-[13px] text-muted">
-                Adicione os serviços que você oferece e o preço de cada um.
-              </p>
-            ) : null}
-            {services.map((item, index) => (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-2xl border border-line bg-white p-3.5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[12px] font-semibold text-ink">
-                    Serviço {index + 1}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      label={item.isVisible ? "Ocultar" : "Mostrar"}
-                      onClick={() =>
-                        onServicesChange?.(
-                          services.map((svc) =>
-                            svc.id === item.id
-                              ? { ...svc, isVisible: !svc.isVisible }
-                              : svc,
-                          ),
-                        )
-                      }
-                    >
-                      {item.isVisible ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      )}
-                    </IconButton>
-                    <IconButton
-                      label="Remover serviço"
-                      danger
-                      onClick={() =>
-                        onServicesChange?.(
-                          services.filter((svc) => svc.id !== item.id),
-                        )
-                      }
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </IconButton>
-                  </div>
-                </div>
-                <Field>
-                  <Label>Nome</Label>
-                  <Input
-                    value={item.name}
-                    onChange={(event) =>
-                      onServicesChange?.(
-                        services.map((svc) =>
-                          svc.id === item.id
-                            ? { ...svc, name: event.target.value }
-                            : svc,
-                        ),
-                      )
-                    }
-                    placeholder="Extensão fio a fio"
-                  />
-                </Field>
-                <Field>
-                  <Label>Descrição</Label>
-                  <Textarea
-                    value={item.description ?? ""}
-                    onChange={(event) =>
-                      onServicesChange?.(
-                        services.map((svc) =>
-                          svc.id === item.id
-                            ? { ...svc, description: event.target.value }
-                            : svc,
-                        ),
-                      )
-                    }
-                    placeholder="Duração, o que está incluso..."
-                    className="min-h-[72px]"
-                  />
-                </Field>
-                <Field>
-                  <Label>Preço (R$)</Label>
-                  <Input
-                    inputMode="decimal"
-                    value={
-                      item.priceCents
-                        ? (item.priceCents / 100).toLocaleString("pt-BR", {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 2,
-                          })
-                        : ""
-                    }
-                    onChange={(event) =>
-                      onServicesChange?.(
-                        services.map((svc) => {
-                          if (svc.id !== item.id) return svc;
-                          const priceCents = parsePriceToCents(
-                            event.target.value,
-                          );
-                          return {
-                            ...svc,
-                            priceCents,
-                            priceFormatted: formatPriceFromCents(priceCents),
-                          };
-                        }),
-                      )
-                    }
-                    placeholder="180"
-                  />
-                </Field>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                if (!canAddService) {
-                  onLimitReached?.();
-                  return;
+          <Section title="Tamanho dos itens">
+            <div className="space-y-2 rounded-2xl border border-line bg-white p-3.5">
+              <SizeRow
+                label="Nome"
+                value={lookFontSize(look, "body")}
+                onChange={(bodyFontSize) =>
+                  setContent({ ...content, bodyFontSize })
                 }
-                onServicesChange?.([
-                  ...services,
-                  {
-                    id: `tmp_${Date.now()}`,
-                    name: "Novo serviço",
-                    description: "",
-                    priceCents: 0,
-                    priceFormatted: "R$ 0,00",
-                    sortOrder: services.length,
-                    isVisible: true,
-                  },
-                ]);
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Adicionar serviço
-            </Button>
+              />
+              <SizeRow
+                label="Descrição"
+                value={lookFontSize(look, "meta")}
+                onChange={(metaFontSize) =>
+                  setContent({ ...content, metaFontSize })
+                }
+              />
+              <SizeRow
+                label="Preço"
+                value={lookFontSize(look, "price")}
+                onChange={(priceFontSize) =>
+                  setContent({ ...content, priceFontSize })
+                }
+              />
+            </div>
+          </Section>
+          <Section title="Itens">
+            <ServicesEditor
+              services={services}
+              onChange={(next) => onServicesChange?.(next)}
+              canAdd={canAddService}
+              onLimitReached={onLimitReached}
+            />
           </Section>
           <BlockLookControls
             look={lookFrom(content)}
-            onChange={(look) => setContent(mergeLook(content, look))}
+            onChange={(nextLook) => setContent(mergeLook(content, nextLook))}
+            showFontSize={false}
           />
         </div>
       );
     }
     case "TESTIMONIALS": {
       const content = (block.content || {}) as TestimonialsContent;
+      const look = lookFrom(content);
       return (
         <div className="space-y-5">
           <Section title="Seção">
             <Field>
-              <Label>Título</Label>
+              <FieldHead
+                label="Título"
+                size={lookFontSize(look, "heading")}
+                onSizeChange={(headingFontSize) =>
+                  setContent({ ...content, headingFontSize })
+                }
+              />
               <Input
                 value={content.heading ?? "Depoimentos"}
                 onChange={(event) =>
@@ -764,6 +748,24 @@ export function BlockInspector({
                 }
               />
             </Field>
+          </Section>
+          <Section title="Tamanho dos textos">
+            <div className="space-y-2 rounded-2xl border border-line bg-white p-3.5">
+              <SizeRow
+                label="Depoimento"
+                value={lookFontSize(look, "body")}
+                onChange={(bodyFontSize) =>
+                  setContent({ ...content, bodyFontSize })
+                }
+              />
+              <SizeRow
+                label="Nome do cliente"
+                value={lookFontSize(look, "meta")}
+                onChange={(metaFontSize) =>
+                  setContent({ ...content, metaFontSize })
+                }
+              />
+            </div>
           </Section>
           <Section title="Depoimentos">
             {testimonials.length === 0 ? (
@@ -904,6 +906,7 @@ export function BlockInspector({
           <BlockLookControls
             look={lookFrom(content)}
             onChange={(look) => setContent(mergeLook(content, look))}
+            showFontSize={false}
           />
         </div>
       );

@@ -13,9 +13,11 @@ import {
   alignStack,
   avatarPixels,
   avatarRadius,
+  buttonMetrics,
   buttonShellClass,
-  fontScale,
   justifyAlign,
+  lookFontPx,
+  lookFontSize,
   lookFrom,
   lookRadius,
   pulseStyle,
@@ -45,6 +47,8 @@ import {
   type TestimonialsContent,
   type TestimonialItem,
   type WhatsAppContent,
+  serviceHasPrice,
+  sortBySortOrder,
 } from "@/lib/types/profile";
 import { normalizeWhatsAppPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
@@ -118,7 +122,6 @@ function BlockView({
         (item) => item.type === "LOCATION" && item.isVisible,
       );
       const color = look.textColor || theme.text;
-      const sizes = fontScale(look.fontSize);
       const photo = avatarPixels(look.avatarSize);
       const radius = avatarRadius(look.avatarShape);
       const stacked = !look.align || look.align === "center";
@@ -171,14 +174,14 @@ function BlockView({
         >
           <h1
             className="break-words font-serif leading-[1.15] tracking-tight"
-            style={{ color, fontSize: sizes.title }}
+            style={{ color, fontSize: lookFontPx(look, "title") }}
           >
             {name}
           </h1>
           {page.username ? (
             <p
               className="mt-1 break-all font-medium"
-              style={{ color: theme.muted, fontSize: sizes.meta }}
+              style={{ color: theme.muted, fontSize: lookFontPx(look, "meta") }}
             >
               @{page.username}
             </p>
@@ -186,7 +189,7 @@ function BlockView({
           {headline ? (
             <p
               className="mt-2 break-words font-medium"
-              style={{ color, fontSize: sizes.headline }}
+              style={{ color, fontSize: lookFontPx(look, "headline") }}
             >
               {headline}
             </p>
@@ -194,7 +197,7 @@ function BlockView({
           {bioText ? (
             <p
               className="mt-2.5 w-full break-words leading-relaxed"
-              style={{ color: theme.muted, fontSize: sizes.body }}
+              style={{ color: theme.muted, fontSize: lookFontPx(look, "bio") }}
             >
               {bioText}
             </p>
@@ -209,7 +212,7 @@ function BlockView({
                     ? "justify-end"
                     : "justify-start",
               )}
-              style={{ color: theme.muted, fontSize: sizes.meta }}
+              style={{ color: theme.muted, fontSize: lookFontPx(look, "meta") }}
             >
               <MapPin className="h-3.5 w-3.5 shrink-0" />
               <span className="min-w-0 break-words">{locationText}</span>
@@ -250,7 +253,16 @@ function BlockView({
       if (!text) return null;
       const href = content.mapsUrl || content.url;
       const color = look.textColor || theme.text;
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       const align = look.align || "center";
       const full = look.width !== "fit";
       const card = (
@@ -332,7 +344,16 @@ function BlockView({
     case "CTA_BUTTON": {
       const content = block.content as CtaButtonContent;
       const style = content.style || "primary";
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       const fill =
         look.backgroundColor ||
         (style === "outline"
@@ -359,9 +380,10 @@ function BlockView({
                 : look.borderColor
                   ? `1px solid ${look.borderColor}`
                   : undefined,
-          padding: "12px 16px",
+          padding: buttonMetrics(lookFontSize(look, "button")).padding,
         }),
       };
+      const ctaMetrics = buttonMetrics(lookFontSize(look, "button"));
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
@@ -377,6 +399,8 @@ function BlockView({
             )}
             style={{
               ...lookStyle,
+              minHeight: ctaMetrics.minHeight,
+              gap: ctaMetrics.gap,
               fontSize: sizes.button,
               ...pulseStyle(
                 style === "primary"
@@ -400,7 +424,17 @@ function BlockView({
       );
       const host = linkHostname(content.url);
       const subtitle = (content.subtitle || "").trim() || host;
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
+      const linkMetrics = buttonMetrics(lookFontSize(look, "button"));
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
@@ -408,7 +442,7 @@ function BlockView({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "group flex min-h-14 items-center gap-3 px-2.5 py-2",
+              "group flex items-center gap-3 px-2.5 py-2",
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
               look.pulse && "block-pulse",
               tapClass(look.pulse),
@@ -422,6 +456,7 @@ function BlockView({
                 padding: "8px 10px",
                 shadow: "0 1px 2px rgba(20,17,14,0.05)",
               }),
+              minHeight: linkMetrics.minHeight + 8,
               ...pulseStyle(fill.background),
             }}
           >
@@ -465,7 +500,16 @@ function BlockView({
     case "WHATSAPP": {
       const content = block.content as WhatsAppContent;
       const color = look.textColor || "#fff";
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
@@ -481,8 +525,9 @@ function BlockView({
                 background: "#128c4b",
                 color,
                 radius: theme.buttonRadius,
-                padding: "12px 16px",
+                padding: buttonMetrics(lookFontSize(look, "button")).padding,
               }),
+              minHeight: buttonMetrics(lookFontSize(look, "button")).minHeight,
               fontSize: sizes.button,
               ...pulseStyle(look.backgroundColor || "#128c4b"),
             }}
@@ -498,7 +543,16 @@ function BlockView({
       const items = content.items || [];
       if (items.length === 0) return null;
       const layout = content.layout || "icons";
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       const iconBox = socialIconPixels(look.fontSize);
       if (layout === "buttons") {
         return (
@@ -592,11 +646,22 @@ function BlockView({
     }
     case "SERVICES": {
       const content = block.content as ServicesContent;
-      const items = (page.services || []).filter((s) => s.isVisible !== false);
+      const items = sortBySortOrder(page.services || []).filter(
+        (s) => s.isVisible !== false,
+      );
       if (items.length === 0) return null;
       const whatsapp = pageWhatsApp(page);
       const headingColor = look.textColor || theme.muted;
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       return (
         <div
           className={cn("flex flex-col", alignStack(look.align))}
@@ -613,12 +678,14 @@ function BlockView({
           </p>
           <div className="w-full space-y-1.5">
             {items.map((item: ServiceItem) => {
-              const price =
-                item.priceFormatted ||
-                (item.priceCents / 100).toLocaleString("pt-BR", {
-                  style: "currency",
-                  currency: "BRL",
-                });
+              const showPrice = serviceHasPrice(item);
+              const price = showPrice
+                ? item.priceFormatted ||
+                  (item.priceCents / 100).toLocaleString("pt-BR", {
+                    style: "currency",
+                    currency: "BRL",
+                  })
+                : "";
               const inner = (
                 <>
                   <span className="min-w-0 text-left">
@@ -640,12 +707,14 @@ function BlockView({
                       </span>
                     ) : null}
                   </span>
-                  <span
-                    className="shrink-0 font-semibold"
-                    style={{ fontSize: sizes.body }}
-                  >
-                    {price}
-                  </span>
+                  {showPrice ? (
+                    <span
+                      className="shrink-0 font-semibold"
+                      style={{ fontSize: sizes.price }}
+                    >
+                      {price}
+                    </span>
+                  ) : null}
                 </>
               );
               const className =
@@ -694,7 +763,16 @@ function BlockView({
       );
       if (items.length === 0) return null;
       const headingColor = look.textColor || theme.muted;
-      const sizes = fontScale(look.fontSize);
+      const sizes = {
+        title: lookFontPx(look, "title"),
+        headline: lookFontPx(look, "headline"),
+        body: lookFontPx(look, "body"),
+        meta: lookFontPx(look, "meta"),
+        button: lookFontPx(look, "button"),
+        label: lookFontPx(look, "heading"),
+        price: lookFontPx(look, "price"),
+        bio: lookFontPx(look, "bio"),
+      };
       return (
         <div
           className={cn("flex flex-col", alignStack(look.align))}

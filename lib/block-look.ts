@@ -13,6 +13,33 @@ import type {
 import { cn } from "@/lib/utils";
 
 const FONT_SIZES: FontSize[] = ["sm", "md", "lg", "xl"];
+const ROLE_FONT_KEYS = [
+  "fontSize",
+  "titleFontSize",
+  "headlineFontSize",
+  "bioFontSize",
+  "headingFontSize",
+  "bodyFontSize",
+  "metaFontSize",
+  "buttonFontSize",
+  "priceFontSize",
+] as const;
+
+export type TextRole =
+  | "title"
+  | "headline"
+  | "bio"
+  | "heading"
+  | "body"
+  | "meta"
+  | "button"
+  | "price";
+
+function asFontSize(value: unknown): FontSize | undefined {
+  return FONT_SIZES.includes(value as FontSize)
+    ? (value as FontSize)
+    : undefined;
+}
 const AVATAR_SIZES: AvatarSize[] = ["xs", "sm", "md", "lg", "xl", "2xl"];
 const AVATAR_SHAPES: AvatarShape[] = ["circle", "rounded", "square"];
 const BLOCK_RADII: BlockRadius[] = ["none", "sm", "md", "lg", "pill"];
@@ -49,8 +76,9 @@ export function lookFrom(content: object): BlockLook {
   }
   if (c.width === "fit" || c.width === "full") look.width = c.width;
   if (c.pulse) look.pulse = true;
-  if (FONT_SIZES.includes(c.fontSize as FontSize)) {
-    look.fontSize = c.fontSize as FontSize;
+  for (const key of ROLE_FONT_KEYS) {
+    const value = asFontSize(c[key]);
+    if (value) look[key] = value;
   }
   if (AVATAR_SIZES.includes(c.avatarSize as AvatarSize)) {
     look.avatarSize = c.avatarSize as AvatarSize;
@@ -89,6 +117,44 @@ export function pulseClass(pulse?: boolean) {
 
 export function pulseStyle(color: string): CSSProperties {
   return { ["--pulse-color" as string]: color };
+}
+
+export function lookFontSize(look: BlockLook, role: TextRole): FontSize {
+  const specific = {
+    title: look.titleFontSize,
+    headline: look.headlineFontSize,
+    bio: look.bioFontSize,
+    heading: look.headingFontSize,
+    body: look.bodyFontSize,
+    meta: look.metaFontSize,
+    button: look.buttonFontSize,
+    price: look.priceFontSize,
+  }[role];
+  return specific || look.fontSize || "md";
+}
+
+export function lookFontPx(look: BlockLook, role: TextRole): string {
+  const scale = fontScale(lookFontSize(look, role));
+  if (role === "title") return scale.title;
+  if (role === "headline") return scale.headline;
+  if (role === "heading") return scale.label;
+  if (role === "button") return scale.button;
+  if (role === "meta") return scale.meta;
+  return scale.body;
+}
+
+export function buttonMetrics(size?: FontSize) {
+  const key = size || "md";
+  if (key === "sm") {
+    return { minHeight: 34, padding: "6px 12px", gap: 6, icon: 14 };
+  }
+  if (key === "lg") {
+    return { minHeight: 48, padding: "11px 16px", gap: 8, icon: 18 };
+  }
+  if (key === "xl") {
+    return { minHeight: 56, padding: "13px 18px", gap: 10, icon: 20 };
+  }
+  return { minHeight: 40, padding: "8px 14px", gap: 7, icon: 16 };
 }
 
 export function fontScale(size?: FontSize) {
@@ -275,8 +341,8 @@ export function surfaceStyle(
 export function buttonShellClass(look: BlockLook, extra?: string) {
   const full = look.width !== "fit";
   return cn(
-    "inline-flex min-h-12 items-center gap-2 font-semibold",
-    full ? "w-full" : "w-auto px-6",
+    "inline-flex items-center font-semibold",
+    full ? "w-full" : "w-auto px-4",
     justifyAlign(look.align),
     pulseClass(look.pulse),
     extra,

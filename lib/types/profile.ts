@@ -41,6 +41,14 @@ export type BlockLook = {
   width?: ButtonWidth;
   pulse?: boolean;
   fontSize?: FontSize;
+  titleFontSize?: FontSize;
+  headlineFontSize?: FontSize;
+  bioFontSize?: FontSize;
+  headingFontSize?: FontSize;
+  bodyFontSize?: FontSize;
+  metaFontSize?: FontSize;
+  buttonFontSize?: FontSize;
+  priceFontSize?: FontSize;
   avatarSize?: AvatarSize;
   avatarShape?: AvatarShape;
   radius?: BlockRadius;
@@ -270,6 +278,18 @@ export function formatPriceFromCents(cents: number) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+export function serviceHasPrice(item: Pick<ServiceItem, "priceCents">) {
+  return (item.priceCents ?? 0) > 0;
+}
+
+export function sortBySortOrder<T extends { id: string; sortOrder: number }>(
+  items: T[],
+) {
+  return [...items].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id),
+  );
 }
 
 export function parsePriceToCents(value: string) {
