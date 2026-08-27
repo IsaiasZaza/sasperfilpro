@@ -225,10 +225,10 @@ function BlockView({
           className={cn(
             "flex w-full px-3 pb-4 pt-3",
             stacked
-              ? "flex-col items-center gap-4"
+              ? "flex-col items-center gap-6"
               : look.align === "right"
-                ? "flex-row-reverse items-center gap-3.5"
-                : "flex-row items-center gap-3.5",
+                ? "flex-row-reverse items-center gap-5"
+                : "flex-row items-center gap-5",
           )}
           style={surfaceStyle(look, {
             padding:
@@ -513,7 +513,7 @@ function BlockView({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "group flex items-center gap-3",
+              "group flex items-center gap-3.5",
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
               look.pulse && "wa-pulse",
               tapClass(look.pulse),
@@ -973,7 +973,7 @@ export function ProfilePreview({
                   {initials(page.displayName || page.username || "PP")}
                 </span>
               </span>
-              <h1 className="mt-4 font-serif text-[1.75rem] leading-tight">
+              <h1 className="mt-6 font-serif text-[1.75rem] leading-tight">
                 {page.displayName || page.username}
               </h1>
               {page.username ? (
