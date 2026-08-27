@@ -166,6 +166,8 @@ export type ServiceItem = {
   isVisible: boolean;
 };
 
+export type TestimonialSpacing = "sm" | "md" | "lg";
+
 export type TestimonialItem = {
   id: string;
   authorName: string;
@@ -173,6 +175,11 @@ export type TestimonialItem = {
   rating: number;
   sortOrder: number;
   isVisible: boolean;
+  /** Sobrescreve o estilo padrão da seção. */
+  layout?: TestimonialsLayout;
+  padding?: BlockPadding;
+  /** Espaço abaixo deste depoimento. */
+  spacing?: TestimonialSpacing;
 };
 
 export type Profile = {

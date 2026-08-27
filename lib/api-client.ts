@@ -209,6 +209,9 @@ export const testimonialsApi = {
     rating?: number;
     sortOrder?: number;
     isVisible?: boolean;
+    layout?: TestimonialItem["layout"];
+    padding?: TestimonialItem["padding"];
+    spacing?: TestimonialItem["spacing"];
   }) {
     return api<TestimonialItem>("/me/profile/testimonials", {
       method: "POST",
@@ -223,6 +226,9 @@ export const testimonialsApi = {
       rating: number;
       sortOrder: number;
       isVisible: boolean;
+      layout: TestimonialItem["layout"];
+      padding: TestimonialItem["padding"];
+      spacing: TestimonialItem["spacing"];
     }>,
   ) {
     return api<TestimonialItem>(`/me/profile/testimonials/${id}`, {

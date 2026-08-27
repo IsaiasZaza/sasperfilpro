@@ -280,6 +280,12 @@ export function lookPadding(padding?: BlockPadding) {
   return undefined;
 }
 
+export function testimonialGap(spacing?: "sm" | "md" | "lg") {
+  if (spacing === "sm") return "0.5rem";
+  if (spacing === "lg") return "1.25rem";
+  return "0.75rem";
+}
+
 export function lookShadow(
   shadow?: BlockShadow,
   fallback?: string,

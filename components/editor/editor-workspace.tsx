@@ -776,6 +776,7 @@ export function EditorWorkspace() {
     }
     const orderedServices = sortBySortOrder(resolved);
     lastSavedServices.current = JSON.stringify(orderedServices);
+    servicesRef.current = orderedServices;
     setServices(orderedServices);
   }, []);
 
@@ -784,28 +785,26 @@ export function EditorWorkspace() {
     if (JSON.stringify(list) === lastSavedTestimonials.current) return;
     const resolved: TestimonialItem[] = [];
     for (const local of list) {
+      const payload = {
+        authorName: local.authorName,
+        text: local.text,
+        rating: local.rating,
+        sortOrder: local.sortOrder,
+        isVisible: local.isVisible,
+        layout: local.layout,
+        padding: local.padding,
+        spacing: local.spacing,
+      };
       if (local.id.startsWith("tmp_")) {
-        resolved.push(
-          await testimonialsApi.create({
-            authorName: local.authorName,
-            text: local.text,
-            rating: local.rating,
-            isVisible: local.isVisible,
-          }),
-        );
+        resolved.push(await testimonialsApi.create(payload));
       } else {
-        resolved.push(
-          await testimonialsApi.update(local.id, {
-            authorName: local.authorName,
-            text: local.text,
-            rating: local.rating,
-            isVisible: local.isVisible,
-          }),
-        );
+        resolved.push(await testimonialsApi.update(local.id, payload));
       }
     }
-    lastSavedTestimonials.current = JSON.stringify(resolved);
-    setTestimonials(resolved);
+    const ordered = sortBySortOrder(resolved);
+    lastSavedTestimonials.current = JSON.stringify(ordered);
+    testimonialsRef.current = ordered;
+    setTestimonials(ordered);
   }, []);
 
   const persistDirtyProfile = useCallback(async () => {
@@ -1271,10 +1270,16 @@ export function EditorWorkspace() {
   }
 
   function handleTestimonialsChange(next: TestimonialItem[]) {
+    const added = next.length > testimonials.length;
     const removed = testimonials.filter(
       (t) => !next.some((n) => n.id === t.id) && !t.id.startsWith("tmp_"),
     );
     setTestimonials(next);
+    if (added) {
+      notify("Depoimento adicionado", "success");
+    } else if (removed.length > 0) {
+      notify("Depoimento removido", "info");
+    }
     for (const item of removed) {
       void testimonialsApi.remove(item.id).catch(() => {
         setSaveState("error");

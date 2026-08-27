@@ -912,8 +912,8 @@ export function BlockInspector({
               />
             </Field>
             <ChoiceRow
-              label="Estilo"
-              hint="Cards têm estrelas e fundo. Citação é o texto grande com aspas."
+              label="Estilo padrão"
+              hint="Novos depoimentos herdam este estilo. Cada um pode ter o seu abaixo."
               value={content.layout || "stack"}
               onChange={(layout) => setContent({ ...content, layout })}
               options={[
@@ -946,7 +946,11 @@ export function BlockInspector({
                 Adicione falas reais de clientes para gerar confiança.
               </p>
             ) : null}
-            {testimonials.map((item, index) => (
+            {testimonials.map((item, index) => {
+              const defaultLayout = content.layout || "stack";
+              const itemLayout = item.layout ?? defaultLayout;
+              const asQuote = itemLayout === "quote";
+              return (
               <div
                 key={item.id}
                 className="space-y-3 rounded-2xl border border-line bg-white p-3.5"
@@ -954,6 +958,9 @@ export function BlockInspector({
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[12px] font-semibold text-ink">
                     Cliente {index + 1}
+                    {!item.isVisible ? (
+                      <span className="ml-1.5 font-normal text-muted">· oculto</span>
+                    ) : null}
                   </p>
                   <div className="flex items-center gap-1">
                     <IconButton
@@ -987,6 +994,64 @@ export function BlockInspector({
                     </IconButton>
                   </div>
                 </div>
+                <ChoiceRow
+                  label="Estilo"
+                  hint={
+                    asQuote
+                      ? "Texto grande com aspas, sem estrelas."
+                      : "Cartão com estrelas e fundo."
+                  }
+                  value={item.layout ?? defaultLayout}
+                  onChange={(layout) =>
+                    onTestimonialsChange?.(
+                      testimonials.map((tst) =>
+                        tst.id === item.id ? { ...tst, layout } : tst,
+                      ),
+                    )
+                  }
+                  options={[
+                    { value: "stack", label: "Card" },
+                    { value: "quote", label: "Citação" },
+                  ]}
+                />
+                <div className={cn("grid gap-3", asQuote ? "" : "sm:grid-cols-2")}>
+                  {!asQuote ? (
+                    <ChoiceRow
+                      label="Espaço interno"
+                      hint="Padding dentro do card."
+                      value={item.padding || "md"}
+                      onChange={(padding) =>
+                        onTestimonialsChange?.(
+                          testimonials.map((tst) =>
+                            tst.id === item.id ? { ...tst, padding } : tst,
+                          ),
+                        )
+                      }
+                      options={[
+                        { value: "sm", label: "Compacto" },
+                        { value: "md", label: "Normal" },
+                        { value: "lg", label: "Amplo" },
+                      ]}
+                    />
+                  ) : null}
+                  <ChoiceRow
+                    label="Espaço abaixo"
+                    hint="Distância até o próximo depoimento."
+                    value={item.spacing || "md"}
+                    onChange={(spacing) =>
+                      onTestimonialsChange?.(
+                        testimonials.map((tst) =>
+                          tst.id === item.id ? { ...tst, spacing } : tst,
+                        ),
+                      )
+                    }
+                    options={[
+                      { value: "sm", label: "Pouco" },
+                      { value: "md", label: "Normal" },
+                      { value: "lg", label: "Muito" },
+                    ]}
+                  />
+                </div>
                 <Field>
                   <Label>Nome</Label>
                   <Input
@@ -1019,37 +1084,44 @@ export function BlockInspector({
                     placeholder="Ficou perfeito, super recomendo."
                   />
                 </Field>
-                <div>
-                  <Label>Nota</Label>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map((rating) => (
-                      <button
-                        key={rating}
-                        type="button"
-                        onClick={() =>
-                          onTestimonialsChange?.(
-                            testimonials.map((tst) =>
-                              tst.id === item.id ? { ...tst, rating } : tst,
-                            ),
-                          )
-                        }
-                        className="inline-flex h-11 w-11 items-center justify-center rounded-lg hover:bg-background"
-                        aria-label={`${rating} estrelas`}
-                      >
-                        <Star
-                          className={cn(
-                            "h-5 w-5",
-                            rating <= (item.rating || 0)
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-line",
-                          )}
-                        />
-                      </button>
-                    ))}
+                {!asQuote ? (
+                  <div>
+                    <Label>Nota</Label>
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 4, 5].map((rating) => (
+                        <button
+                          key={rating}
+                          type="button"
+                          onClick={() =>
+                            onTestimonialsChange?.(
+                              testimonials.map((tst) =>
+                                tst.id === item.id ? { ...tst, rating } : tst,
+                              ),
+                            )
+                          }
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-lg hover:bg-background"
+                          aria-label={`${rating} estrelas`}
+                        >
+                          <Star
+                            className={cn(
+                              "h-5 w-5",
+                              rating <= (item.rating || 0)
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-line",
+                            )}
+                          />
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <p className="text-[12px] leading-relaxed text-muted">
+                    Citações não exibem estrelas na página.
+                  </p>
+                )}
               </div>
-            ))}
+              );
+            })}
             <Button
               type="button"
               variant="secondary"
@@ -1068,6 +1140,9 @@ export function BlockInspector({
                     rating: 5,
                     sortOrder: testimonials.length,
                     isVisible: true,
+                    layout: content.layout || "stack",
+                    padding: "md",
+                    spacing: "md",
                   },
                 ]);
               }}

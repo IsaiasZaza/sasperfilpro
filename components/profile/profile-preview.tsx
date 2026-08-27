@@ -21,12 +21,14 @@ import {
   lookFontPx,
   lookFontSize,
   lookFrom,
+  lookPadding,
   lookRadius,
   mediaRadius,
   pulseStyle,
   socialIconPixels,
   surfaceClass,
   surfaceStyle,
+  testimonialGap,
   withoutPadding,
 } from "@/lib/block-look";
 import {
@@ -1217,8 +1219,8 @@ function BlockView({
         (t) => t.isVisible !== false,
       );
       if (items.length === 0) return null;
+      const defaultLayout = content.layout || "stack";
       const headingColor = look.textColor || theme.muted;
-      const asQuote = content.layout === "quote";
       const sizes = {
         title: lookFontPx(look, "title"),
         headline: lookFontPx(look, "headline"),
@@ -1244,65 +1246,80 @@ function BlockView({
           >
             {content.heading || "Depoimentos"}
           </p>
-          <div className="w-full space-y-2">
-            {items.map((item: TestimonialItem) => (
-              <div
-                key={item.id}
-                className={asQuote ? "relative px-1 py-2" : undefined}
-                style={
-                  asQuote
-                    ? undefined
-                    : {
-                        background: look.backgroundColor
-                          ? "transparent"
-                          : `color-mix(in srgb, ${theme.text} 12%, ${theme.card})`,
-                        border: `1px solid ${look.borderColor || `color-mix(in srgb, ${theme.text} 22%, ${theme.line})`}`,
-                        borderRadius: lookRadius(look.radius, "1rem"),
-                        padding: "14px",
-                      }
-                }
-              >
-                {asQuote ? (
-                  <span
-                    aria-hidden="true"
-                    className="absolute -left-1 -top-3 font-serif leading-none"
-                    style={{
-                      color: theme.accent,
-                      fontSize: "2.6rem",
-                      opacity: 0.35,
-                    }}
-                  >
-                    “
-                  </span>
-                ) : (
-                  <div
-                    className="mb-1.5 flex gap-0.5"
-                    style={{ color: theme.accent }}
-                  >
-                    {Array.from({
-                      length: Math.max(1, Math.min(5, item.rating || 5)),
-                    }).map((_, index) => (
-                      <Star key={index} className="h-3.5 w-3.5 fill-current" />
-                    ))}
-                  </div>
-                )}
-                <p
-                  className="leading-relaxed"
+          <div className="w-full">
+            {items.map((item: TestimonialItem, index) => {
+              const itemLayout = item.layout ?? defaultLayout;
+              const asQuote = itemLayout === "quote";
+              const cardPadding =
+                lookPadding(item.padding) ||
+                lookPadding(look.padding) ||
+                "14px";
+              return (
+                <div
+                  key={item.id}
+                  className={asQuote ? "relative px-1 py-2" : undefined}
                   style={{
-                    color: look.textColor || theme.text,
-                    fontSize: asQuote ? sizes.headline : sizes.body,
+                    marginBottom:
+                      index < items.length - 1
+                        ? testimonialGap(item.spacing)
+                        : undefined,
+                    ...(asQuote
+                      ? undefined
+                      : {
+                          background: look.backgroundColor
+                            ? "transparent"
+                            : `color-mix(in srgb, ${theme.text} 12%, ${theme.card})`,
+                          border: `1px solid ${look.borderColor || `color-mix(in srgb, ${theme.text} 22%, ${theme.line})`}`,
+                          borderRadius: lookRadius(look.radius, "1rem"),
+                          padding: cardPadding,
+                        }),
                   }}
                 >
-                  {asQuote ? item.text : `“${item.text}”`}
-                </p>
-                <p
-                  className="mt-2 font-semibold"
-                  style={{ color: theme.muted, fontSize: sizes.meta }}
-                >
-                  {item.authorName}
-                </p>
-              </div>
-            ))}
+                  {asQuote ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute -left-1 -top-3 font-serif leading-none"
+                      style={{
+                        color: theme.accent,
+                        fontSize: "2.6rem",
+                        opacity: 0.35,
+                      }}
+                    >
+                      “
+                    </span>
+                  ) : (
+                    <div
+                      className="mb-1.5 flex gap-0.5"
+                      style={{ color: theme.accent }}
+                    >
+                      {Array.from({
+                        length: Math.max(1, Math.min(5, item.rating || 5)),
+                      }).map((_, starIndex) => (
+                        <Star
+                          key={starIndex}
+                          className="h-3.5 w-3.5 fill-current"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <p
+                    className="leading-relaxed"
+                    style={{
+                      color: look.textColor || theme.text,
+                      fontSize: asQuote ? sizes.headline : sizes.body,
+                    }}
+                  >
+                    {asQuote ? item.text : `“${item.text}”`}
+                  </p>
+                  <p
+                    className="mt-2 font-semibold"
+                    style={{ color: theme.muted, fontSize: sizes.meta }}
+                  >
+                    {item.authorName}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
       );
