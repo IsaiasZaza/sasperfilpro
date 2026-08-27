@@ -104,6 +104,18 @@ export const profileApi = {
       },
     );
   },
+  uploadBanner(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    return api<{ bannerUrl: string; profile: Profile }>(
+      "/me/profile/banner",
+      {
+        method: "POST",
+        body: form,
+        formData: true,
+      },
+    );
+  },
 };
 
 export const blocksApi = {

@@ -195,7 +195,6 @@ function applySavedProfile(
 
 function applyUploadedAvatar(
   profileRef: { current: Profile | null },
-  lastSavedProfile: { current: string },
   setProfile: (profile: Profile) => void,
   setAuthProfile: (profile: Profile) => void,
   avatarUrl: string,
@@ -204,13 +203,6 @@ function applyUploadedAvatar(
   if (!current) return;
   const next = { ...current, avatarUrl };
   profileRef.current = next;
-  try {
-    const last = JSON.parse(lastSavedProfile.current) as Record<string, unknown>;
-    last.avatarUrl = avatarUrl;
-    lastSavedProfile.current = JSON.stringify(last);
-  } catch {
-    lastSavedProfile.current = profileSnapshot(next);
-  }
   setProfile(next);
   setAuthProfile(next);
 }
@@ -571,10 +563,10 @@ export function EditorWorkspace() {
       .catch(() => undefined);
   }, []);
 
-  function requestUpgrade(message?: string) {
+  const requestUpgrade = useCallback((message?: string) => {
     setUpgradeMessage(message);
     setUpgradeOpen(true);
-  }
+  }, []);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -672,6 +664,7 @@ export function EditorWorkspace() {
         if (current && current.location !== address) {
           const updatedProfile = await profileApi.update({
             location: address,
+            avatarUrl: current.avatarUrl,
             theme: themeToApi(current.theme),
           });
           const { profile: merged, lost } = withPersistedTheme(
@@ -734,6 +727,7 @@ export function EditorWorkspace() {
           : hero.location !== undefined
             ? emptyToNull(hero.location)
             : emptyToNull(current?.location),
+        avatarUrl: current?.avatarUrl,
         theme: themeToApi(current?.theme),
       });
       const { profile: merged, lost } = withPersistedTheme(
@@ -833,6 +827,7 @@ export function EditorWorkspace() {
       location: locationOwnedByBlock
         ? emptyToNull(pending.location)
         : pickHeroText(heroContent, "location", pending.location),
+      avatarUrl: pending.avatarUrl,
       theme: themeToApi(pending.theme),
     });
     if (gen !== profileSaveGen.current) return;
@@ -905,6 +900,11 @@ export function EditorWorkspace() {
               : "Não salvou. Tente de novo.",
           "error",
         );
+        if (isPlanGateError(err)) {
+          requestUpgrade(
+            "Capa, foto de fundo e temas visuais ficam no Pro e no Premium.",
+          );
+        }
         throw err;
       } finally {
         saveInFlight.current = null;
@@ -921,6 +921,7 @@ export function EditorWorkspace() {
     persistDirtyProfile,
     persistDirtyServices,
     persistDirtyTestimonials,
+    requestUpgrade,
   ]);
 
   const scheduleAutosave = useCallback(() => {
@@ -2016,12 +2017,17 @@ export function EditorWorkspace() {
                   onAvatarUploaded={(data) => {
                     applyUploadedAvatar(
                       profileRef,
-                      lastSavedProfile,
                       setProfile,
                       setAuthProfile,
                       data.avatarUrl,
                     );
                   }}
+                  canCustomizeTheme={entitlements.customTheme}
+                  onUpgrade={() =>
+                    requestUpgrade(
+                      "Capa, foto de fundo e temas visuais ficam no Pro e no Premium.",
+                    )
+                  }
                   services={services}
                   testimonials={testimonials}
                   onServicesChange={handleServicesChange}

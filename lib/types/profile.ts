@@ -26,12 +26,20 @@ export type CtaStyle = "primary" | "secondary" | "outline";
 export type BlockAlign = "left" | "center" | "right";
 export type ButtonWidth = "full" | "fit";
 export type SocialLayout = "icons" | "buttons";
+export type SocialStyle = "brand" | "mono" | "ghost";
 export type FontSize = "sm" | "md" | "lg" | "xl";
 export type AvatarSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
 export type AvatarShape = "circle" | "rounded" | "square";
 export type BlockRadius = "none" | "sm" | "md" | "lg" | "pill";
 export type BlockPadding = "sm" | "md" | "lg";
-export type BlockShadow = "none" | "soft";
+export type BlockShadow = "none" | "soft" | "hard" | "glow";
+export type BlockHover = "none" | "lift" | "scale" | "glow";
+export type BlockSurface = "clean" | "card" | "glass" | "neon" | "comic";
+export type HeroLayout = "stack" | "split" | "banner";
+export type LinkLayout = "row" | "cover" | "minimal";
+export type ServicesLayout = "list" | "cards";
+export type TestimonialsLayout = "stack" | "quote";
+export type LocationLayout = "card" | "map";
 
 export type BlockLook = {
   textColor?: string;
@@ -54,6 +62,8 @@ export type BlockLook = {
   radius?: BlockRadius;
   padding?: BlockPadding;
   shadow?: BlockShadow;
+  hover?: BlockHover;
+  surface?: BlockSurface;
 };
 
 export type HeroContent = BlockLook & {
@@ -62,6 +72,8 @@ export type HeroContent = BlockLook & {
   bio?: string;
   avatarUrl?: string;
   location?: string;
+  layout?: HeroLayout;
+  bannerUrl?: string;
 };
 
 export type CtaButtonContent = BlockLook & {
@@ -75,6 +87,9 @@ export type LinkButtonContent = BlockLook & {
   url?: string;
   icon?: string;
   subtitle?: string;
+  thumbnailUrl?: string;
+  layout?: LinkLayout;
+  badge?: string;
 };
 
 export type WhatsAppContent = BlockLook & {
@@ -86,14 +101,17 @@ export type WhatsAppContent = BlockLook & {
 export type SocialContent = BlockLook & {
   items: { network: SocialNetwork; url: string; label?: string }[];
   layout?: SocialLayout;
+  style?: SocialStyle;
 };
 
 export type ServicesContent = BlockLook & {
   heading?: string;
+  layout?: ServicesLayout;
 };
 
 export type TestimonialsContent = BlockLook & {
   heading?: string;
+  layout?: TestimonialsLayout;
 };
 
 export type LocationContent = BlockLook & {
@@ -101,6 +119,7 @@ export type LocationContent = BlockLook & {
   mapsUrl?: string;
   url?: string;
   label?: string;
+  layout?: LocationLayout;
 };
 
 export type BlockContent =

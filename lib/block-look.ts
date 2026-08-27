@@ -3,10 +3,12 @@ import type {
   AvatarShape,
   AvatarSize,
   BlockAlign,
+  BlockHover,
   BlockLook,
   BlockPadding,
   BlockRadius,
   BlockShadow,
+  BlockSurface,
   ButtonWidth,
   FontSize,
 } from "@/lib/types/profile";
@@ -44,7 +46,23 @@ const AVATAR_SIZES: AvatarSize[] = ["xs", "sm", "md", "lg", "xl", "2xl"];
 const AVATAR_SHAPES: AvatarShape[] = ["circle", "rounded", "square"];
 const BLOCK_RADII: BlockRadius[] = ["none", "sm", "md", "lg", "pill"];
 const BLOCK_PADDINGS: BlockPadding[] = ["sm", "md", "lg"];
-const BLOCK_SHADOWS: BlockShadow[] = ["none", "soft"];
+const BLOCK_SHADOWS: BlockShadow[] = ["none", "soft", "hard", "glow"];
+const BLOCK_HOVERS: BlockHover[] = ["none", "lift", "scale", "glow"];
+const BLOCK_SURFACES: BlockSurface[] = [
+  "clean",
+  "card",
+  "glass",
+  "neon",
+  "comic",
+];
+
+export const SURFACE_PRESETS: Record<BlockSurface, Partial<BlockLook>> = {
+  clean: { surface: "clean", shadow: "none", radius: "md" },
+  card: { surface: "card", shadow: "soft", radius: "lg" },
+  glass: { surface: "glass", shadow: "soft", radius: "lg" },
+  neon: { surface: "neon", shadow: "glow", radius: "md" },
+  comic: { surface: "comic", shadow: "hard", radius: "none" },
+};
 
 function asLookColor(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
@@ -94,6 +112,12 @@ export function lookFrom(content: object): BlockLook {
   }
   if (BLOCK_SHADOWS.includes(c.shadow as BlockShadow)) {
     look.shadow = c.shadow as BlockShadow;
+  }
+  if (BLOCK_HOVERS.includes(c.hover as BlockHover)) {
+    look.hover = c.hover as BlockHover;
+  }
+  if (BLOCK_SURFACES.includes(c.surface as BlockSurface)) {
+    look.surface = c.surface as BlockSurface;
   }
 
   return look;
@@ -235,6 +259,20 @@ export function lookRadius(radius?: BlockRadius, fallback?: string) {
   return fallback;
 }
 
+/** Capas, fotos e mapas: pílula vira recorte oval e destrói a mídia. */
+export function mediaRadius(radius?: BlockRadius, fallback = "1.25rem") {
+  if (radius === "pill") return fallback;
+  return lookRadius(radius, fallback) || fallback;
+}
+
+/** Capa do HERO: cantos de baixo só — o topo encosta na tela. */
+export function coverRadius(radius?: BlockRadius) {
+  if (radius === "none") return "0";
+  if (radius === "sm") return "0 0 10px 10px";
+  if (radius === "md") return "0 0 16px 16px";
+  return "0 0 1.35rem 1.35rem";
+}
+
 export function lookPadding(padding?: BlockPadding) {
   if (padding === "sm") return "8px 12px";
   if (padding === "md") return "14px 16px";
@@ -242,10 +280,33 @@ export function lookPadding(padding?: BlockPadding) {
   return undefined;
 }
 
-export function lookShadow(shadow?: BlockShadow, fallback?: string) {
+export function lookShadow(
+  shadow?: BlockShadow,
+  fallback?: string,
+  color?: string,
+) {
+  const ink = color || "#14110e";
   if (shadow === "none") return "none";
   if (shadow === "soft") return "0 10px 28px -16px rgba(20,17,14,0.45)";
+  if (shadow === "hard") return `4px 4px 0 ${ink}`;
+  if (shadow === "glow") return `0 0 22px ${ink}73`;
   return fallback;
+}
+
+export function hoverClass(look: BlockLook) {
+  if (look.pulse) return undefined;
+  const hover = look.hover || "lift";
+  if (hover === "none") return undefined;
+  if (hover === "scale") return "pp-tap pp-tap-scale";
+  if (hover === "glow") return "pp-tap pp-tap-glow";
+  return "pp-tap";
+}
+
+export function surfaceClass(look: BlockLook) {
+  if (look.surface === "glass") return "pp-glass";
+  if (look.surface === "neon") return "pp-neon";
+  if (look.surface === "comic") return "pp-comic";
+  return undefined;
 }
 
 /** Look fica no `content`. Title só texto humano (legado `__pp_look__:` ainda é lido). */
@@ -317,25 +378,70 @@ export function surfaceStyle(
     border?: string;
     padding?: string;
     shadow?: string;
+    shadowColor?: string;
   } = {},
 ): CSSProperties {
   const style: CSSProperties = {};
-  const background = look.backgroundColor || fallbacks.background;
+  const surface = look.surface;
+  const accent = fallbacks.shadowColor || fallbacks.color || "#14110e";
+
+  let background = look.backgroundColor || fallbacks.background;
+  if (!look.backgroundColor && surface === "glass") {
+    background = fallbacks.background
+      ? `color-mix(in srgb, ${fallbacks.background} 62%, transparent)`
+      : "rgba(255,255,255,0.48)";
+  }
   if (background) style.background = background;
+
   const color = look.textColor || fallbacks.color;
   if (color) style.color = color;
-  const radius = lookRadius(look.radius, fallbacks.radius);
+
+  const radiusFallback =
+    surface === "comic" ? "6px" : fallbacks.radius;
+  const radius = lookRadius(look.radius, radiusFallback);
   if (radius) style.borderRadius = radius;
+
   if (look.borderColor) {
-    style.border = `1px solid ${look.borderColor}`;
+    style.border = `${surface === "comic" ? 2 : 1}px solid ${look.borderColor}`;
+  } else if (surface === "neon") {
+    style.border = `1px solid ${accent}`;
+  } else if (surface === "comic") {
+    style.border = `2.5px solid ${accent}`;
   } else if (fallbacks.border) {
     style.border = fallbacks.border;
   }
+
   const padding = lookPadding(look.padding) || fallbacks.padding;
   if (padding) style.padding = padding;
-  const shadow = lookShadow(look.shadow, fallbacks.shadow);
+
+  const defaultShadow =
+    surface === "neon"
+      ? `0 0 22px ${accent}73`
+      : surface === "comic"
+        ? `4px 4px 0 ${accent}`
+        : surface === "card" || surface === "glass"
+          ? "0 10px 28px -16px rgba(20,17,14,0.45)"
+          : fallbacks.shadow;
+  const shadow = lookShadow(look.shadow, defaultShadow, accent);
   if (shadow) style.boxShadow = shadow;
   return style;
+}
+
+/** Evita misturar `padding` com `paddingTop` no mesmo style. */
+export function withoutPadding(style: CSSProperties): CSSProperties {
+  const next = { ...style };
+  delete next.padding;
+  delete next.paddingTop;
+  delete next.paddingRight;
+  delete next.paddingBottom;
+  delete next.paddingLeft;
+  delete next.paddingBlock;
+  delete next.paddingInline;
+  delete next.paddingBlockStart;
+  delete next.paddingBlockEnd;
+  delete next.paddingInlineStart;
+  delete next.paddingInlineEnd;
+  return next;
 }
 
 export function buttonShellClass(look: BlockLook, extra?: string) {

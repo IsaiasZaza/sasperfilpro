@@ -1,9 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, Plus, Star, Trash2 } from "lucide-react";
-import { useAuth } from "@/components/auth/auth-provider";
+import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
 import {
   SOCIAL_NETWORKS,
   socialUrlPlaceholder,
@@ -11,8 +8,10 @@ import {
 } from "@/components/editor/editor-meta";
 import {
   BlockLookControls,
+  ChoiceRow,
   mergeLook,
 } from "@/components/editor/block-look-controls";
+import { ImageUploadField } from "@/components/editor/image-upload-field";
 import { ServicesEditor } from "@/components/editor/services-editor";
 import { FieldHead, SizeRow } from "@/components/editor/size-pills";
 import { SocialIcon } from "@/components/profile/brand-icons";
@@ -20,12 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  avatarPixels,
-  lookFrom,
-  lookFontSize,
-} from "@/lib/block-look";
-import { ApiError } from "@/lib/api";
+import { avatarPixels, lookFrom, lookFontSize } from "@/lib/block-look";
 import { profileApi } from "@/lib/api-client";
 import type {
   CtaButtonContent,
@@ -60,6 +54,8 @@ export function BlockInspector({
   onLimitReached,
   hasLocationBlock = false,
   onAvatarUploaded,
+  canCustomizeTheme = false,
+  onUpgrade,
 }: {
   block: ProfileBlock;
   onChange: (next: ProfileBlock) => void;
@@ -73,6 +69,8 @@ export function BlockInspector({
   onLimitReached?: () => void;
   hasLocationBlock?: boolean;
   onAvatarUploaded?: (data: { avatarUrl: string; profile: Profile }) => void;
+  canCustomizeTheme?: boolean;
+  onUpgrade?: () => void;
 }) {
   const setContent = (content: ProfileBlock["content"]) => {
     if (JSON.stringify(content) === JSON.stringify(block.content)) return;
@@ -92,17 +90,73 @@ export function BlockInspector({
       return (
         <div className="space-y-5">
           <Section title="Foto">
-            <AvatarUploadField
+            <ImageUploadField
               value={avatarUrl}
-              photo={photo}
-              onUploaded={(data) => {
+              photoSize={photo}
+              onUploaded={(url) => {
                 setContent({
                   ...content,
-                  avatarUrl: data.avatarUrl,
+                  avatarUrl: url,
                 });
-                onAvatarUploaded?.(data);
+                if (profile) {
+                  onAvatarUploaded?.({ avatarUrl: url, profile });
+                } else {
+                  onAvatarUploaded?.({
+                    avatarUrl: url,
+                    profile: { avatarUrl: url } as Profile,
+                  });
+                }
               }}
+              upload={async (file) => {
+                const data = await profileApi.uploadAvatar(file);
+                return data.avatarUrl;
+              }}
+              onLocked={onUpgrade}
             />
+            <ChoiceRow
+              label="Layout do topo"
+              value={
+                content.layout ||
+                (look.align === "left" || look.align === "right"
+                  ? "split"
+                  : "stack")
+              }
+              onChange={(layout) => setContent({ ...content, layout })}
+              options={[
+                { value: "stack", label: "Empilhado" },
+                { value: "banner", label: "Capa" },
+              ]}
+            />
+            {(content.layout || "stack") === "banner" && canCustomizeTheme ? (
+              <Field hint="Envia a imagem agora. A capa só entra no ar quando você clicar em Atualizar.">
+                <Label>Foto de capa</Label>
+                <ImageUploadField
+                  value={content.bannerUrl || null}
+                  variant="cover"
+                  buttonLabel={content.bannerUrl ? "Trocar capa" : "Enviar capa"}
+                  emptyLabel="Capa"
+                  onUploaded={(bannerUrl) =>
+                    setContent({ ...content, layout: "banner", bannerUrl })
+                  }
+                  upload={async (file) => {
+                    const data = await profileApi.uploadBanner(file);
+                    return data.bannerUrl;
+                  }}
+                  onLocked={onUpgrade}
+                />
+                {content.bannerUrl ? (
+                  <button
+                    type="button"
+                    className="mt-2 text-[13px] font-semibold text-muted hover:text-ink"
+                    onClick={() =>
+                      setContent({ ...content, bannerUrl: "" })
+                    }
+                  >
+                    Remover capa
+                  </button>
+                ) : null}
+              </Field>
+            ) : null}
             <BlockLookControls
               look={lookFrom(content)}
               onChange={(nextLook) =>
@@ -118,6 +172,8 @@ export function BlockInspector({
               showRadius={false}
               showPadding={false}
               showShadow={false}
+              showSurface={false}
+              showHover={false}
             />
           </Section>
           <Section title="Textos do topo">
@@ -198,7 +254,9 @@ export function BlockInspector({
             onChange={(nextLook) => setContent(mergeLook(content, nextLook))}
             showAvatar={false}
             showAlign
+            showHover={false}
             showFontSize={false}
+            showRadius={content.layout !== "banner"}
           />
         </div>
       );
@@ -255,6 +313,22 @@ export function BlockInspector({
                 placeholder="https://maps.google.com/?q=Brasilia"
               />
             </Field>
+            <ChoiceRow
+              label="Como aparece"
+              value={content.layout || "card"}
+              onChange={(layout) => setContent({ ...content, layout })}
+              options={[
+                { value: "card", label: "Cartão" },
+                { value: "map", label: "Com mapa" },
+              ]}
+            />
+            {(content.layout || "card") === "map" ? (
+              <p className="text-[12px] leading-relaxed text-muted">
+                O mapa é uma prévia. O visitante toca no cartão e abre o Google
+                Maps — o botão Maps permanece visível, sem o iframe roubar o
+                scroll da página.
+              </p>
+            ) : null}
           </Section>
           <BlockLookControls
             look={lookFrom(content)}
@@ -387,6 +461,37 @@ export function BlockInspector({
                 placeholder="instagram.com"
               />
             </Field>
+            <Field hint="Foto quadrada à esquerda do botão. Cole um link https://.">
+              <Label>Miniatura</Label>
+              <Input
+                value={content.thumbnailUrl ?? ""}
+                onChange={(event) =>
+                  setContent({ ...content, thumbnailUrl: event.target.value })
+                }
+                placeholder="https://…"
+                inputMode="url"
+              />
+            </Field>
+            <Field hint="Opcional. Ex.: Novo, Vagas.">
+              <Label>Selo</Label>
+              <Input
+                value={content.badge ?? ""}
+                onChange={(event) =>
+                  setContent({ ...content, badge: event.target.value })
+                }
+                placeholder="Novo"
+              />
+            </Field>
+            <ChoiceRow
+              label="Formato do link"
+              value={content.layout || "row"}
+              onChange={(layout) => setContent({ ...content, layout })}
+              options={[
+                { value: "row", label: "Linha" },
+                { value: "cover", label: "Capa" },
+                { value: "minimal", label: "Limpo" },
+              ]}
+            />
           </Section>
           <Section title="Ícone">
             <div className="flex flex-wrap gap-1.5">
@@ -550,6 +655,16 @@ export function BlockInspector({
                 </button>
               ))}
             </div>
+            <ChoiceRow
+              label="Cores"
+              value={content.style || "brand"}
+              onChange={(style) => setContent({ ...content, style })}
+              options={[
+                { value: "brand", label: "Da rede" },
+                { value: "mono", label: "Do tema" },
+                { value: "ghost", label: "Contorno" },
+              ]}
+            />
           </Section>
           <Section title="Redes">
             {items.length === 0 ? (
@@ -689,6 +804,15 @@ export function BlockInspector({
                 }
               />
             </Field>
+            <ChoiceRow
+              label="Lista"
+              value={content.layout || "list"}
+              onChange={(layout) => setContent({ ...content, layout })}
+              options={[
+                { value: "list", label: "Linhas" },
+                { value: "cards", label: "Cards" },
+              ]}
+            />
           </Section>
           <Section title="Tamanho dos itens">
             <div className="space-y-2 rounded-2xl border border-line bg-white p-3.5">
@@ -752,6 +876,15 @@ export function BlockInspector({
                 }
               />
             </Field>
+            <ChoiceRow
+              label="Estilo"
+              value={content.layout || "stack"}
+              onChange={(layout) => setContent({ ...content, layout })}
+              options={[
+                { value: "stack", label: "Cards" },
+                { value: "quote", label: "Citação" },
+              ]}
+            />
           </Section>
           <Section title="Tamanho dos textos">
             <div className="space-y-2 rounded-2xl border border-line bg-white p-3.5">
@@ -989,173 +1122,4 @@ function IconButton({
       {children}
     </button>
   );
-}
-
-function AvatarUploadField({
-  value,
-  photo,
-  onUploaded,
-}: {
-  value: string | null;
-  photo: number;
-  onUploaded: (data: { avatarUrl: string; profile: Profile }) => void;
-}) {
-  const router = useRouter();
-  const { clearSession } = useAuth();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const localUrlRef = useRef<string | null>(null);
-  const [previewSrc, setPreviewSrc] = useState(value);
-  const [broken, setBroken] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPreviewSrc(value);
-    setBroken(false);
-  }, [value]);
-
-  useEffect(() => {
-    return () => {
-      if (localUrlRef.current) URL.revokeObjectURL(localUrlRef.current);
-    };
-  }, []);
-
-  function revokeLocalPreview() {
-    if (localUrlRef.current) {
-      URL.revokeObjectURL(localUrlRef.current);
-      localUrlRef.current = null;
-    }
-  }
-
-  async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    setError(null);
-
-    if (!isAllowedAvatarFile(file)) {
-      setError("Use JPEG, PNG ou WEBP");
-      return;
-    }
-    if (file.size > AVATAR_MAX_BYTES) {
-      setError("A imagem deve ter no máximo 1 MB");
-      return;
-    }
-
-    revokeLocalPreview();
-    const localUrl = URL.createObjectURL(file);
-    localUrlRef.current = localUrl;
-    setPreviewSrc(localUrl);
-    setBroken(false);
-    setPending(true);
-
-    try {
-      const data = await profileApi.uploadAvatar(file);
-      revokeLocalPreview();
-      setPreviewSrc(data.avatarUrl);
-      setBroken(false);
-      onUploaded(data);
-    } catch (err) {
-      revokeLocalPreview();
-      setPreviewSrc(value);
-      if (
-        err instanceof ApiError &&
-        (err.status === 401 || err.code === "UNAUTHORIZED")
-      ) {
-        clearSession();
-        router.replace("/login");
-        return;
-      }
-      setError(avatarUploadMessage(err));
-    } finally {
-      setPending(false);
-    }
-  }
-
-  const size = Math.min(Math.max(photo, 64), 96);
-
-  return (
-    <div className="flex items-center gap-4">
-      <div
-        className="relative shrink-0 overflow-hidden rounded-full border border-line bg-ink/5"
-        style={{ width: size, height: size }}
-      >
-        {previewSrc && !broken ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previewSrc}
-            alt=""
-            className="h-full w-full object-cover"
-            onError={() => setBroken(true)}
-          />
-        ) : (
-          <span className="flex h-full w-full items-center justify-center text-[11px] font-medium text-muted">
-            Foto
-          </span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1 space-y-2">
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          onChange={(event) => void onFileChange(event)}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={pending}
-          onClick={() => inputRef.current?.click()}
-        >
-          {pending ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Enviando...
-            </>
-          ) : (
-            "Alterar foto"
-          )}
-        </Button>
-        <p className="text-[12px] leading-relaxed text-muted">
-          JPEG, PNG ou WEBP. Máximo 1 MB.
-        </p>
-        {error ? (
-          <p role="alert" className="text-[12px] text-red-700">
-            {error}
-          </p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-const AVATAR_MAX_BYTES = 1024 * 1024;
-const AVATAR_TYPES = new Set([
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-]);
-
-function isAllowedAvatarFile(file: File) {
-  if (AVATAR_TYPES.has(file.type.toLowerCase())) return true;
-  return /\.(jpe?g|png|webp)$/i.test(file.name);
-}
-
-function avatarUploadMessage(err: unknown) {
-  if (!(err instanceof ApiError)) {
-    return "Não foi possível salvar a foto. Tente de novo.";
-  }
-  if (err.code === "FILE_REQUIRED") return "Envie uma imagem";
-  if (err.code === "INVALID_FILE_TYPE") return "Use JPEG, PNG ou WEBP";
-  if (err.code === "FILE_TOO_LARGE" || err.status === 413) {
-    return "A imagem deve ter no máximo 1 MB";
-  }
-  if (err.code === "STORAGE_ERROR" || err.code === "STORAGE_NOT_CONFIGURED") {
-    return "Não foi possível salvar a foto. Tente de novo.";
-  }
-  return err.message || "Não foi possível salvar a foto. Tente de novo.";
 }

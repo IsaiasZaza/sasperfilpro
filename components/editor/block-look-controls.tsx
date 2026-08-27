@@ -4,15 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { AlignCenter, AlignLeft, AlignRight, ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { pickerHex } from "@/lib/block-look";
+import { pickerHex, SURFACE_PRESETS } from "@/lib/block-look";
 import type {
   AvatarShape,
   AvatarSize,
   BlockAlign,
+  BlockHover,
   BlockLook,
   BlockPadding,
   BlockRadius,
   BlockShadow,
+  BlockSurface,
   ButtonWidth,
   FontSize,
 } from "@/lib/types/profile";
@@ -36,6 +38,8 @@ export function BlockLookControls({
   showRadius = true,
   showPadding = true,
   showShadow = true,
+  showSurface = true,
+  showHover = true,
 }: {
   look: BlockLook;
   onChange: (next: BlockLook) => void;
@@ -54,6 +58,8 @@ export function BlockLookControls({
   showRadius?: boolean;
   showPadding?: boolean;
   showShadow?: boolean;
+  showSurface?: boolean;
+  showHover?: boolean;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -79,7 +85,8 @@ export function BlockLookControls({
     showRadius ||
     showPadding ||
     showShadow ||
-    showPulse;
+    showPulse ||
+    showHover;
 
   return (
     <section className="space-y-4">
@@ -119,6 +126,20 @@ export function BlockLookControls({
             ]}
           />
         </>
+      ) : null}
+      {showSurface ? (
+        <ChoiceRow
+          label="Estilo da superfície"
+          value={look.surface || "clean"}
+          onChange={(surface) => patch({ ...SURFACE_PRESETS[surface] })}
+          options={[
+            { value: "clean", label: "Limpo" },
+            { value: "card", label: "Cartão" },
+            { value: "glass", label: "Vidro" },
+            { value: "neon", label: "Neon" },
+            { value: "comic", label: "HQ" },
+          ]}
+        />
       ) : null}
       {showBackground || showTextColor ? (
         <div className="space-y-3">
@@ -239,6 +260,21 @@ export function BlockLookControls({
                   options={[
                     { value: "none", label: "Sem" },
                     { value: "soft", label: "Suave" },
+                    { value: "hard", label: "HQ" },
+                    { value: "glow", label: "Neon" },
+                  ]}
+                />
+              ) : null}
+              {showHover ? (
+                <ChoiceRow
+                  label="Ao tocar"
+                  value={look.hover || "lift"}
+                  onChange={(hover) => patch({ hover })}
+                  options={[
+                    { value: "lift", label: "Sobe" },
+                    { value: "scale", label: "Cresce" },
+                    { value: "glow", label: "Brilha" },
+                    { value: "none", label: "Parado" },
                   ]}
                 />
               ) : null}
@@ -424,6 +460,8 @@ export function mergeLook<T extends object>(
     "radius",
     "padding",
     "shadow",
+    "hover",
+    "surface",
   ] as const;
 
   for (const key of keys) {
@@ -437,13 +475,17 @@ export function mergeLook<T extends object>(
   return next;
 }
 
+export { ChoiceRow };
+
 export type {
   AvatarShape,
   AvatarSize,
   BlockAlign,
+  BlockHover,
   BlockPadding,
   BlockRadius,
   BlockShadow,
+  BlockSurface,
   ButtonWidth,
   FontSize,
 };

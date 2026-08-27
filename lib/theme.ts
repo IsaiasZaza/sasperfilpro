@@ -19,6 +19,10 @@ export type ApiTheme = {
   font?: "sans" | "serif" | "mono";
   /** Efeito de fundo animado. Backend deve aceitar e devolver este campo. */
   atmosphere?: AtmosphereId;
+  /** Foto de fundo da página (URL http(s) ou "" para limpar). */
+  backgroundImage?: string | null;
+  /** Escurece a foto de fundo, 0–80. */
+  overlay?: number;
 };
 
 export type PaintTheme = {
@@ -35,6 +39,8 @@ export type PaintTheme = {
   atmosphere: AtmosphereId;
   /** Gradiente de fundo (sobre a cor sólida). */
   wash: string;
+  backgroundImage: string | null;
+  overlay: number;
 };
 
 export type ThemePreset = {
@@ -246,6 +252,26 @@ export function asAtmosphere(value: unknown): AtmosphereId {
     : "none";
 }
 
+function asOverlay(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(80, Math.max(0, Math.round(n)));
+}
+
+function asImageUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const next = value.trim();
+  if (!next) return null;
+  try {
+    const url = new URL(next);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (!url.hostname || !url.hostname.includes(".")) return null;
+    return next;
+  } catch {
+    return null;
+  }
+}
+
 function luminance(hex: string): number {
   const r = Number.parseInt(hex.slice(1, 3), 16);
   const g = Number.parseInt(hex.slice(3, 5), 16);
@@ -316,6 +342,8 @@ export function resolvePaintTheme(
   const buttonStyle = asButtonStyle(t.buttonStyle);
   const font = asFont(t.font);
   const atmosphere = asAtmosphere(t.atmosphere);
+  const backgroundImage = asImageUrl(t.backgroundImage);
+  const overlay = asOverlay(t.overlay);
 
   return {
     background,
@@ -335,6 +363,8 @@ export function resolvePaintTheme(
           : "9999px",
     atmosphere,
     wash: washFor(atmosphere, accent, background),
+    backgroundImage,
+    overlay: backgroundImage ? overlay : 0,
   };
 }
 
@@ -347,7 +377,7 @@ export function themeToApi(
 ): ApiTheme | undefined {
   if (isThemeEmpty(theme)) return undefined;
   const painted = resolvePaintTheme(theme);
-  return {
+  const api: ApiTheme = {
     primaryColor: painted.primaryColor,
     backgroundColor: painted.background,
     textColor: painted.text,
@@ -355,6 +385,16 @@ export function themeToApi(
     font: painted.font,
     atmosphere: painted.atmosphere,
   };
+  if (painted.backgroundImage) {
+    api.backgroundImage = painted.backgroundImage;
+    if (painted.overlay > 0) api.overlay = painted.overlay;
+  } else {
+    const raw = parseStoredTheme(theme);
+    if (raw.backgroundImage === "" || raw.backgroundImage === null) {
+      api.backgroundImage = "";
+    }
+  }
+  return api;
 }
 
 export function themeFromApi(raw: unknown): ProfileTheme {
@@ -377,14 +417,18 @@ export function mergeThemeResponse(
 
   if (!isThemeEmpty(fromApi)) {
     const rawIn = parseStoredTheme(incoming);
+    const next = { ...fromApi };
     const apiHasAtmosphere = rawIn.atmosphere != null;
     if (!apiHasAtmosphere && localTheme?.atmosphere && localTheme.atmosphere !== "none") {
-      return {
-        theme: { ...fromApi, atmosphere: localTheme.atmosphere },
-        lost: false,
-      };
+      next.atmosphere = localTheme.atmosphere;
     }
-    return { theme: fromApi, lost: false };
+    if (rawIn.backgroundImage == null && localTheme?.backgroundImage) {
+      next.backgroundImage = localTheme.backgroundImage;
+    }
+    if (rawIn.overlay == null && localTheme?.overlay) {
+      next.overlay = localTheme.overlay;
+    }
+    return { theme: next, lost: false };
   }
 
   if (!localTheme) return { theme: {}, lost: false };
@@ -402,5 +446,7 @@ export function themeSnapshot(theme: ProfileTheme | null | undefined): string {
     buttonStyle: api.buttonStyle ?? "pill",
     font: api.font ?? "sans",
     atmosphere: api.atmosphere ?? "none",
+    backgroundImage: api.backgroundImage ?? "",
+    overlay: api.overlay ?? 0,
   });
 }

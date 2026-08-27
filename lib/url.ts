@@ -113,6 +113,11 @@ export function prepareBlockContent(
     else delete next.avatarUrl;
   }
 
+  if (type === "HERO" && "bannerUrl" in next) {
+    const banner = normalizeHttpUrl(asString(next.bannerUrl));
+    next.bannerUrl = banner || "";
+  }
+
   if (type === "WHATSAPP") {
     next.phone = digitsOnly(asString(next.phone, asString(prev.phone))).slice(
       0,

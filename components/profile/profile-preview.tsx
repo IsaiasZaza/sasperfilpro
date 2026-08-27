@@ -15,14 +15,19 @@ import {
   avatarRadius,
   buttonMetrics,
   buttonShellClass,
+  hoverClass,
   justifyAlign,
+  coverRadius,
   lookFontPx,
   lookFontSize,
   lookFrom,
   lookRadius,
+  mediaRadius,
   pulseStyle,
   socialIconPixels,
+  surfaceClass,
   surfaceStyle,
+  withoutPadding,
 } from "@/lib/block-look";
 import {
   brandFill,
@@ -85,8 +90,18 @@ function initials(name: string) {
 }
 
 /** Micro-interação de hover/toque. Pulse já anima transform — não empilhar. */
-function tapClass(pulse?: boolean) {
-  return pulse ? undefined : "pp-tap";
+function tapClass(look: { pulse?: boolean; hover?: "none" | "lift" | "scale" | "glow" }) {
+  return hoverClass(look);
+}
+
+function mapsEmbedSrc(address: string) {
+  return `https://maps.google.com/maps?q=${encodeURIComponent(address)}&z=15&output=embed`;
+}
+
+function mapsOpenHref(address: string, explicit?: string | null) {
+  const given = (explicit || "").trim();
+  if (given) return given;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }
 
 function BlockView({
@@ -123,7 +138,12 @@ function BlockView({
       const color = look.textColor || theme.text;
       const photo = avatarPixels(look.avatarSize);
       const radius = avatarRadius(look.avatarShape);
-      const stacked = !look.align || look.align === "center";
+      const layout =
+        content.layout ||
+        (look.align === "left" || look.align === "right" ? "split" : "stack");
+      const stacked = layout !== "split";
+      const bannerUrl = (content.bannerUrl || "").trim() || null;
+      const ring = look.borderColor || (look.surface === "neon" ? theme.accent : undefined);
       const avatarNode = avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -134,7 +154,13 @@ function BlockView({
             width: photo,
             height: photo,
             borderRadius: radius,
-            border: look.borderColor ? `2px solid ${look.borderColor}` : undefined,
+            border: ring ? `2px solid ${ring}` : undefined,
+            boxShadow:
+              look.surface === "neon"
+                ? `0 0 18px ${theme.accent}80`
+                : look.surface === "comic"
+                  ? `3px 3px 0 ${theme.text}`
+                  : undefined,
           }}
         />
       ) : (
@@ -148,7 +174,13 @@ function BlockView({
             background: look.backgroundColor
               ? `linear-gradient(145deg, ${theme.muted}, ${look.backgroundColor})`
               : `linear-gradient(145deg, ${theme.muted}, ${theme.accent})`,
-            border: look.borderColor ? `2px solid ${look.borderColor}` : undefined,
+            border: ring ? `2px solid ${ring}` : undefined,
+            boxShadow:
+              look.surface === "neon"
+                ? `0 0 18px ${theme.accent}80`
+                : look.surface === "comic"
+                  ? `3px 3px 0 ${theme.text}`
+                  : undefined,
           }}
         >
           {initials(name)}
@@ -219,10 +251,109 @@ function BlockView({
           ) : null}
         </div>
       );
+      if (layout === "banner") {
+        const coverH = bannerUrl
+          ? Math.min(200, Math.max(160, Math.round(photo * 0.55 + 88)))
+          : Math.min(132, Math.max(100, Math.round(photo * 0.35 + 64)));
+        const framed =
+          look.surface === "card" ||
+          look.surface === "glass" ||
+          look.surface === "neon" ||
+          look.surface === "comic" ||
+          Boolean(look.backgroundColor);
+        const plate = framed
+          ? look.backgroundColor || theme.card
+          : theme.background;
+        const frameRadius =
+          look.surface === "comic"
+            ? "0 0 8px 8px"
+            : coverRadius(look.radius);
+        const padX = framed ? 16 : 8;
+        const padBottom = framed ? 18 : 8;
+        const portrait = (
+          <span
+            className="inline-flex shrink-0"
+            style={{
+              borderRadius: radius,
+              boxShadow: `0 0 0 3px ${plate}, 0 12px 28px -10px rgba(0,0,0,0.4)`,
+            }}
+          >
+            {avatar}
+          </span>
+        );
+        return (
+          <div
+            className={cn("w-full", framed && "overflow-hidden", surfaceClass(look))}
+            style={
+              framed
+                ? {
+                    ...withoutPadding(
+                      surfaceStyle(look, {
+                        background: theme.card,
+                        color,
+                        radius: frameRadius,
+                        border:
+                          look.surface === "card" || look.surface === "glass"
+                            ? `1px solid ${theme.line}`
+                            : undefined,
+                        shadowColor: theme.accent,
+                      }),
+                    ),
+                    borderRadius: frameRadius,
+                  }
+                : undefined
+            }
+          >
+            <div className="relative">
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  height: coverH,
+                  borderRadius: framed ? undefined : coverRadius(look.radius),
+                }}
+              >
+                {bannerUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={bannerUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="h-full w-full"
+                    style={{
+                      background: `radial-gradient(ellipse 80% 70% at 50% 110%, color-mix(in srgb, ${theme.accent} 38%, transparent), transparent 58%), radial-gradient(ellipse 90% 55% at 50% -20%, color-mix(in srgb, ${theme.accent} 32%, transparent), transparent 52%), linear-gradient(180deg, color-mix(in srgb, ${theme.accent} 16%, ${theme.background}) 0%, ${theme.background} 100%)`,
+                    }}
+                  />
+                )}
+                <div
+                  className="pp-cover-fade"
+                  style={{ ["--cover-fade" as string]: plate }}
+                />
+              </div>
+              <div className="absolute bottom-0 left-1/2 z-[1] -translate-x-1/2 translate-y-1/2">
+                {portrait}
+              </div>
+            </div>
+            <div
+              style={{
+                paddingTop: photo / 2 + 16,
+                paddingRight: padX,
+                paddingBottom: padBottom,
+                paddingLeft: padX,
+              }}
+            >
+              {texts}
+            </div>
+          </div>
+        );
+      }
       return (
         <div
           className={cn(
             "flex w-full px-3 pb-4 pt-3",
+            surfaceClass(look),
             stacked
               ? "flex-col items-center gap-6"
               : look.align === "right"
@@ -231,13 +362,24 @@ function BlockView({
           )}
           style={surfaceStyle(look, {
             padding:
-              look.backgroundColor || look.borderColor || look.shadow === "soft"
+              look.backgroundColor ||
+              look.borderColor ||
+              look.surface === "card" ||
+              look.surface === "glass" ||
+              look.shadow === "soft" ||
+              look.shadow === "hard" ||
+              look.shadow === "glow"
                 ? "16px 14px"
                 : undefined,
             radius:
-              look.backgroundColor || look.borderColor || look.shadow === "soft"
+              look.backgroundColor ||
+              look.borderColor ||
+              look.surface === "card" ||
+              look.surface === "glass" ||
+              look.shadow === "soft"
                 ? "1.35rem"
                 : undefined,
+            shadowColor: theme.accent,
           })}
         >
           {avatar}
@@ -264,24 +406,32 @@ function BlockView({
       };
       const align = look.align || "center";
       const full = look.width !== "fit";
+      const withMap = content.layout === "map";
+      const openHref = mapsOpenHref(text, href);
       const card = (
         <div
           className={cn(
             "flex items-center gap-3",
+            !withMap && surfaceClass(look),
             align === "right" && "flex-row-reverse",
             align === "center" && !full && "justify-center",
-            look.pulse && "block-pulse",
+            look.pulse && !withMap && "block-pulse",
           )}
-          style={{
-            ...surfaceStyle(look, {
-              background: theme.card,
-              color,
-              radius: "1rem",
-              border: `1px solid ${theme.line}`,
-              padding: "14px",
-            }),
-            ...pulseStyle(theme.accent),
-          }}
+          style={
+            withMap
+              ? { color, padding: "14px" }
+              : {
+                  ...surfaceStyle(look, {
+                    background: theme.card,
+                    color,
+                    radius: "1rem",
+                    border: `1px solid ${theme.line}`,
+                    padding: "14px",
+                    shadowColor: theme.accent,
+                  }),
+                  ...pulseStyle(theme.accent),
+                }
+          }
         >
           <span
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
@@ -306,37 +456,92 @@ function BlockView({
             >
               {text}
             </span>
-            <span
-              className={cn(
-                "mt-0.5 flex items-center gap-0.5 font-medium",
-                align === "right" && "justify-end flex-row-reverse",
-                align === "center" && "justify-center",
-              )}
-              style={{ color: theme.muted, fontSize: sizes.meta }}
-            >
-              {content.label || "Ver no mapa"}
-              {href ? <ArrowUpRight className="h-3.5 w-3.5" /> : null}
-            </span>
+            {withMap ? null : (
+              <span
+                className={cn(
+                  "mt-0.5 flex items-center gap-0.5 font-medium",
+                  align === "right" && "justify-end flex-row-reverse",
+                  align === "center" && "justify-center",
+                )}
+                style={{ color: theme.muted, fontSize: sizes.meta }}
+              >
+                {content.label || "Abrir no Maps"}
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
+            )}
           </span>
         </div>
       );
+      if (withMap) {
+        return (
+          <a
+            href={openHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={content.label || `Abrir ${text} no Google Maps`}
+            className={cn(
+              "block w-full overflow-hidden",
+              surfaceClass(look),
+              tapClass(look),
+              look.pulse && "block-pulse",
+            )}
+            style={{
+              ...surfaceStyle(look, {
+                background: theme.card,
+                color,
+                radius: mediaRadius(look.radius, "1.25rem"),
+                border: `1px solid ${theme.line}`,
+                padding: "0",
+                shadowColor: theme.accent,
+              }),
+              borderRadius: mediaRadius(look.radius, "1.25rem"),
+              padding: 0,
+              ...pulseStyle(theme.accent),
+            }}
+          >
+            <div className="relative h-44 overflow-hidden sm:h-48">
+              <iframe
+                title={`Mapa de ${text}`}
+                src={mapsEmbedSrc(text)}
+                className="pointer-events-none absolute left-1/2 top-1/2 h-[140%] w-[140%] -translate-x-1/2 -translate-y-[46%] border-0"
+                loading="lazy"
+                tabIndex={-1}
+                aria-hidden
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+              <div
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background: `linear-gradient(to top, ${theme.card} 0%, color-mix(in srgb, ${theme.card} 72%, transparent) 34%, transparent 62%)`,
+                }}
+              />
+              <span className="pp-map-chip absolute bottom-3 right-3">
+                {content.label || "Abrir no Maps"}
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
+            </div>
+            {card}
+          </a>
+        );
+      }
       return (
-        <div className={cn("flex w-full", justifyAlign(align))}>
-          {href ? (
-            <a
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                full ? "w-full" : "w-auto max-w-full",
-                tapClass(look.pulse),
-              )}
-            >
-              {card}
-            </a>
-          ) : (
-            <div className={full ? "w-full" : "w-auto max-w-full"}>{card}</div>
+        <div
+          className={cn(
+            "flex w-full flex-col gap-2",
+            justifyAlign(align),
           )}
+        >
+          <a
+            href={openHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              full ? "w-full" : "w-auto max-w-full",
+              tapClass(look),
+            )}
+          >
+            {card}
+          </a>
         </div>
       );
     }
@@ -380,6 +585,7 @@ function BlockView({
                   ? `1px solid ${look.borderColor}`
                   : undefined,
           padding: buttonMetrics(lookFontSize(look, "button")).padding,
+          shadowColor: theme.accent,
         }),
       };
       const ctaMetrics = buttonMetrics(lookFontSize(look, "button"));
@@ -392,7 +598,8 @@ function BlockView({
             className={buttonShellClass(
               look,
               cn(
-                tapClass(look.pulse),
+                surfaceClass(look),
+                tapClass(look),
                 motion && style === "primary" && "pp-sheen",
               ),
             )}
@@ -434,6 +641,142 @@ function BlockView({
         bio: lookFontPx(look, "bio"),
       };
       const linkMetrics = buttonMetrics(lookFontSize(look, "button"));
+      const thumb = (content.thumbnailUrl || "").trim() || null;
+      const layout = content.layout || (thumb ? "row" : "row");
+      const badge = (content.badge || "").trim();
+      const icon = (
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full"
+          style={{
+            background: thumb
+              ? undefined
+              : brand === "emoji"
+                ? `${theme.accent}14`
+                : fill.background,
+            color: brand === "emoji" ? theme.accent : fill.color,
+          }}
+        >
+          {thumb ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={thumb} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <LinkBrandGlyph
+              brand={brand}
+              emoji={content.icon}
+              className="h-[18px] w-[18px]"
+            />
+          )}
+        </span>
+      );
+      const copy = (
+        <span className="min-w-0 flex-1 text-left">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="block truncate font-semibold leading-tight"
+              style={{ fontSize: sizes.body }}
+            >
+              {content.label || "Link"}
+            </span>
+            {badge ? (
+              <span
+                className="pp-badge shrink-0"
+                style={{
+                  background: `${theme.accent}18`,
+                  color: theme.accent,
+                }}
+              >
+                {badge}
+              </span>
+            ) : null}
+          </span>
+          {subtitle && layout !== "minimal" ? (
+            <span
+              className="mt-0.5 block truncate font-medium"
+              style={{ color: theme.muted, fontSize: sizes.meta }}
+            >
+              {subtitle}
+            </span>
+          ) : null}
+        </span>
+      );
+      if (layout === "cover" && thumb) {
+        return (
+          <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
+            <a
+              href={content.url || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "group relative overflow-hidden",
+                surfaceClass(look),
+                look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
+                look.pulse && "block-pulse",
+                tapClass(look),
+              )}
+              style={{
+                ...surfaceStyle(look, {
+                  background: theme.card,
+                  color: "#fff",
+                  radius: mediaRadius(look.radius, "1.25rem"),
+                  border: `1px solid ${theme.line}`,
+                  padding: "0",
+                  shadowColor: theme.accent,
+                }),
+                borderRadius: mediaRadius(look.radius, "1.25rem"),
+                padding: 0,
+                ...pulseStyle(fill.background),
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumb}
+                alt=""
+                className="h-40 w-full object-cover transition duration-500 group-hover:scale-[1.03] sm:h-44"
+              />
+              <span
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "linear-gradient(to top, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.2) 48%, transparent 100%)",
+                }}
+              />
+              <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-3.5">
+                <span className="min-w-0 text-left">
+                  {badge ? (
+                    <span
+                      className="pp-badge mb-1.5"
+                      style={{
+                        background: "rgba(255,255,255,0.18)",
+                        color: "#fff",
+                      }}
+                    >
+                      {badge}
+                    </span>
+                  ) : null}
+                  <span
+                    className="block truncate font-semibold leading-tight text-white"
+                    style={{ fontSize: sizes.body }}
+                  >
+                    {content.label || "Link"}
+                  </span>
+                  {subtitle ? (
+                    <span
+                      className="mt-0.5 block truncate font-medium text-white/75"
+                      style={{ fontSize: sizes.meta }}
+                    >
+                      {subtitle}
+                    </span>
+                  ) : null}
+                </span>
+                <ArrowUpRight
+                  className="h-5 w-5 shrink-0 text-white/80 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </span>
+            </a>
+          </div>
+        );
+      }
       return (
         <div className={cn("flex", look.width === "fit" && justifyAlign(look.align))}>
           <a
@@ -441,10 +784,11 @@ function BlockView({
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "group flex items-center gap-3 px-2.5 py-2",
+              "group flex items-center gap-3",
+              surfaceClass(look),
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
               look.pulse && "block-pulse",
-              tapClass(look.pulse),
+              tapClass(look),
             )}
             style={{
               ...surfaceStyle(look, {
@@ -452,42 +796,16 @@ function BlockView({
                 color,
                 radius: theme.buttonRadius,
                 border: `1px solid ${theme.line}`,
-                padding: "8px 10px",
+                padding: layout === "minimal" ? "10px 14px" : "8px 10px",
                 shadow: "0 1px 2px rgba(20,17,14,0.05)",
+                shadowColor: theme.accent,
               }),
               minHeight: linkMetrics.minHeight + 8,
               ...pulseStyle(fill.background),
             }}
           >
-            <span
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-              style={{
-                background: brand === "emoji" ? `${theme.accent}14` : fill.background,
-                color: brand === "emoji" ? theme.accent : fill.color,
-              }}
-            >
-              <LinkBrandGlyph
-                brand={brand}
-                emoji={content.icon}
-                className="h-[18px] w-[18px]"
-              />
-            </span>
-            <span className="min-w-0 flex-1 text-left">
-              <span
-                className="block truncate font-semibold leading-tight"
-                style={{ fontSize: sizes.body }}
-              >
-                {content.label || "Link"}
-              </span>
-              {subtitle ? (
-                <span
-                  className="mt-0.5 block truncate font-medium"
-                  style={{ color: theme.muted, fontSize: sizes.meta }}
-                >
-                  {subtitle}
-                </span>
-              ) : null}
-            </span>
+            {layout === "minimal" ? null : icon}
+            {copy}
             <ArrowUpRight
               className="h-4 w-4 shrink-0 opacity-45 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
               aria-hidden="true"
@@ -513,9 +831,10 @@ function BlockView({
             rel="noopener noreferrer"
             className={cn(
               "group flex items-center gap-3.5",
+              surfaceClass(look),
               look.width === "fit" ? "w-auto min-w-[220px]" : "w-full",
               look.pulse && "wa-pulse",
-              tapClass(look.pulse),
+              tapClass(look),
             )}
             style={{
               ...surfaceStyle(look, {
@@ -524,6 +843,7 @@ function BlockView({
                 radius: "1.15rem",
                 padding: "8px 12px 8px 8px",
                 shadow: "0 10px 24px -12px rgba(20, 140, 70, 0.55)",
+                shadowColor: fill,
               }),
               minHeight: metrics.minHeight + 8,
             }}
@@ -576,6 +896,7 @@ function BlockView({
       const items = content.items || [];
       if (items.length === 0) return null;
       const layout = content.layout || "icons";
+      const socialStyle = content.style || "brand";
       const sizes = {
         title: lookFontPx(look, "title"),
         headline: lookFontPx(look, "headline"),
@@ -587,6 +908,27 @@ function BlockView({
         bio: lookFontPx(look, "bio"),
       };
       const iconBox = socialIconPixels(look.fontSize);
+      const paintSocial = (brand: { background: string; color: string }) => {
+        if (socialStyle === "mono") {
+          return {
+            background: theme.accent,
+            color: look.textColor || "#fff",
+            border: undefined as string | undefined,
+          };
+        }
+        if (socialStyle === "ghost") {
+          return {
+            background: "transparent",
+            color: look.textColor || theme.text,
+            border: `1.5px solid ${look.borderColor || theme.line}`,
+          };
+        }
+        return {
+          background: look.backgroundColor || brand.background,
+          color: look.textColor || brand.color,
+          border: look.borderColor ? `1px solid ${look.borderColor}` : undefined,
+        };
+      };
       if (layout === "buttons") {
         return (
           <div className="space-y-2">
@@ -606,15 +948,21 @@ function BlockView({
                     rel="noopener noreferrer"
                     className={buttonShellClass(
                       look,
-                      cn("min-h-11 font-medium", tapClass(look.pulse)),
+                      cn(
+                        "min-h-11 font-medium",
+                        surfaceClass(look),
+                        tapClass(look),
+                      ),
                     )}
                     style={{
                       ...surfaceStyle(look, {
-                        background: brand.background,
-                        color: look.textColor || brand.color,
+                        background: paintSocial(brand).background,
+                        color: paintSocial(brand).color,
                         radius: theme.buttonRadius,
                         padding: "10px 14px",
+                        shadowColor: theme.accent,
                       }),
+                      border: paintSocial(brand).border,
                       fontSize: sizes.body,
                       ...pulseStyle(look.backgroundColor || brand.background),
                     }}
@@ -641,6 +989,7 @@ function BlockView({
         >
           {items.map((item, index) => {
             const brand = SOCIAL_BRAND[item.network] || SOCIAL_BRAND.site;
+            const paint = paintSocial(brand);
             return (
               <a
                 key={`${item.network}-${item.url}-${index}`}
@@ -651,17 +1000,15 @@ function BlockView({
                 className={cn(
                   "flex items-center justify-center",
                   look.pulse && "block-pulse",
-                  tapClass(look.pulse),
+                  tapClass(look),
                 )}
                 style={{
                   width: iconBox,
                   height: iconBox,
-                  background: brand.background,
-                  color: look.textColor || brand.color,
+                  background: paint.background,
+                  color: paint.color,
                   borderRadius: lookRadius(look.radius, "9999px"),
-                  border: look.borderColor
-                    ? `1px solid ${look.borderColor}`
-                    : undefined,
+                  border: paint.border,
                   ...pulseStyle(brand.background),
                 }}
               >
@@ -685,6 +1032,7 @@ function BlockView({
       if (items.length === 0) return null;
       const whatsapp = pageWhatsApp(page);
       const headingColor = look.textColor || theme.muted;
+      const asCards = content.layout === "cards";
       const sizes = {
         title: lookFontPx(look, "title"),
         headline: lookFontPx(look, "headline"),
@@ -697,10 +1045,11 @@ function BlockView({
       };
       return (
         <div
-          className={cn("flex flex-col", alignStack(look.align))}
+          className={cn("flex flex-col", alignStack(look.align), surfaceClass(look))}
           style={surfaceStyle(look, {
-            radius: look.backgroundColor ? "1.35rem" : undefined,
-            padding: look.backgroundColor ? "14px" : undefined,
+            radius: look.backgroundColor || look.surface === "card" || look.surface === "glass" ? "1.35rem" : undefined,
+            padding: look.backgroundColor || look.surface === "card" || look.surface === "glass" ? "14px" : undefined,
+            shadowColor: theme.accent,
           })}
         >
           <p
@@ -709,7 +1058,7 @@ function BlockView({
           >
             {content.heading || "Serviços"}
           </p>
-          <div className="w-full space-y-1.5">
+          <div className={cn("w-full", asCards ? "grid grid-cols-2 gap-2" : "space-y-1.5")}>
             {items.map((item: ServiceItem) => {
               const showPrice = serviceHasPrice(item);
               const price = showPrice
@@ -719,7 +1068,39 @@ function BlockView({
                     currency: "BRL",
                   })
                 : "";
-              const inner = (
+              const inner = asCards ? (
+                <>
+                  <span
+                    className="block font-medium"
+                    style={{
+                      color: look.textColor || theme.text,
+                      fontSize: sizes.body,
+                    }}
+                  >
+                    {item.name}
+                  </span>
+                  {item.description ? (
+                    <span
+                      className="mt-1 block leading-snug"
+                      style={{ color: theme.muted, fontSize: sizes.meta }}
+                    >
+                      {item.description}
+                    </span>
+                  ) : null}
+                  {showPrice ? (
+                    <span
+                      className="pp-badge mt-2"
+                      style={{
+                        background: `${theme.accent}18`,
+                        color: theme.accent,
+                        fontSize: sizes.price,
+                      }}
+                    >
+                      {price}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
                 <>
                   <span className="min-w-0 text-left">
                     <span
@@ -750,13 +1131,20 @@ function BlockView({
                   ) : null}
                 </>
               );
-              const className =
-                "flex min-h-12 w-full items-start justify-between gap-2";
+              const className = asCards
+                ? cn(
+                    "flex min-h-24 w-full flex-col items-start",
+                    tapClass(look),
+                  )
+                : cn(
+                    "flex min-h-12 w-full items-start justify-between gap-2",
+                    tapClass(look),
+                  );
               const style = {
                 background: look.backgroundColor ? "transparent" : theme.card,
                 border: `1px solid ${look.borderColor || theme.line}`,
-                borderRadius: lookRadius(look.radius, "1rem"),
-                padding: "12px 14px",
+                borderRadius: lookRadius(look.radius, asCards ? "1.1rem" : "1rem"),
+                padding: asCards ? "12px" : "12px 14px",
                 color: theme.text,
               };
               if (whatsapp?.phone) {
@@ -772,7 +1160,7 @@ function BlockView({
                     href={whatsappHref(whatsapp.phone, message)}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className={cn(className, "pp-tap")}
+                    className={cn(className)}
                     style={style}
                   >
                     {inner}
@@ -796,6 +1184,7 @@ function BlockView({
       );
       if (items.length === 0) return null;
       const headingColor = look.textColor || theme.muted;
+      const asQuote = content.layout === "quote";
       const sizes = {
         title: lookFontPx(look, "title"),
         headline: lookFontPx(look, "headline"),
@@ -808,10 +1197,11 @@ function BlockView({
       };
       return (
         <div
-          className={cn("flex flex-col", alignStack(look.align))}
+          className={cn("flex flex-col", alignStack(look.align), surfaceClass(look))}
           style={surfaceStyle(look, {
-            radius: look.backgroundColor ? "1.35rem" : undefined,
-            padding: look.backgroundColor ? "14px" : undefined,
+            radius: look.backgroundColor || look.surface === "card" || look.surface === "glass" ? "1.35rem" : undefined,
+            padding: look.backgroundColor || look.surface === "card" || look.surface === "glass" ? "14px" : undefined,
+            shadowColor: theme.accent,
           })}
         >
           <p
@@ -824,32 +1214,54 @@ function BlockView({
             {items.map((item: TestimonialItem) => (
               <div
                 key={item.id}
-                style={{
-                  background: look.backgroundColor ? "transparent" : theme.card,
-                  border: `1px solid ${look.borderColor || theme.line}`,
-                  borderRadius: lookRadius(look.radius, "1rem"),
-                  padding: "14px",
-                }}
+                className={asQuote ? "relative px-1 py-2" : undefined}
+                style={
+                  asQuote
+                    ? undefined
+                    : {
+                        background: look.backgroundColor ? "transparent" : theme.card,
+                        border: `1px solid ${look.borderColor || theme.line}`,
+                        borderRadius: lookRadius(look.radius, "1rem"),
+                        padding: "14px",
+                      }
+                }
               >
-                <div className="mb-1.5 flex gap-0.5 text-amber-500">
-                  {Array.from({
-                    length: Math.max(1, Math.min(5, item.rating || 5)),
-                  }).map((_, index) => (
-                    <Star key={index} className="h-3.5 w-3.5 fill-current" />
-                  ))}
-                </div>
+                {asQuote ? (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -left-1 -top-3 font-serif leading-none"
+                    style={{
+                      color: theme.accent,
+                      fontSize: "2.6rem",
+                      opacity: 0.35,
+                    }}
+                  >
+                    “
+                  </span>
+                ) : (
+                  <div
+                    className="mb-1.5 flex gap-0.5"
+                    style={{ color: theme.accent }}
+                  >
+                    {Array.from({
+                      length: Math.max(1, Math.min(5, item.rating || 5)),
+                    }).map((_, index) => (
+                      <Star key={index} className="h-3.5 w-3.5 fill-current" />
+                    ))}
+                  </div>
+                )}
                 <p
                   className="leading-relaxed"
                   style={{
                     color: look.textColor || theme.text,
-                    fontSize: sizes.body,
+                    fontSize: asQuote ? sizes.headline : sizes.body,
                   }}
                 >
-                  “{item.text}”
+                  {asQuote ? item.text : `“${item.text}”`}
                 </p>
                 <p
                   className="mt-2 font-semibold"
-                  style={{ color: theme.text, fontSize: sizes.meta }}
+                  style={{ color: theme.muted, fontSize: sizes.meta }}
                 >
                   {item.authorName}
                 </p>
@@ -911,6 +1323,8 @@ export function ProfilePreview({
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   const hero = blocks.find((block) => block.type === "HERO");
+  const heroIsBanner =
+    Boolean(hero) && (hero?.content as HeroContent | undefined)?.layout === "banner";
   const hasLocationBlock = blocks.some((block) => block.type === "LOCATION");
   const rest = blocks.filter((block) => block.type !== "HERO");
 
@@ -933,33 +1347,61 @@ export function ProfilePreview({
         } as CSSProperties
       }
     >
+      {theme.backgroundImage ? (
+        <>
+          <div
+            className="pp-page-photo"
+            style={{ backgroundImage: `url("${theme.backgroundImage}")` }}
+          />
+          {theme.overlay > 0 ? (
+            <div
+              className="pp-page-overlay"
+              style={{ opacity: theme.overlay / 100 }}
+            />
+          ) : null}
+        </>
+      ) : null}
       <ThemeAtmosphere atmosphere={theme.atmosphere} accent={theme.accent} />
       <div
         className={cn(
           "relative z-[1]",
           asPage
-            ? "mx-auto w-full max-w-[30rem] px-5 pb-28 pt-10 sm:pt-14"
-            : "px-3.5 pb-16 pt-1",
+            ? cn(
+                "mx-auto w-full max-w-[30rem] px-5 pb-28",
+                heroIsBanner ? "pt-0" : "pt-10 sm:pt-14",
+              )
+            : cn("px-3.5 pb-16", heroIsBanner ? "pt-0" : "pt-1"),
         )}
       >
         {showStatusBar ? <StatusBar color={theme.text} /> : null}
         <div className={asPage ? "pp-rise" : undefined}>
           {hero ? (
-            <SelectableBlock
-              id={hero.id}
-              label={BLOCK_META[hero.type].label}
-              selected={selectedId === hero.id}
-              hidden={!hero.isVisible}
-              onSelect={onSelectBlock}
-              padded
+            <div
+              className={
+                heroIsBanner
+                  ? asPage
+                    ? "-mx-5"
+                    : "-mx-3.5"
+                  : undefined
+              }
             >
-              <BlockView
-                block={hero}
-                theme={theme}
-                page={page}
-                motion={asPage}
-              />
-            </SelectableBlock>
+              <SelectableBlock
+                id={hero.id}
+                label={BLOCK_META[hero.type].label}
+                selected={selectedId === hero.id}
+                hidden={!hero.isVisible}
+                onSelect={onSelectBlock}
+                padded={!heroIsBanner}
+                flushTop={heroIsBanner}
+              >
+                <BlockView
+                  block={hero}
+                  theme={theme}
+                  page={page}
+                  motion={asPage}
+                />
+              </SelectableBlock>
+            </div>
           ) : (
             <div className="flex flex-col items-center px-3 pt-3 text-center">
               <span className={asPage ? "pp-avatar" : undefined}>
@@ -1039,6 +1481,7 @@ function SelectableBlock({
   hidden,
   onSelect,
   padded,
+  flushTop,
   children,
 }: {
   id: string;
@@ -1047,23 +1490,32 @@ function SelectableBlock({
   hidden: boolean;
   onSelect?: (id: string) => void;
   padded?: boolean;
+  flushTop?: boolean;
   children: ReactNode;
 }) {
   if (!onSelect) return children;
   return (
     <div
       className={cn(
-        "relative rounded-[1.35rem] transition",
+        "relative transition",
+        flushTop
+          ? "rounded-none rounded-b-[1.35rem]"
+          : "rounded-[1.35rem]",
         padded && "px-1 py-1",
         selected &&
-          "ring-2 ring-lime ring-offset-2 ring-offset-[var(--preview-canvas,#fff)]",
+          (flushTop
+            ? "ring-2 ring-inset ring-lime"
+            : "ring-2 ring-lime ring-offset-2 ring-offset-[var(--preview-canvas,#fff)]"),
         hidden && "opacity-45",
       )}
     >
       <div className="pointer-events-none">{children}</div>
       <button
         type="button"
-        className="absolute inset-0 z-10 min-h-7 rounded-2xl"
+        className={cn(
+          "absolute inset-0 z-10 min-h-7",
+          flushTop ? "rounded-none rounded-b-[1.35rem]" : "rounded-2xl",
+        )}
         aria-label={`Editar ${label}`}
         onClick={(event) => {
           event.preventDefault();

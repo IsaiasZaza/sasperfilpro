@@ -1,8 +1,10 @@
 "use client";
 
 import { ThemeAtmosphere } from "@/components/profile/theme-atmosphere";
+import { ImageUploadField } from "@/components/editor/image-upload-field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { profileApi } from "@/lib/api-client";
 import {
   THEME_PRESETS,
   resolvePaintTheme,
@@ -92,6 +94,8 @@ export function AppearancePanel({
       buttonStyle: painted.buttonStyle,
       font: painted.font,
       atmosphere: painted.atmosphere,
+      backgroundImage: painted.backgroundImage || undefined,
+      overlay: painted.overlay,
       ...partial,
     });
     if (next) onChange({ theme: next });
@@ -209,6 +213,66 @@ export function AppearancePanel({
             </button>
           ))}
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="font-serif text-lg text-ink">Foto de fundo</h3>
+        <p className="text-[13px] leading-relaxed text-muted">
+          Uma imagem atrás dos blocos. Envia agora; só entra no ar quando você
+          clicar em Atualizar.
+        </p>
+        <ImageUploadField
+          value={painted.backgroundImage}
+          variant="cover"
+          buttonLabel={
+            painted.backgroundImage ? "Trocar foto de fundo" : "Enviar foto"
+          }
+          emptyLabel="Fundo"
+          onUploaded={(bannerUrl) =>
+            patchTheme({
+              backgroundImage: bannerUrl,
+              overlay: painted.overlay || 40,
+            })
+          }
+          upload={async (file) => {
+            const data = await profileApi.uploadBanner(file);
+            return data.bannerUrl;
+          }}
+          onLocked={onUnlockTheme}
+        />
+        {painted.backgroundImage ? (
+          <>
+            <div>
+              <Label>Escurecer a foto</Label>
+              <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+                {[0, 20, 40, 60].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => patchTheme({ overlay: value })}
+                    className={cn(
+                      "min-h-11 rounded-xl border text-[12px] font-semibold",
+                      painted.overlay === value
+                        ? "border-ink bg-ink text-white"
+                        : "border-line bg-white text-ink hover:border-ink/15",
+                    )}
+                  >
+                    {value === 0 ? "Não" : `${value}%`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="text-[13px] font-semibold text-muted hover:text-ink"
+              onClick={() =>
+                patchTheme({ backgroundImage: "", overlay: 0 })
+              }
+            >
+              Remover foto de fundo
+            </button>
+          </>
+        ) : null}
       </section>
 
       <section className="space-y-4">

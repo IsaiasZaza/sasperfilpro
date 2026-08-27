@@ -400,6 +400,88 @@ h2 {
   outline-offset: 3px;
 }
 
+@media (hover: hover) {
+  .pp-tap-scale:hover {
+    transform: scale(1.03);
+    filter: brightness(1.03);
+  }
+
+  .pp-tap-glow:hover {
+    transform: translate3d(0, -1px, 0);
+    filter: brightness(1.06)
+      drop-shadow(
+        0 0 16px color-mix(in srgb, var(--theme-accent, #14110e) 55%, transparent)
+      );
+  }
+}
+
+.pp-glass {
+  backdrop-filter: blur(16px) saturate(1.25);
+  -webkit-backdrop-filter: blur(16px) saturate(1.25);
+}
+
+.pp-neon {
+  isolation: isolate;
+}
+
+.pp-comic {
+  letter-spacing: -0.02em;
+}
+
+.pp-page-photo {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.pp-page-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+
+.pp-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pp-cover-fade {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    var(--cover-fade, #0b0f12) 0%,
+    color-mix(in srgb, var(--cover-fade, #0b0f12) 35%, transparent) 42%,
+    transparent 72%
+  );
+}
+
+.pp-map-chip {
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #14110e;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.45);
+}
+
 /* --- Temas dinâmicos: glow ambient (lento, suave) --- */
 
 .theme-fx {
