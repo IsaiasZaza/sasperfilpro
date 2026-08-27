@@ -80,7 +80,7 @@ import {
   themeSnapshot,
   themeToApi,
 } from "@/lib/theme";
-import { normalizeHttpUrl, prepareBlockContent } from "@/lib/url";
+import { prepareBlockContent } from "@/lib/url";
 import {
   hydrateBlockLook,
   lookFrom,
@@ -137,7 +137,9 @@ function withHeroFromProfile(block: ProfileBlock, profile: Profile): ProfileBloc
   if (!("headline" in content)) content.headline = profile.headline ?? "";
   if (!("bio" in content)) content.bio = profile.bio ?? "";
   if (!("location" in content)) content.location = profile.location ?? "";
-  if (!("avatarUrl" in content)) content.avatarUrl = profile.avatarUrl ?? "";
+  if (!("avatarUrl" in content) && profile.avatarUrl) {
+    content.avatarUrl = profile.avatarUrl;
+  }
   return { ...block, content };
 }
 
@@ -179,11 +181,38 @@ function applySavedProfile(
   setAuthProfile: (profile: Profile) => void,
   merged: Profile,
 ) {
+  // PUT não envia mais a foto; o local (GET ou POST /avatar) é a fonte.
+  const next = {
+    ...merged,
+    avatarUrl: profileRef.current?.avatarUrl ?? merged.avatarUrl,
+  };
   // Atualiza o ref na hora — o useEffect atrasa e o autosave entra em loop.
-  profileRef.current = merged;
-  lastSavedProfile.current = profileSnapshot(merged);
-  setProfile(merged);
-  setAuthProfile(merged);
+  profileRef.current = next;
+  lastSavedProfile.current = profileSnapshot(next);
+  setProfile(next);
+  setAuthProfile(next);
+}
+
+function applyUploadedAvatar(
+  profileRef: { current: Profile | null },
+  lastSavedProfile: { current: string },
+  setProfile: (profile: Profile) => void,
+  setAuthProfile: (profile: Profile) => void,
+  avatarUrl: string,
+) {
+  const current = profileRef.current;
+  if (!current) return;
+  const next = { ...current, avatarUrl };
+  profileRef.current = next;
+  try {
+    const last = JSON.parse(lastSavedProfile.current) as Record<string, unknown>;
+    last.avatarUrl = avatarUrl;
+    lastSavedProfile.current = JSON.stringify(last);
+  } catch {
+    lastSavedProfile.current = profileSnapshot(next);
+  }
+  setProfile(next);
+  setAuthProfile(next);
 }
 
 function sortBlocks(blocks: ProfileBlock[]) {
@@ -682,7 +711,6 @@ export function EditorWorkspace() {
         headline?: string;
         bio?: string;
         location?: string;
-        avatarUrl?: string;
       };
       const current = profileRef.current;
       const locationOwnedByBlock = blocksRef.current.some(
@@ -706,11 +734,6 @@ export function EditorWorkspace() {
           : hero.location !== undefined
             ? emptyToNull(hero.location)
             : emptyToNull(current?.location),
-        avatarUrl:
-          normalizeHttpUrl(hero.avatarUrl || "") ||
-          (hero.avatarUrl !== undefined
-            ? null
-            : normalizeHttpUrl(current?.avatarUrl || "") || null),
         theme: themeToApi(current?.theme),
       });
       const { profile: merged, lost } = withPersistedTheme(
@@ -810,7 +833,6 @@ export function EditorWorkspace() {
       location: locationOwnedByBlock
         ? emptyToNull(pending.location)
         : pickHeroText(heroContent, "location", pending.location),
-      avatarUrl: pickHeroText(heroContent, "avatarUrl", pending.avatarUrl),
       theme: themeToApi(pending.theme),
     });
     if (gen !== profileSaveGen.current) return;
@@ -1125,7 +1147,6 @@ export function EditorWorkspace() {
               (locationBlock.content as { address?: string }).address,
             )
           : pickHeroText(heroContent, "location", current?.location),
-        avatarUrl: pickHeroText(heroContent, "avatarUrl", current?.avatarUrl),
         theme: template.theme,
       });
       const { profile: merged } = withPersistedTheme(
@@ -1213,7 +1234,6 @@ export function EditorWorkspace() {
       headline?: string;
       bio?: string;
       location?: string;
-      avatarUrl?: string;
     };
     setProfile((current) => {
       if (!current) return current;
@@ -1230,10 +1250,6 @@ export function EditorWorkspace() {
           hero.location !== undefined
             ? emptyToNull(hero.location)
             : current.location,
-        avatarUrl:
-          hero.avatarUrl !== undefined
-            ? emptyToNull(hero.avatarUrl)
-            : current.avatarUrl,
       };
       if (profileSnapshot(patched) === profileSnapshot(current)) return current;
       return patched;
@@ -1997,6 +2013,15 @@ export function EditorWorkspace() {
                   block={selected}
                   onChange={updateSelected}
                   profile={profile}
+                  onAvatarUploaded={(data) => {
+                    applyUploadedAvatar(
+                      profileRef,
+                      lastSavedProfile,
+                      setProfile,
+                      setAuthProfile,
+                      data.avatarUrl,
+                    );
+                  }}
                   services={services}
                   testimonials={testimonials}
                   onServicesChange={handleServicesChange}

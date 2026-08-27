@@ -92,6 +92,18 @@ export const profileApi = {
   preview() {
     return api<PublicPage>("/me/profile/preview");
   },
+  uploadAvatar(file: File) {
+    const form = new FormData();
+    form.append("file", file);
+    return api<{ avatarUrl: string; profile: Profile }>(
+      "/me/profile/avatar",
+      {
+        method: "POST",
+        body: form,
+        formData: true,
+      },
+    );
+  },
 };
 
 export const blocksApi = {

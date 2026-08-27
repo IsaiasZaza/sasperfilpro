@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Loader2, Plus, Star, Trash2 } from "lucide-react";
+import { useAuth } from "@/components/auth/auth-provider";
 import {
   SOCIAL_NETWORKS,
   socialUrlPlaceholder,
@@ -20,10 +22,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   avatarPixels,
-  avatarRadius,
   lookFrom,
   lookFontSize,
 } from "@/lib/block-look";
+import { ApiError } from "@/lib/api";
+import { profileApi } from "@/lib/api-client";
 import type {
   CtaButtonContent,
   CtaStyle,
@@ -42,12 +45,12 @@ import type {
   WhatsAppContent,
 } from "@/lib/types/profile";
 import { formatWhatsAppPhone, isValidWhatsAppPhone, normalizeWhatsAppPhone } from "@/lib/phone";
-import { isCompleteHttpUrl, normalizeHttpUrl } from "@/lib/url";
 import { cn } from "@/lib/utils";
 
 export function BlockInspector({
   block,
   onChange,
+  profile = null,
   services = [],
   testimonials = [],
   onServicesChange,
@@ -56,6 +59,7 @@ export function BlockInspector({
   canAddTestimonial = true,
   onLimitReached,
   hasLocationBlock = false,
+  onAvatarUploaded,
 }: {
   block: ProfileBlock;
   onChange: (next: ProfileBlock) => void;
@@ -68,6 +72,7 @@ export function BlockInspector({
   canAddTestimonial?: boolean;
   onLimitReached?: () => void;
   hasLocationBlock?: boolean;
+  onAvatarUploaded?: (data: { avatarUrl: string; profile: Profile }) => void;
 }) {
   const setContent = (content: ProfileBlock["content"]) => {
     if (JSON.stringify(content) === JSON.stringify(block.content)) return;
@@ -81,23 +86,22 @@ export function BlockInspector({
       const headline = content.headline ?? "";
       const bio = content.bio ?? "";
       const location = content.location ?? "";
-      const avatarUrl = content.avatarUrl ?? "";
+      const avatarUrl = profile?.avatarUrl || content.avatarUrl || null;
       const look = lookFrom(content);
       const photo = avatarPixels(look.avatarSize);
-      const photoRadius = avatarRadius(look.avatarShape);
       return (
         <div className="space-y-5">
           <Section title="Foto">
-            <AvatarUrlField
+            <AvatarUploadField
               value={avatarUrl}
               photo={photo}
-              photoRadius={photoRadius}
-              onChange={(next) =>
+              onUploaded={(data) => {
                 setContent({
                   ...content,
-                  avatarUrl: next,
-                })
-              }
+                  avatarUrl: data.avatarUrl,
+                });
+                onAvatarUploaded?.(data);
+              }}
             />
             <BlockLookControls
               look={lookFrom(content)}
@@ -987,65 +991,171 @@ function IconButton({
   );
 }
 
-function AvatarUrlField({
+function AvatarUploadField({
   value,
   photo,
-  photoRadius,
-  onChange,
+  onUploaded,
 }: {
-  value: string;
+  value: string | null;
   photo: number;
-  photoRadius: string | number;
-  onChange: (next: string) => void;
+  onUploaded: (data: { avatarUrl: string; profile: Profile }) => void;
 }) {
+  const router = useRouter();
+  const { clearSession } = useAuth();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const localUrlRef = useRef<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState(value);
   const [broken, setBroken] = useState(false);
-  const trimmed = value.trim();
-  const normalized = trimmed ? normalizeHttpUrl(trimmed) : null;
-  const formatInvalid = Boolean(trimmed) && !normalized;
-  const previewSrc = normalized || (isCompleteHttpUrl(trimmed) ? trimmed : "");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setPreviewSrc(value);
     setBroken(false);
-  }, [previewSrc]);
+  }, [value]);
+
+  useEffect(() => {
+    return () => {
+      if (localUrlRef.current) URL.revokeObjectURL(localUrlRef.current);
+    };
+  }, []);
+
+  function revokeLocalPreview() {
+    if (localUrlRef.current) {
+      URL.revokeObjectURL(localUrlRef.current);
+      localUrlRef.current = null;
+    }
+  }
+
+  async function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setError(null);
+
+    if (!isAllowedAvatarFile(file)) {
+      setError("Use JPEG, PNG ou WEBP");
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      setError("A imagem deve ter no máximo 1 MB");
+      return;
+    }
+
+    revokeLocalPreview();
+    const localUrl = URL.createObjectURL(file);
+    localUrlRef.current = localUrl;
+    setPreviewSrc(localUrl);
+    setBroken(false);
+    setPending(true);
+
+    try {
+      const data = await profileApi.uploadAvatar(file);
+      revokeLocalPreview();
+      setPreviewSrc(data.avatarUrl);
+      setBroken(false);
+      onUploaded(data);
+    } catch (err) {
+      revokeLocalPreview();
+      setPreviewSrc(value);
+      if (
+        err instanceof ApiError &&
+        (err.status === 401 || err.code === "UNAUTHORIZED")
+      ) {
+        clearSession();
+        router.replace("/login");
+        return;
+      }
+      setError(avatarUploadMessage(err));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const size = Math.min(Math.max(photo, 64), 96);
 
   return (
-    <div className="space-y-2">
-      {previewSrc && !broken ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={previewSrc}
-          alt="Prévia da foto"
-          className="mb-1 object-cover"
-          style={{
-            width: photo,
-            height: photo,
-            borderRadius: photoRadius,
-            maxWidth: "100%",
-          }}
-          onError={() => setBroken(true)}
+    <div className="flex items-center gap-4">
+      <div
+        className="relative shrink-0 overflow-hidden rounded-full border border-line bg-ink/5"
+        style={{ width: size, height: size }}
+      >
+        {previewSrc && !broken ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={previewSrc}
+            alt=""
+            className="h-full w-full object-cover"
+            onError={() => setBroken(true)}
+          />
+        ) : (
+          <span className="flex h-full w-full items-center justify-center text-[11px] font-medium text-muted">
+            Foto
+          </span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1 space-y-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="sr-only"
+          onChange={(event) => void onFileChange(event)}
         />
-      ) : null}
-      {broken ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">
-          Não foi possível carregar essa imagem. Confira se o link abre a foto
-          direto (termine em .jpg, .png ou similar).
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={pending}
+          onClick={() => inputRef.current?.click()}
+        >
+          {pending ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Enviando...
+            </>
+          ) : (
+            "Alterar foto"
+          )}
+        </Button>
+        <p className="text-[12px] leading-relaxed text-muted">
+          JPEG, PNG ou WEBP. Máximo 1 MB.
         </p>
-      ) : null}
-      {formatInvalid ? (
-        <p className="rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">
-          Use um link completo começando com https://
-        </p>
-      ) : null}
-      <Field hint="Copie o link direto da imagem (https://…), não o da página do Instagram ou Google.">
-        <Label>URL da foto</Label>
-        <Input
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder="https://exemplo.com/foto.jpg"
-          inputMode="url"
-          autoComplete="off"
-        />
-      </Field>
+        {error ? (
+          <p role="alert" className="text-[12px] text-red-700">
+            {error}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
+}
+
+const AVATAR_MAX_BYTES = 1024 * 1024;
+const AVATAR_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+
+function isAllowedAvatarFile(file: File) {
+  if (AVATAR_TYPES.has(file.type.toLowerCase())) return true;
+  return /\.(jpe?g|png|webp)$/i.test(file.name);
+}
+
+function avatarUploadMessage(err: unknown) {
+  if (!(err instanceof ApiError)) {
+    return "Não foi possível salvar a foto. Tente de novo.";
+  }
+  if (err.code === "FILE_REQUIRED") return "Envie uma imagem";
+  if (err.code === "INVALID_FILE_TYPE") return "Use JPEG, PNG ou WEBP";
+  if (err.code === "FILE_TOO_LARGE" || err.status === 413) {
+    return "A imagem deve ter no máximo 1 MB";
+  }
+  if (err.code === "STORAGE_ERROR" || err.code === "STORAGE_NOT_CONFIGURED") {
+    return "Não foi possível salvar a foto. Tente de novo.";
+  }
+  return err.message || "Não foi possível salvar a foto. Tente de novo.";
 }

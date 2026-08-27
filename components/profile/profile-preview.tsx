@@ -112,8 +112,7 @@ function BlockView({
           : page.displayName || page.username || "Seu nome";
       const headline =
         content.headline !== undefined ? content.headline : page.headline || "";
-      const avatarUrl =
-        content.avatarUrl !== undefined ? content.avatarUrl : page.avatarUrl;
+      const avatarUrl = page.avatarUrl || content.avatarUrl || null;
       const locationText =
         content.location !== undefined ? content.location : page.location || "";
       const bioText =
