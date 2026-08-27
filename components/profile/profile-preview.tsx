@@ -227,7 +227,7 @@ function BlockView({
           ) : null}
           {bioText ? (
             <p
-              className="mt-2.5 w-full break-words leading-relaxed"
+              className="mt-2.5 w-full break-words whitespace-pre-line leading-relaxed"
               style={{ color: theme.muted, fontSize: lookFontPx(look, "bio") }}
             >
               {bioText}

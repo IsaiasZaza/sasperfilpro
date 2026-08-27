@@ -217,8 +217,12 @@ export function BlockInspector({
                 onChange={(event) =>
                   setContent({ ...content, bio: event.target.value })
                 }
-                placeholder="Uma frase sobre o seu trabalho"
+                placeholder={"Atendo em Brasília\nHorário marcado\nCílios e sobrancelha"}
+                rows={4}
               />
+              <p className="mt-1.5 text-[12px] leading-relaxed text-muted-soft">
+                Aperte Enter para colocar uma frase embaixo da outra.
+              </p>
             </Field>
             {hasLocationBlock ? (
               <p className="rounded-xl bg-[#f7f4ef] px-3 py-2.5 text-[12px] leading-relaxed text-muted">
