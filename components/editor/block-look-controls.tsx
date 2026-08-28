@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlignCenter, AlignLeft, AlignRight, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
+import { ChoiceDropdown } from "@/components/editor/choice-dropdown";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { pickerHex, SURFACE_PRESETS } from "@/lib/block-look";
@@ -104,7 +105,7 @@ export function BlockLookControls({
       ) : null}
       {showAvatar ? (
         <>
-          <ChoiceRow
+          <ChoiceDropdown
             label="Tamanho da foto"
             hint="Olhe a prévia: Mini é discreta, Máx preenche quase a largura."
             value={look.avatarSize || "md"}
@@ -118,7 +119,7 @@ export function BlockLookControls({
               { value: "2xl", label: "Máx" },
             ]}
           />
-          <ChoiceRow
+          <ChoiceDropdown
             label="Formato da foto"
             value={look.avatarShape || "circle"}
             onChange={(avatarShape) => patch({ avatarShape })}
@@ -131,7 +132,7 @@ export function BlockLookControls({
         </>
       ) : null}
       {showSurface ? (
-        <ChoiceRow
+        <ChoiceDropdown
           label="Estilo da superfície"
           hint="Limpo some o fundo. Cartão vira um retângulo. Vidro é translúcido. Neon brilha. Quadrinhos tem borda forte."
           value={look.surface || "clean"}
@@ -200,7 +201,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showFontSize ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Tamanho da letra"
                   hint="Vale para os textos deste bloco. P é discreto, GG é o maior."
                   value={look.fontSize || "md"}
@@ -214,20 +215,20 @@ export function BlockLookControls({
                 />
               ) : null}
               {showAlign ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label={showAvatar ? "Posição (foto e textos)" : "Alinhamento"}
                   hint="Move o conteúdo para a esquerda, centro ou direita."
                   value={look.align || "center"}
                   onChange={(align) => patch({ align })}
                   options={[
-                    { value: "left", label: "Esquerda", icon: AlignLeft },
-                    { value: "center", label: "Centro", icon: AlignCenter },
-                    { value: "right", label: "Direita", icon: AlignRight },
+                    { value: "left", label: "Esquerda" },
+                    { value: "center", label: "Centro" },
+                    { value: "right", label: "Direita" },
                   ]}
                 />
               ) : null}
               {showWidth ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Largura"
                   hint="Toda a linha ocupa a página. Ajustar deixa o botão só do tamanho do texto."
                   value={look.width || "full"}
@@ -239,7 +240,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showRadius ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Arredondamento"
                   hint="Pílula deixa o botão bem oval. Reto é quadrado."
                   value={look.radius || "md"}
@@ -254,7 +255,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showPadding ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Espaço interno"
                   hint="Distância entre a borda e o texto."
                   value={look.padding || "md"}
@@ -267,7 +268,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showShadow ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Sombra"
                   hint="Suave é um relevo leve. Forte parece quadrinhos. Neon brilha."
                   value={look.shadow || "none"}
@@ -281,7 +282,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showHover ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="Ao tocar"
                   hint="O que o botão faz quando alguém passa o mouse ou clica."
                   value={look.hover || "lift"}
@@ -295,7 +296,7 @@ export function BlockLookControls({
                 />
               ) : null}
               {showPulse ? (
-                <ChoiceRow
+                <ChoiceDropdown
                   label="O botão pulsa"
                   hint="Cresce e brilha sozinho para chamar atenção. Use só no WhatsApp ou no botão principal — em vários ao mesmo tempo cansa."
                   value={look.pulse ? "yes" : "no"}
@@ -397,66 +398,6 @@ function ColorControl({
   );
 }
 
-function ChoiceRow<T extends string>({
-  label,
-  hint,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  hint?: string;
-  value: T;
-  onChange: (value: T) => void;
-  options: { value: T; label: string; icon?: typeof AlignLeft }[];
-}) {
-  const cols =
-    options.length >= 6
-      ? "grid-cols-3"
-      : options.length === 5
-        ? "grid-cols-3 sm:grid-cols-5"
-        : options.length === 4
-          ? "grid-cols-4"
-          : options.length === 3
-            ? "grid-cols-3"
-            : "grid-cols-2";
-
-  return (
-    <div>
-      <Label>{label}</Label>
-      {hint ? (
-        <p className="mb-1.5 mt-0.5 text-[12px] leading-snug text-muted">{hint}</p>
-      ) : null}
-      <div className={cn("grid gap-1.5", cols)} role="group" aria-label={label}>
-        {options.map((option) => {
-          const Icon = option.icon;
-          const selected = value === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={selected}
-              onClick={() => {
-                if (option.value === value) return;
-                onChange(option.value);
-              }}
-              className={cn(
-                "inline-flex min-h-11 items-center justify-center gap-1 rounded-xl border px-1.5 text-[11px] font-semibold transition sm:text-[12px]",
-                selected
-                  ? "border-ink bg-ink text-white"
-                  : "border-line bg-white text-ink hover:border-bronze/40",
-              )}
-            >
-              {Icon ? <Icon className="h-3.5 w-3.5 shrink-0" /> : null}
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export function mergeLook<T extends object>(
   content: T,
   look: BlockLook,
@@ -497,8 +438,6 @@ export function mergeLook<T extends object>(
   }
   return next;
 }
-
-export { ChoiceRow };
 
 export type {
   AvatarShape,
