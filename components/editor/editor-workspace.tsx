@@ -87,6 +87,7 @@ import {
   remapItemStylesBatch,
   testimonialsBlockSummary,
 } from "@/lib/testimonials";
+import { prepareBlockContent } from "@/lib/url";
 import {
   hydrateBlockLook,
   lookFrom,
