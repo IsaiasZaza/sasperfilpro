@@ -28,7 +28,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { ChoicePickerSheet } from "@/components/editor/choice-picker-sheet";
+import { ChoiceDropdown } from "@/components/editor/choice-dropdown";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -318,7 +318,7 @@ function SortableTestimonialCard({
         rating={item.rating}
       />
 
-      <ChoicePickerSheet
+      <ChoiceDropdown
         label="Estilo"
         hint={
           asQuote
@@ -333,7 +333,7 @@ function SortableTestimonialCard({
         ]}
       />
       {!asQuote ? (
-        <ChoicePickerSheet
+        <ChoiceDropdown
           label="Espaço interno"
           hint="Padding dentro do card."
           value={item.padding || "md"}
@@ -345,7 +345,7 @@ function SortableTestimonialCard({
           ]}
         />
       ) : null}
-      <ChoicePickerSheet
+      <ChoiceDropdown
         label="Espaço abaixo"
         hint="Distância até o próximo depoimento."
         value={item.spacing || "md"}

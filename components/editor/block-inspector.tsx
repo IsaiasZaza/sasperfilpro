@@ -6,7 +6,7 @@ import {
   socialUrlPlaceholder,
   urlForSocialNetwork,
 } from "@/components/editor/editor-meta";
-import { ChoicePickerSheet } from "@/components/editor/choice-picker-sheet";
+import { ChoiceDropdown } from "@/components/editor/choice-dropdown";
 import {
   BlockLookControls,
   ChoiceRow,
@@ -915,7 +915,7 @@ export function BlockInspector({
                 }
               />
             </Field>
-            <ChoicePickerSheet
+            <ChoiceDropdown
               label="Estilo padrão"
               hint="Novos depoimentos herdam este estilo. Cada um pode ter o seu abaixo."
               value={content.layout || "stack"}
