@@ -1,11 +1,12 @@
 "use client";
 
-import { Eye, EyeOff, Plus, Star, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import {
   SOCIAL_NETWORKS,
   socialUrlPlaceholder,
   urlForSocialNetwork,
 } from "@/components/editor/editor-meta";
+import { ChoicePickerSheet } from "@/components/editor/choice-picker-sheet";
 import {
   BlockLookControls,
   ChoiceRow,
@@ -13,6 +14,7 @@ import {
 } from "@/components/editor/block-look-controls";
 import { ImageUploadField } from "@/components/editor/image-upload-field";
 import { ServicesEditor } from "@/components/editor/services-editor";
+import { TestimonialsEditor } from "@/components/editor/testimonials-editor";
 import { FieldHead, SizeRow } from "@/components/editor/size-pills";
 import { SocialIcon, SOCIAL_BRAND } from "@/components/profile/brand-icons";
 import { Button } from "@/components/ui/button";
@@ -51,6 +53,7 @@ export function BlockInspector({
   onTestimonialsChange,
   canAddService = true,
   canAddTestimonial = true,
+  testimonialLimit = null,
   onLimitReached,
   hasLocationBlock = false,
   onAvatarUploaded,
@@ -66,6 +69,7 @@ export function BlockInspector({
   onTestimonialsChange?: (next: TestimonialItem[]) => void;
   canAddService?: boolean;
   canAddTestimonial?: boolean;
+  testimonialLimit?: number | null;
   onLimitReached?: () => void;
   hasLocationBlock?: boolean;
   onAvatarUploaded?: (data: { avatarUrl: string; profile: Profile }) => void;
@@ -911,7 +915,7 @@ export function BlockInspector({
                 }
               />
             </Field>
-            <ChoiceRow
+            <ChoicePickerSheet
               label="Estilo padrão"
               hint="Novos depoimentos herdam este estilo. Cada um pode ter o seu abaixo."
               value={content.layout || "stack"}
@@ -941,215 +945,15 @@ export function BlockInspector({
             </div>
           </Section>
           <Section title="Depoimentos">
-            {testimonials.length === 0 ? (
-              <p className="text-[13px] text-muted">
-                Adicione falas reais de clientes para gerar confiança.
-              </p>
-            ) : null}
-            {testimonials.map((item, index) => {
-              const defaultLayout = content.layout || "stack";
-              const itemLayout = item.layout ?? defaultLayout;
-              const asQuote = itemLayout === "quote";
-              return (
-              <div
-                key={item.id}
-                className="space-y-3 rounded-2xl border border-line bg-white p-3.5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[12px] font-semibold text-ink">
-                    Cliente {index + 1}
-                    {!item.isVisible ? (
-                      <span className="ml-1.5 font-normal text-muted">· oculto</span>
-                    ) : null}
-                  </p>
-                  <div className="flex items-center gap-1">
-                    <IconButton
-                      label={item.isVisible ? "Ocultar" : "Mostrar"}
-                      onClick={() =>
-                        onTestimonialsChange?.(
-                          testimonials.map((tst) =>
-                            tst.id === item.id
-                              ? { ...tst, isVisible: !tst.isVisible }
-                              : tst,
-                          ),
-                        )
-                      }
-                    >
-                      {item.isVisible ? (
-                        <Eye className="h-3.5 w-3.5" />
-                      ) : (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      )}
-                    </IconButton>
-                    <IconButton
-                      label="Remover depoimento"
-                      danger
-                      onClick={() =>
-                        onTestimonialsChange?.(
-                          testimonials.filter((tst) => tst.id !== item.id),
-                        )
-                      }
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </IconButton>
-                  </div>
-                </div>
-                <ChoiceRow
-                  label="Estilo"
-                  hint={
-                    asQuote
-                      ? "Texto grande com aspas, sem estrelas."
-                      : "Cartão com estrelas e fundo."
-                  }
-                  value={item.layout ?? defaultLayout}
-                  onChange={(layout) =>
-                    onTestimonialsChange?.(
-                      testimonials.map((tst) =>
-                        tst.id === item.id ? { ...tst, layout } : tst,
-                      ),
-                    )
-                  }
-                  options={[
-                    { value: "stack", label: "Card" },
-                    { value: "quote", label: "Citação" },
-                  ]}
-                />
-                <div className={cn("grid gap-3", asQuote ? "" : "sm:grid-cols-2")}>
-                  {!asQuote ? (
-                    <ChoiceRow
-                      label="Espaço interno"
-                      hint="Padding dentro do card."
-                      value={item.padding || "md"}
-                      onChange={(padding) =>
-                        onTestimonialsChange?.(
-                          testimonials.map((tst) =>
-                            tst.id === item.id ? { ...tst, padding } : tst,
-                          ),
-                        )
-                      }
-                      options={[
-                        { value: "sm", label: "Compacto" },
-                        { value: "md", label: "Normal" },
-                        { value: "lg", label: "Amplo" },
-                      ]}
-                    />
-                  ) : null}
-                  <ChoiceRow
-                    label="Espaço abaixo"
-                    hint="Distância até o próximo depoimento."
-                    value={item.spacing || "md"}
-                    onChange={(spacing) =>
-                      onTestimonialsChange?.(
-                        testimonials.map((tst) =>
-                          tst.id === item.id ? { ...tst, spacing } : tst,
-                        ),
-                      )
-                    }
-                    options={[
-                      { value: "sm", label: "Pouco" },
-                      { value: "md", label: "Normal" },
-                      { value: "lg", label: "Muito" },
-                    ]}
-                  />
-                </div>
-                <Field>
-                  <Label>Nome</Label>
-                  <Input
-                    value={item.authorName}
-                    onChange={(event) =>
-                      onTestimonialsChange?.(
-                        testimonials.map((tst) =>
-                          tst.id === item.id
-                            ? { ...tst, authorName: event.target.value }
-                            : tst,
-                        ),
-                      )
-                    }
-                    placeholder="Ana Clara"
-                  />
-                </Field>
-                <Field>
-                  <Label>Depoimento</Label>
-                  <Textarea
-                    value={item.text}
-                    onChange={(event) =>
-                      onTestimonialsChange?.(
-                        testimonials.map((tst) =>
-                          tst.id === item.id
-                            ? { ...tst, text: event.target.value }
-                            : tst,
-                        ),
-                      )
-                    }
-                    placeholder="Ficou perfeito, super recomendo."
-                  />
-                </Field>
-                {!asQuote ? (
-                  <div>
-                    <Label>Nota</Label>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((rating) => (
-                        <button
-                          key={rating}
-                          type="button"
-                          onClick={() =>
-                            onTestimonialsChange?.(
-                              testimonials.map((tst) =>
-                                tst.id === item.id ? { ...tst, rating } : tst,
-                              ),
-                            )
-                          }
-                          className="inline-flex h-11 w-11 items-center justify-center rounded-lg hover:bg-background"
-                          aria-label={`${rating} estrelas`}
-                        >
-                          <Star
-                            className={cn(
-                              "h-5 w-5",
-                              rating <= (item.rating || 0)
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-line",
-                            )}
-                          />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-[12px] leading-relaxed text-muted">
-                    Citações não exibem estrelas na página.
-                  </p>
-                )}
-              </div>
-              );
-            })}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                if (!canAddTestimonial) {
-                  onLimitReached?.();
-                  return;
-                }
-                onTestimonialsChange?.([
-                  ...testimonials,
-                  {
-                    id: `tmp_${Date.now()}`,
-                    authorName: "Cliente",
-                    text: "Excelente atendimento.",
-                    rating: 5,
-                    sortOrder: testimonials.length,
-                    isVisible: true,
-                    layout: content.layout || "stack",
-                    padding: "md",
-                    spacing: "md",
-                  },
-                ]);
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Adicionar depoimento
-            </Button>
+            <TestimonialsEditor
+              testimonials={testimonials}
+              defaultLayout={content.layout || "stack"}
+              content={content}
+              onChange={(next) => onTestimonialsChange?.(next)}
+              canAdd={canAddTestimonial}
+              testimonialLimit={testimonialLimit}
+              onLimitReached={onLimitReached}
+            />
           </Section>
           <BlockLookControls
             look={lookFrom(content)}

@@ -109,9 +109,17 @@ export type ServicesContent = BlockLook & {
   layout?: ServicesLayout;
 };
 
+export type TestimonialItemStyle = {
+  layout?: TestimonialsLayout;
+  padding?: BlockPadding;
+  spacing?: TestimonialSpacing;
+};
+
 export type TestimonialsContent = BlockLook & {
   heading?: string;
   layout?: TestimonialsLayout;
+  /** Fallback visual por id enquanto a API não persiste layout/padding/spacing. */
+  itemStyles?: Record<string, TestimonialItemStyle>;
 };
 
 export type LocationContent = BlockLook & {

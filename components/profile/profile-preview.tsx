@@ -58,6 +58,12 @@ import {
   serviceHasPrice,
   sortBySortOrder,
 } from "@/lib/types/profile";
+import {
+  mergeTestimonialsWithBlockStyles,
+  resolveTestimonialLayout,
+  resolveTestimonialPadding,
+  resolveTestimonialSpacing,
+} from "@/lib/testimonials";
 import { normalizeWhatsAppPhone } from "@/lib/phone";
 import { cn } from "@/lib/utils";
 
@@ -112,11 +118,13 @@ function BlockView({
   theme,
   page,
   motion,
+  editable = false,
 }: {
   block: ProfileBlock;
   theme: ReturnType<typeof resolvePaintTheme>;
   page: PublicPage;
   motion?: boolean;
+  editable?: boolean;
 }) {
   if (!block.isVisible) return null;
   const look = lookFrom(block.content);
@@ -1215,11 +1223,11 @@ function BlockView({
     }
     case "TESTIMONIALS": {
       const content = block.content as TestimonialsContent;
-      const items = (page.testimonials || []).filter(
-        (t) => t.isVisible !== false,
+      const allItems = mergeTestimonialsWithBlockStyles(
+        page.testimonials || [],
+        content,
       );
-      if (items.length === 0) return null;
-      const defaultLayout = content.layout || "stack";
+      const items = allItems.filter((t) => t.isVisible !== false);
       const headingColor = look.textColor || theme.muted;
       const sizes = {
         title: lookFontPx(look, "title"),
@@ -1231,6 +1239,33 @@ function BlockView({
         price: lookFontPx(look, "price"),
         bio: lookFontPx(look, "bio"),
       };
+
+      if (items.length === 0) {
+        if (!editable) return null;
+        return (
+          <div
+            className={cn(
+              "flex flex-col rounded-2xl border border-dashed px-4 py-5 text-center",
+              alignStack(look.align),
+            )}
+            style={{
+              borderColor: theme.line,
+              color: theme.muted,
+            }}
+          >
+            <p
+              className="font-semibold uppercase tracking-[0.16em]"
+              style={{ fontSize: sizes.label, color: headingColor }}
+            >
+              {content.heading || "Depoimentos"}
+            </p>
+            <p className="mt-3 text-[13px] leading-relaxed">
+              Nenhum depoimento ainda. Adicione à direita para aparecer aqui.
+            </p>
+          </div>
+        );
+      }
+
       return (
         <div
           className={cn("flex flex-col", alignStack(look.align), surfaceClass(look))}
@@ -1248,10 +1283,10 @@ function BlockView({
           </p>
           <div className="w-full">
             {items.map((item: TestimonialItem, index) => {
-              const itemLayout = item.layout ?? defaultLayout;
+              const itemLayout = resolveTestimonialLayout(item, content);
               const asQuote = itemLayout === "quote";
               const cardPadding =
-                lookPadding(item.padding) ||
+                lookPadding(resolveTestimonialPadding(item, content)) ||
                 lookPadding(look.padding) ||
                 "14px";
               return (
@@ -1261,7 +1296,7 @@ function BlockView({
                   style={{
                     marginBottom:
                       index < items.length - 1
-                        ? testimonialGap(item.spacing)
+                        ? testimonialGap(resolveTestimonialSpacing(item, content))
                         : undefined,
                     ...(asQuote
                       ? undefined
@@ -1450,6 +1485,7 @@ export function ProfilePreview({
                   theme={theme}
                   page={page}
                   motion={asPage}
+                  editable={editable}
                 />
               </SelectableBlock>
             </div>
@@ -1507,6 +1543,7 @@ export function ProfilePreview({
                   theme={theme}
                   page={page}
                   motion={asPage}
+                  editable={editable}
                 />
               </SelectableBlock>
             </div>

@@ -80,7 +80,13 @@ import {
   themeSnapshot,
   themeToApi,
 } from "@/lib/theme";
-import { prepareBlockContent } from "@/lib/url";
+import {
+  buildItemStyles,
+  mergeTestimonialsWithBlockStyles,
+  pruneItemStyles,
+  remapItemStylesBatch,
+  testimonialsBlockSummary,
+} from "@/lib/testimonials";
 import {
   hydrateBlockLook,
   lookFrom,
@@ -95,6 +101,7 @@ import {
   type PublicPage,
   type ServiceItem,
   type TestimonialItem,
+  type TestimonialsContent,
 } from "@/lib/types/profile";
 import { cn } from "@/lib/utils";
 
@@ -211,7 +218,16 @@ function sortBlocks(blocks: ProfileBlock[]) {
   return [...blocks].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-function blockSummary(block: ProfileBlock): string {
+function blockSummary(
+  block: ProfileBlock,
+  testimonials: TestimonialItem[] = [],
+): string {
+  if (block.type === "TESTIMONIALS") {
+    return testimonialsBlockSummary(
+      testimonials,
+      block.content as TestimonialsContent,
+    );
+  }
   const c = block.content as Record<string, unknown>;
   if (typeof c.name === "string" && c.name) return c.name;
   if (typeof c.label === "string" && c.label) return c.label;
@@ -312,6 +328,7 @@ function SortableBlockRow({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  testimonials = [],
 }: {
   block: ProfileBlock;
   selected: boolean;
@@ -321,6 +338,7 @@ function SortableBlockRow({
   onMoveDown: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
+  testimonials?: TestimonialItem[];
 }) {
   const {
     attributes,
@@ -380,7 +398,7 @@ function SortableBlockRow({
             {BLOCK_META[block.type].label}
           </span>
           <span className="block truncate text-[11px] text-muted">
-            {blockSummary(block)}
+            {blockSummary(block, testimonials)}
           </span>
         </span>
       </button>
@@ -486,6 +504,16 @@ export function EditorWorkspace() {
     })).filter((group) => group.types.length > 0);
   }, [inserterQuery]);
 
+  const previewTestimonials = useMemo(() => {
+    const testimonialsBlock = orderedBlocks.find(
+      (block) => block.type === "TESTIMONIALS",
+    );
+    return mergeTestimonialsWithBlockStyles(
+      testimonials,
+      testimonialsBlock?.content as TestimonialsContent | undefined,
+    );
+  }, [testimonials, orderedBlocks]);
+
   const previewPage: PublicPage | null = useMemo(() => {
     if (!profile) return null;
     return {
@@ -500,9 +528,9 @@ export function EditorWorkspace() {
       publishedAt: profile.publishedAt,
       blocks: orderedBlocks,
       services,
-      testimonials,
+      testimonials: previewTestimonials,
     };
-  }, [profile, orderedBlocks, services, testimonials]);
+  }, [profile, orderedBlocks, services, previewTestimonials]);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -532,14 +560,21 @@ export function EditorWorkspace() {
       setAuthProfile(loaded);
       setBlocks(ordered);
       setServices(sortBySortOrder(s));
-      setTestimonials(sortBySortOrder(t));
+      const testimonialsBlock = ordered.find(
+        (block) => block.type === "TESTIMONIALS",
+      );
+      const mergedTestimonials = mergeTestimonialsWithBlockStyles(
+        sortBySortOrder(t),
+        testimonialsBlock?.content as TestimonialsContent | undefined,
+      );
+      setTestimonials(mergedTestimonials);
       setSelectedId(ordered[0]?.id ?? null);
       lastSavedBlock.current = {};
       for (const block of ordered) {
         lastSavedBlock.current[block.id] = snapshotBlock(block);
       }
-        lastSavedServices.current = JSON.stringify(sortBySortOrder(s));
-        lastSavedTestimonials.current = JSON.stringify(sortBySortOrder(t));
+      lastSavedServices.current = JSON.stringify(sortBySortOrder(s));
+      lastSavedTestimonials.current = JSON.stringify(mergedTestimonials);
       lastSavedProfile.current = profileSnapshot(loaded);
     } catch (err) {
       setLoadError(
@@ -784,6 +819,7 @@ export function EditorWorkspace() {
     const list = testimonialsRef.current;
     if (JSON.stringify(list) === lastSavedTestimonials.current) return;
     const resolved: TestimonialItem[] = [];
+    const idMap = new Map<string, string>();
     for (const local of list) {
       const payload = {
         authorName: local.authorName,
@@ -796,12 +832,43 @@ export function EditorWorkspace() {
         spacing: local.spacing,
       };
       if (local.id.startsWith("tmp_")) {
-        resolved.push(await testimonialsApi.create(payload));
+        const created = await testimonialsApi.create(payload);
+        idMap.set(local.id, created.id);
+        resolved.push(created);
       } else {
         resolved.push(await testimonialsApi.update(local.id, payload));
       }
     }
-    const ordered = sortBySortOrder(resolved);
+    const ordered = sortBySortOrder(
+      resolved.map((item) => {
+        const localId =
+          [...idMap.entries()].find(([, toId]) => toId === item.id)?.[0] ??
+          item.id;
+        const local = list.find((entry) => entry.id === localId);
+        if (!local) return item;
+        return {
+          ...item,
+          layout: item.layout ?? local.layout,
+          padding: item.padding ?? local.padding,
+          spacing: item.spacing ?? local.spacing,
+        };
+      }),
+    );
+    if (idMap.size > 0) {
+      setBlocks((prev) =>
+        prev.map((block) => {
+          if (block.type !== "TESTIMONIALS") return block;
+          const content = block.content as TestimonialsContent;
+          return {
+            ...block,
+            content: {
+              ...content,
+              itemStyles: remapItemStylesBatch(content.itemStyles, idMap),
+            },
+          };
+        }),
+      );
+    }
     lastSavedTestimonials.current = JSON.stringify(ordered);
     testimonialsRef.current = ordered;
     setTestimonials(ordered);
@@ -1269,12 +1336,30 @@ export function EditorWorkspace() {
     }
   }
 
+  function syncTestimonialsItemStyles(next: TestimonialItem[]) {
+    const itemStyles = pruneItemStyles(buildItemStyles(next), next);
+    setBlocks((prev) =>
+      prev.map((block) => {
+        if (block.type !== "TESTIMONIALS") return block;
+        const content = block.content as TestimonialsContent;
+        return {
+          ...block,
+          content: {
+            ...content,
+            itemStyles,
+          },
+        };
+      }),
+    );
+  }
+
   function handleTestimonialsChange(next: TestimonialItem[]) {
     const added = next.length > testimonials.length;
     const removed = testimonials.filter(
       (t) => !next.some((n) => n.id === t.id) && !t.id.startsWith("tmp_"),
     );
     setTestimonials(next);
+    syncTestimonialsItemStyles(next);
     if (added) {
       notify("Depoimento adicionado", "success");
     } else if (removed.length > 0) {
@@ -1740,6 +1825,7 @@ export function EditorWorkspace() {
                     <SortableBlockRow
                       key={block.id}
                       block={block}
+                      testimonials={testimonials}
                       selected={
                         editorPanel === "block" && selectedId === block.id
                       }
@@ -2040,6 +2126,7 @@ export function EditorWorkspace() {
                     entitlements.maxTestimonials,
                     testimonials.length,
                   )}
+                  testimonialLimit={entitlements.maxTestimonials}
                   onLimitReached={() =>
                     requestUpgrade(
                       "O Free chega no limite de serviços ou depoimentos. Assine Pro ou Premium.",
